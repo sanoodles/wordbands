@@ -293,6 +293,29 @@ describe("WordCard multi-sense words", () => {
   });
 });
 
+// Nothing on Google's line leaves its page as the way to a translation.
+describe("WordCard where Google has nothing", () => {
+  const ANSWERS = {
+    fails: () => new Response("upstream error", { status: 502 }),
+    "answers with no translation": () =>
+      Response.json({ translation: "", senses: [], groups: [], levels: {} }),
+  };
+
+  // A word per case, since `glossCache` keeps an answer that landed.
+  it.each([
+    ["fails", "Fernweh"],
+    ["answers with no translation", "Heimweh"],
+  ] as const)("spells out Google Translate beside the status when Google %s", async (how, word) => {
+    vi.stubGlobal("fetch", vi.fn(async () => ANSWERS[how]()));
+    render(<WordCard word={word} forms={[word]} source="de" target="en" onTargetChange={() => {}} />);
+    const link = await screen.findByRole("link", { name: `Google Translate: ${word} in English` });
+    expect(link).toHaveTextContent(/^Google Translate/);
+    expect(link).toHaveAttribute("target", "_blank");
+    // A control of its own, not the end of the status sentence.
+    expect(screen.getByText("no translation")).not.toContainElement(link);
+  });
+});
+
 const A1 = { key: "A1", label: "A1 · Beginner", rank: 391 };
 const B2 = { key: "B2", label: "B2 · Upper-intermediate", rank: 9002 };
 
@@ -609,9 +632,8 @@ describe("WordCard Wiktionary's line", () => {
     expect(await screen.findByRole("link", { name: "Wiktionary entry for alienígena" })).toBeInTheDocument();
     expect(reading(sourceLines("de")[0]!)).toBe("Alien, Außerirdischer");
     // Google's line says it found nothing, and still leads to Google's own page.
-    expect(screen.getByText(/no translation/)).toContainElement(
-      screen.getByRole("link", { name: /google translate/i }),
-    );
+    expect(screen.getByText("no translation")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /google translate/i })).toBeInTheDocument();
   });
 
   // @spec WIKT-1

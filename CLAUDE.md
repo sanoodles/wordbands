@@ -882,7 +882,7 @@ How `build-wiktionary.ts` builds one direction:
 | The source's name trails its line | The line is a translation first. Leading names would also start the two lists at different places |
 | The source's name is `select-none` | A copied line stays the translation, as with the badges |
 | A link only where the edition has a page | In es→de 752 Spanish words have none under any casing, and in de→es 60 German. The name stays, as plain text |
-| Where Google has nothing, its line says so | `no translation`, then its name, which is still the way to Google's page |
+| Where Google has nothing, its link becomes a pill | The line reads `no translation`, then **Google Translate** in full. Google's page is then the only way to Google's answer. So the pill outranks the etymology link, with full-contrast text and a `line-strong` border. A failed lookup and an empty answer look the same. So does a line with Wiktionary's beneath it, because the pill belongs to Google's line |
 
 | Known cost | Detail |
 | --- | --- |
@@ -1006,10 +1006,10 @@ The misses are mostly what no dictionary headwords: clitic verb forms (`chantaje
 | etimo.it for Italian | Pianigiani's 1907 dictionary, as scanned page images |
 | etimologias.dechile.net for Spanish | 40 of 60, against the RAE's 47 |
 
-The etymology link is the card's one pill, about 105px wide. The lines of translation take
-the width they need (`w-max`, capped at the row), so the pill sits beside them where both
-fit and drops below them where they do not. Where it drops depends on the translation, not
-on a breakpoint.
+The etymology link is a pill, about 105px wide. The lines of translation take the width
+they need (`w-max`, capped at the row), so the pill sits beside them where both fit and
+drops below them where they do not. Where it drops depends on the translation, not on a
+breakpoint.
 
 ## Width on a phone
 
@@ -1229,7 +1229,7 @@ row fewer per screen, on the one control the page has hundreds of.
 | Select options | `min-height` on `[role="option"]` inside the popper. They are already a centred flex row, so nothing else moves |
 | The figure's caption toggle | 13px of padding on an 18px line. Padding rather than a height, so it stays centred and a wrapped line still grows |
 | The figure's full-screen button, and every button inside full screen | `TOOL` in `DefiningScatter`: 44px tall, and at least 44 wide |
-| The skip link, Previous and Next, the band tabs, the etymology link | Already 44 or over |
+| The skip link, Previous and Next, the band tabs, the etymology link, Google's link where its line has nothing | Already 44 or over |
 
 What is left under 44 is left on purpose, and the probe still lists it:
 

@@ -205,9 +205,12 @@ const GLOSS_TYPE = {
 // The translation's line box — else each translation resizes the card.
 const STATUS_TYPE = { display: GLOSS_TYPE.display, lineHeight: GLOSS_TYPE.lineHeight };
 
-// The etymology link, a 44px target (WCAG 2.5.5).
-const OUT_LINK =
-  "tw-inline-flex tw-min-h-[44px] tw-shrink-0 tw-items-center tw-justify-center tw-gap-1 tw-rounded-full tw-border tw-border-line-subtle tw-px-3 tw-py-1.5 tw-body-medium tw-text-secondary tw-no-underline hover:tw-border-line hover:tw-text-primary";
+// A link out of the card as a pill, a 44px target (WCAG 2.5.5).
+const PILL =
+  "tw-inline-flex tw-min-h-[44px] tw-shrink-0 tw-items-center tw-justify-center tw-gap-1 tw-rounded-full tw-border tw-px-3 tw-py-1.5 tw-body-medium tw-no-underline";
+const OUT_LINK = `${PILL} tw-border-line-subtle tw-text-secondary hover:tw-border-line hover:tw-text-primary`;
+// Google's link where its line has nothing. It is then the way to a translation, so the loudest.
+const FALLBACK_LINK = `${PILL} tw-border-line-strong tw-font-medium tw-text-primary hover:tw-bg-surface-hover`;
 
 // A line's source trails its terms, quieter than they are: the line is a translation first.
 // Unselectable, like the badges, so a copied line is the translation and nothing else.
@@ -220,6 +223,7 @@ function SourceLink({
   name,
   hrefLang,
   describedBy,
+  className = SOURCE_LINK,
   children,
 }: {
   href: string;
@@ -227,6 +231,7 @@ function SourceLink({
   name: string;
   hrefLang?: string;
   describedBy: string;
+  className?: string;
   children: string;
 }) {
   return (
@@ -239,7 +244,7 @@ function SourceLink({
       lang="en"
       aria-label={name}
       aria-describedby={describedBy}
-      className={SOURCE_LINK}
+      className={className}
     >
       {children} <span aria-hidden="true">↗</span>
     </a>
@@ -433,16 +438,16 @@ export default function WordCard({
     if (landed && document.activeElement === document.body) cardRef.current?.focus();
   }, [word]);
 
+  const googleHref = translateHref(word, source, target);
+  // The word and the language behind it are what the link is for (2.4.9).
+  const googleName = `Google Translate: ${word} in ${englishName(target)}`;
   const googleLink = (
-    <SourceLink
-      href={translateHref(word, source, target)}
-      // The word and the language behind it are what the link is for (2.4.9).
-      name={`Google Translate: ${word} in ${englishName(target)}`}
-      describedBy={newTabHelp}
-    >
+    <SourceLink href={googleHref} name={googleName} describedBy={newTabHelp}>
       Google
     </SourceLink>
   );
+  // Google's line came back empty, or not at all.
+  const googleEmpty = translate && settled && !googleShows;
   const wiktLink = wikt.title ? (
     <SourceLink
       href={wiktionaryHref(wikt.title, source)}
@@ -492,8 +497,9 @@ export default function WordCard({
           {/* The card is only the meaning now — the word itself is in the search box
               and spotlighted in the cloud, so printing it a third time said nothing. */}
           {/* Padded so the first line sits level with the select's text, at any number of
-              lines, and a single line is the 44px of the field facing it. */}
-          <div className="tw-w-max tw-max-w-full tw-py-2.5">
+              lines, and a single line is the 44px of the field facing it. Google's pill
+              is 44px already, so it leads unpadded. */}
+          <div className={`tw-w-max tw-max-w-full ${googleEmpty ? "" : "tw-py-2.5"}`}>
             {/* Announce translation state changes to assistive tech (WCAG 4.1.3). */}
             <div aria-live="polite">
               {/* Nothing to translate, but Google's page still has the word's pronunciation. */}
@@ -548,10 +554,20 @@ export default function WordCard({
                       trailing={googleLink}
                     />
                   ) : (
-                    <span className="tw-body-medium text-muted-aaa" style={STATUS_TYPE}>
-                      no translation
-                      {googleLink}
-                    </span>
+                    <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-x-3 tw-gap-y-2">
+                      {/* 44px, so it stays level with the select where the pill wraps below. */}
+                      <span className="tw-flex tw-min-h-[44px] tw-items-center tw-body-medium text-muted-aaa">
+                        no translation
+                      </span>
+                      <SourceLink
+                        href={googleHref}
+                        name={googleName}
+                        describedBy={newTabHelp}
+                        className={FALLBACK_LINK}
+                      >
+                        Google Translate
+                      </SourceLink>
+                    </div>
                   )}
                   {wiktShows && (
                     <Terms
