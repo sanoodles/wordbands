@@ -585,6 +585,13 @@ const NAP = { pos: "noun", terms: ["Nickerchen", "Schläfchen", "Flor", "Strich"
 /** Every URL the card fetched, in order. */
 const urls = () => (fetch as unknown as { mock: { calls: [string][] } }).mock.calls.map(([u]) => String(u));
 
+/** Google's link, where another line translates: its source's name alone, after that line. */
+function quietAfter(line: HTMLElement) {
+  const google = screen.getByRole("link", { name: /google translate/i });
+  expect(google).toHaveTextContent(/^Google ↗$/);
+  expect(line.compareDocumentPosition(google) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+}
+
 /** Every source's line, in the order they show. */
 const sourceLines = (target: string) => [...document.querySelectorAll(`[aria-live] span[lang="${target}"]`)];
 
@@ -630,15 +637,15 @@ describe("WordCard Wiktionary's line", () => {
     expect(screen.queryByText("Wiktionary")).not.toBeInTheDocument();
   });
 
-  // @spec WIKT-5
-  it("still shows Wiktionary's line when Google fails", async () => {
+  // @spec WIKT-5, WIKT-1
+  it("still shows Wiktionary's line when Google fails, and leads with it", async () => {
     vi.stubGlobal("fetch", mockSources(null, { terms: ["Alien", "Außerirdischer"], title: "alienígena" }));
     render(<WordCard word="alienígena" forms={["alienígena"]} source="es" target="de" onTargetChange={() => {}} />);
-    expect(await screen.findByRole("link", { name: "Wiktionary entry for alienígena" })).toBeInTheDocument();
+    const wiktionary = await screen.findByRole("link", { name: "Wiktionary entry for alienígena" });
     expect(reading(sourceLines("de")[0]!)).toBe("Alien, Außerirdischer");
-    // Google's line says its lookup failed, and still leads to Google's own page.
+    // Google's line says its lookup failed, after the meaning, and still leads to its page.
     expect(screen.getByText("couldn’t translate")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /google translate/i })).toBeInTheDocument();
+    quietAfter(wiktionary);
   });
 
   // @spec WIKT-1
@@ -702,9 +709,9 @@ describe("WordCard Wiktionary standing in for Google", () => {
     const wiktionary = await screen.findByRole("link", { name: `Wiktionary entry for ${word}` });
     expect(wiktionary).toHaveAttribute("href", `https://${source}.wiktionary.org/wiki/${encodeURIComponent(word)}`);
     expect(reading(sourceLines(target)[0]!)).toBe(terms.join(", "));
-    // Google's line still says what happened and leads to Google's own page.
+    // Google's line still says what happened, after the meaning, and leads to its page.
     expect(screen.getByText("couldn’t translate")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /google translate/i })).toBeInTheDocument();
+    quietAfter(wiktionary);
     // Asked only once Google's line had come back with nothing.
     const asked = urls();
     expect(asked.findIndex((u) => u.includes("/api/wiktionary/"))).toBeGreaterThan(

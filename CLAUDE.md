@@ -916,7 +916,8 @@ How `build-wiktionary.ts` builds one direction:
 | The source's name is `select-none` | A copied line stays the translation, as with the badges |
 | A link only where the edition has a page | In es→de 752 Spanish words have none under any casing, and in de→es 60 German. The name stays, as plain text |
 | Where Google has nothing, its line says why | `couldn’t translate` where the lookup failed, `no translation` where Google answered empty. A failure is usually Google refusing our server for a while, so it must not read as a word with no translation. It names no source, because Google's own page still works for the reader |
-| Its link then becomes a pill | **Google Translate**, in full. Google's page is the only way left to Google's answer. So the pill outranks the etymology link, with full-contrast text and a `line-strong` border. A line with Wiktionary's beneath it gets the pill too, because the pill belongs to Google's line |
+| Its link becomes a pill where nothing on the card translates | **Google Translate**, in full. Google's page is then the only way left to a meaning. So the pill outranks the etymology link, with full-contrast text and a `line-strong` border. Where Wiktionary's line translates, the link stays its source's quiet name |
+| Where Google's line has nothing, Wiktionary's leads (`WIKT-1`) | The meaning comes first, level with the select, and Google's status follows it. Led by the status, the card would open on "couldn’t translate" above a translation |
 
 | Known cost | Detail |
 | --- | --- |
@@ -1277,7 +1278,7 @@ row fewer per screen, on the one control the page has hundreds of.
 | Select options | `min-height` on `[role="option"]` inside the popper. They are already a centred flex row, so nothing else moves |
 | The figure's caption toggle | 13px of padding on an 18px line. Padding rather than a height, so it stays centred and a wrapped line still grows |
 | The figure's full-screen button, and every button inside full screen | `TOOL` in `DefiningScatter`: 44px tall, and at least 44 wide |
-| The skip link, Previous and Next, the band tabs, the etymology link, Google's link where its line has nothing | Already 44 or over |
+| The skip link, Previous and Next, the band tabs, the etymology link, Google's link where nothing on the card translates | Already 44 or over |
 
 What is left under 44 is left on purpose, and the probe still lists it:
 

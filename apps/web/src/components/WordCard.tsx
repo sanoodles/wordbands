@@ -453,8 +453,10 @@ export default function WordCard({
       Google
     </SourceLink>
   );
-  // Google's line came back empty, or not at all.
-  const googleEmpty = translate && settled && !googleShows;
+  // A failure names no source: Google's own page still works.
+  const googleStatus = status === "error" ? "couldn’t translate" : "no translation";
+  // Nothing on the card translates the word, so Google's page is the way left.
+  const pillShows = translate && settled && !googleShows && !wiktShows;
   const wiktLink = wikt.title ? (
     <SourceLink
       href={wiktionaryHref(wikt.title, source)}
@@ -506,7 +508,7 @@ export default function WordCard({
           {/* Padded so the first line sits level with the select's text, at any number of
               lines, and a single line is the 44px of the field facing it. Google's pill
               is 44px already, so it leads unpadded. */}
-          <div className={`tw-w-max tw-max-w-full ${googleEmpty ? "" : "tw-py-2.5"}`}>
+          <div className={`tw-w-max tw-max-w-full ${pillShows ? "" : "tw-py-2.5"}`}>
             {/* Announce translation state changes to assistive tech (WCAG 4.1.3). */}
             <div aria-live="polite">
               {/* Nothing to translate, but Google's page still has the word's pronunciation. */}
@@ -560,12 +562,11 @@ export default function WordCard({
                       pickHelp={pickHelp}
                       trailing={googleLink}
                     />
-                  ) : (
+                  ) : pillShows ? (
                     <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-x-3 tw-gap-y-2">
-                      {/* 44px, so it stays level with the select where the pill wraps below.
-                          A failure names no source: Google's own page still works. */}
+                      {/* 44px, so it stays level with the select where the pill wraps below. */}
                       <span className="tw-flex tw-min-h-[44px] tw-items-center tw-body-medium text-muted-aaa">
-                        {status === "error" ? "couldn’t translate" : "no translation"}
+                        {googleStatus}
                       </span>
                       <SourceLink
                         href={googleHref}
@@ -576,7 +577,7 @@ export default function WordCard({
                         Google Translate
                       </SourceLink>
                     </div>
-                  )}
+                  ) : null}
                   {wiktShows && (
                     <Terms
                       terms={wikt.terms}
@@ -586,6 +587,14 @@ export default function WordCard({
                       pickHelp={pickHelp}
                       trailing={wiktLink}
                     />
+                  )}
+                  {/* @spec WIKT-1
+                      After the line that translates, so the meaning comes first. */}
+                  {!googleShows && wiktShows && (
+                    <span className="tw-body-medium text-muted-aaa" style={STATUS_TYPE}>
+                      {googleStatus}
+                      {googleLink}
+                    </span>
                   )}
                 </div>
               )}
