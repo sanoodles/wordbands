@@ -241,8 +241,8 @@ describe("defining levels", () => {
   });
 });
 
-// Built by scripts/build-wiktionary.ts from both languages' own editions, so nothing in it
-// passed through English.
+// Built by scripts/build-wiktionary.ts from both languages' own editions, so no direction
+// between two other languages passes through English.
 describe("Wiktionary's translations", () => {
   const ARTIFACTS = WIKTIONARY_PAIRS.map((pair) => {
     const a = JSON.parse(readFileSync(new URL(`../../data/wiktionary.${pair}.json`, import.meta.url), "utf8")) as {
@@ -254,6 +254,8 @@ describe("Wiktionary's translations", () => {
     expect(`${a.source}-${a.target}`).toBe(pair);
     return { source: a.source, target: a.target, terms: new Map(Object.entries(a.terms)), titles: a.titles };
   });
+  const direction = (source: string, target: string) =>
+    ARTIFACTS.find((a) => a.source === source && a.target === target)!.terms;
 
   // @spec WIKT-4
   it("holds at most four terms a word, each one word or two", () => {
@@ -270,7 +272,7 @@ describe("Wiktionary's translations", () => {
 
   // @spec WIKT-4
   it("leads with what both editions give, then with the more frequent word", () => {
-    const es = ARTIFACTS.find((a) => a.source === "es")!.terms;
+    const es = direction("es", "de");
     // Nickerchen is in both editions; Mittagsschlaf ranks above Siesta in German.
     expect(es.get("siesta")).toEqual(["Nickerchen", "Mittagsschlaf", "Siesta"]);
     expect(es.get("terrible")!.indexOf("schrecklich")).toBeLessThan(es.get("terrible")!.indexOf("mordsmäßig"));
@@ -295,13 +297,25 @@ describe("Wiktionary's translations", () => {
 
   // The words a pivot through English gets wrong, because the English word means more.
   it("translates without passing through English", () => {
-    const es = ARTIFACTS.find((a) => a.source === "es")!.terms;
+    const es = direction("es", "de");
     expect(es.get("letra")).toContain("Buchstabe");
     expect(es.get("letra")).not.toContain("Brief");
     expect(es.get("criar")).toContain("aufziehen");
     expect(es.get("criar")).not.toContain("erhöhen");
     expect(es.get("tiempo")).toContain("Wetter");
-    const de = ARTIFACTS.find((a) => a.source === "de")!.terms;
+    const de = direction("de", "es");
     expect(de.get("buchstabe")).toEqual(["letra"]);
+  });
+
+  // English keeps most of its tables under a sense, where the other five keep none.
+  it("reads the tables the English edition files under each sense", () => {
+    expect(direction("en", "es").get("water")).toContain("agua");
+    expect(direction("en", "de").get("dog")).toContain("Hund");
+    expect(direction("en", "fr").get("eat")).toContain("manger");
+  });
+
+  it("leaves out the dialects and dropped words the English edition files under a language", () => {
+    // Alemannic net, nit, nüt and nöt, and Bavarian ned, are filed under German.
+    expect(direction("en", "de").get("not")).toEqual(["nicht"]);
   });
 });

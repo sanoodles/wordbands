@@ -14,6 +14,7 @@ import {
   DEFINING_LEVEL_COUNT,
   englishName,
   hasWiktionary,
+  hasWiktionaryFallback,
   isSourceLang,
   SOURCE_LANGS,
   SOURCE_LANG_META,
@@ -332,9 +333,10 @@ function CorpusCredit({ source, target }: { source: SourceLang; target: TargetLa
       </a>
       {/* @spec CREDIT-5
           The source edition and the license are credited above, with the defining levels. */}
-      {hasWiktionary(source, target) ? (
+      {hasWiktionary(source, target) || hasWiktionaryFallback(source, target) ? (
         <>
-          , and from the translation tables of the {name} Wiktionary and the{" "}
+          {hasWiktionary(source, target) ? ", and from" : ", and where it has none, from"} the
+          translation tables of the {name} Wiktionary and the{" "}
           <a className={CORPUS_LINK} href={`https://${target}.wiktionary.org/`}>
             {englishName(target)} Wiktionary
           </a>

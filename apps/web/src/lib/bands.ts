@@ -283,6 +283,17 @@ const WIKTIONARY: Record<string, () => Promise<{ default: WiktionaryArtifact }>>
   "pt-de": () => import("../../data/wiktionary.pt-de.json"),
   "pt-fr": () => import("../../data/wiktionary.pt-fr.json"),
   "pt-it": () => import("../../data/wiktionary.pt-it.json"),
+  // English's, which the card asks for only where Google's line has nothing.
+  "es-en": () => import("../../data/wiktionary.es-en.json"),
+  "de-en": () => import("../../data/wiktionary.de-en.json"),
+  "fr-en": () => import("../../data/wiktionary.fr-en.json"),
+  "it-en": () => import("../../data/wiktionary.it-en.json"),
+  "pt-en": () => import("../../data/wiktionary.pt-en.json"),
+  "en-es": () => import("../../data/wiktionary.en-es.json"),
+  "en-de": () => import("../../data/wiktionary.en-de.json"),
+  "en-fr": () => import("../../data/wiktionary.en-fr.json"),
+  "en-it": () => import("../../data/wiktionary.en-it.json"),
+  "en-pt": () => import("../../data/wiktionary.en-pt.json"),
 };
 const wiktionaryCache = new Map<string, { terms: Map<string, string[]>; titles: Map<string, string | null> }>();
 

@@ -22,7 +22,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const data = (f: string) => resolve(here, "../data", f);
 
 // Every one into every other. Each extract is read once, since French's alone is 700MB.
-const LANGS = ["es", "de", "fr", "it", "pt"];
+const LANGS = ["es", "de", "fr", "it", "pt", "en"];
 
 // The card's line holds four terms, as Google's does.
 const MAX_TERMS = 4;
@@ -35,7 +35,20 @@ const ARTICLE: Record<string, RegExp> = {
   fr: /^(?:(?:le|la|les|un|une|des)\s+|l['’])(?=\S)/i,
   it: /^(?:(?:il|lo|la|i|gli|le|un|uno|una)\s+|(?:l|un)['’])(?=\S)/i,
   pt: /^(?:o|a|os|as|um|uma|uns|umas)\s+(?=\S)/i,
+  // "to" too, since a table may list a verb as "to dance".
+  en: /^(?:the|a|an|to)\s+(?=\S)/i,
 };
+
+// The English edition files dialects and dropped words under the standard language, marked
+// by the name of the variety or by a tag. A learner wants neither.
+const STANDARD: Record<string, readonly string[]> = {
+  es: ["Spanish"],
+  de: ["German"],
+  fr: ["French"],
+  it: ["Italian"],
+  pt: ["Portuguese", "Brazilian Portuguese", "European Portuguese"],
+};
+const NOT_STANDARD = new Set(["Alemannic-German", "dialectal", "archaic", "obsolete"]);
 
 /** The terms one translation string holds: notes stripped, variants split, phrases dropped. */
 function termsOf(raw: string, lang: string): string[] {
@@ -66,17 +79,22 @@ async function harvest(lang: string): Promise<Edition> {
   const heads = new Set<string>();
   const lines = createInterface({ input: createReadStream(data(`wiktextract-${lang}.jsonl.gz`)).pipe(createGunzip()) });
   for await (const line of lines) {
+    type Item = { word?: string; lang_code?: string; lang?: string; tags?: string[] };
     const e = JSON.parse(line) as {
       word?: string;
       lang_code?: string;
-      translations?: { word?: string; lang_code?: string }[];
+      translations?: Item[];
+      senses?: { translations?: Item[] }[];
     };
     if (e.lang_code !== lang || !e.word?.trim()) continue;
     const head = e.word.trim();
     heads.add(head);
-    for (const t of e.translations ?? []) {
+    // English keeps most of its tables under a sense; the other five keep theirs on the entry.
+    for (const t of [...(e.translations ?? []), ...(e.senses ?? []).flatMap((s) => s.translations ?? [])]) {
       const into = t.lang_code ? translations.get(t.lang_code) : undefined;
       if (!into || !t.word) continue;
+      if (lang === "en" && (!STANDARD[t.lang_code!]?.includes(t.lang ?? "") || t.tags?.some((g) => NOT_STANDARD.has(g))))
+        continue;
       const terms = into.get(head) ?? [];
       for (const term of termsOf(t.word, t.lang_code!)) if (!terms.includes(term)) terms.push(term);
       if (terms.length) into.set(head, terms);
@@ -165,7 +183,8 @@ function report({ source, target, terms }: Artifact) {
     .map((b) => {
       const band = a.ranked.slice(b.min - 1, b.max ?? a.ranked.length);
       if (!band.length) return null;
-      const n = band.filter((w) => terms[w.toLowerCase()]).length;
+      // Own keys only: English lists "constructor".
+      const n = band.filter((w) => Object.hasOwn(terms, w.toLowerCase())).length;
       return `${b.key} ${Math.round((100 * n) / band.length)}%`;
     })
     .filter(Boolean)

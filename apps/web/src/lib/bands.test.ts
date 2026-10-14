@@ -13,6 +13,7 @@ import {
   DEFINING_EXAMPLE,
   DEFINING_LEVEL_COUNT,
   hasWiktionary,
+  hasWiktionaryFallback,
   SOURCE_LANG_META,
   SOURCE_LANGS,
   WIKTIONARY_LANGS,
@@ -378,19 +379,24 @@ describe("the defining view", () => {
 });
 
 describe("Wiktionary's translations", () => {
-  // @spec WIKT-1
+  // @spec WIKT-1, WIKT-6
   it("loads data for exactly the pairs the card asks for", () => {
-    const asked = WIKTIONARY_LANGS.flatMap((s) => WIKTIONARY_LANGS.filter((t) => t !== s).map((t) => `${s}-${t}`));
-    expect([...WIKTIONARY_PAIRS].sort()).toEqual(asked.sort());
+    const beside = WIKTIONARY_LANGS.flatMap((s) => WIKTIONARY_LANGS.filter((t) => t !== s).map((t) => `${s}-${t}`));
+    const standIn = WIKTIONARY_LANGS.flatMap((l) => [`${l}-en`, `en-${l}`]);
+    expect([...WIKTIONARY_PAIRS].sort()).toEqual([...beside, ...standIn].sort());
     for (const pair of WIKTIONARY_PAIRS) {
       const [source, target] = pair.split("-") as [(typeof SOURCE_LANGS)[number], string];
-      expect(hasWiktionary(source, target), pair).toBe(true);
+      // Each pair is one kind or the other, never both.
+      expect(hasWiktionary(source, target) !== hasWiktionaryFallback(source, target), pair).toBe(true);
     }
     expect(hasWiktionary("de", "en")).toBe(false);
+    expect(hasWiktionaryFallback("de", "en")).toBe(true);
+    expect(hasWiktionaryFallback("en", "ja")).toBe(false);
+    expect(hasWiktionaryFallback("en", "en")).toBe(false);
   });
 
   it("answers null for a pair or a word it has nothing for", async () => {
-    expect(await getWiktionary("es", "en", "siesta")).toBeNull();
+    expect(await getWiktionary("es", "ja", "siesta")).toBeNull();
     expect(await getWiktionary("es", "de", "zzzzznotaword")).toBeNull();
     expect(await getWiktionary("es", "de", "__proto__")).toBeNull();
     expect(await getWiktionary("es", "de", "siesta")).toMatchObject({ title: "siesta" });

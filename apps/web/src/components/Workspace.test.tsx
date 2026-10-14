@@ -493,7 +493,7 @@ describe("Workspace", () => {
   });
 
   // @spec CREDIT-5
-  it("credits both Wiktionaries where the card shows their translations, and neither elsewhere", () => {
+  it("credits both Wiktionaries where the card can show their translations, and neither elsewhere", () => {
     for (const source of WIKTIONARY_LANGS)
       for (const target of WIKTIONARY_LANGS.filter((t) => t !== source)) {
         window.history.replaceState(null, "", `/?source=${source}&target=${target}`);
@@ -509,7 +509,22 @@ describe("Workspace", () => {
         expect(within(credits).getAllByRole("link", { name: name(source) })).toHaveLength(1);
         cleanup();
       }
-    window.history.replaceState(null, "", "/?source=es&target=en");
+    // A pair with English credits both too, and says they stand in for Google.
+    for (const [source, target] of [
+      ["es", "en"],
+      ["en", "de"],
+    ] as const) {
+      window.history.replaceState(null, "", `/?source=${source}&target=${target}`);
+      render(<Workspace />);
+      const credits = screen.getByRole("link", { name: "CEFR-J" }).closest("p")!;
+      const name = (l: string) => `${englishName(l)} Wiktionary`;
+      expect(credits).toHaveTextContent(
+        `Google Translate, and where it has none, from the translation tables of the ${name(source)} and the ${name(target)}`,
+      );
+      expect(within(credits).getAllByRole("link", { name: name(source) })).toHaveLength(1);
+      cleanup();
+    }
+    window.history.replaceState(null, "", "/?source=es&target=ja");
     render(<Workspace />);
     const credits = screen.getByRole("link", { name: "CEFR-J" }).closest("p")!;
     expect(credits).not.toHaveTextContent("translation tables");

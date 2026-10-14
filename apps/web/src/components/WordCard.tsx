@@ -9,6 +9,7 @@ import {
   englishName,
   etymologyHref,
   hasWiktionary,
+  hasWiktionaryFallback,
   wiktionaryHref,
   type SourceLang,
   type TargetLang,
@@ -103,30 +104,32 @@ const wiktCache = new Map<string, Omit<Wikt, "status">>();
 const WIKT_PENDING: Wikt = { status: "loading", terms: [], title: null, levels: NO_LEVELS };
 
 function useWiktionary(word: string, source: string, target: TargetLang, enabled: boolean): Wikt {
-  const [wikt, setWikt] = useState<Wikt>(WIKT_PENDING);
+  const key = `${source}:${target}:${word.toLowerCase()}`;
+  const [wikt, setWikt] = useState<Wikt & { key: string }>({ ...WIKT_PENDING, key: "" });
   useEffect(() => {
     if (!enabled) return;
-    const key = `${source}:${target}:${word.toLowerCase()}`;
     const cached = wiktCache.get(key);
     if (cached !== undefined) {
-      setWikt({ status: "done", ...cached });
+      setWikt({ status: "done", ...cached, key });
       return;
     }
-    setWikt(WIKT_PENDING);
+    setWikt({ ...WIKT_PENDING, key });
     const ac = new AbortController();
     fetch(`/api/wiktionary/${encodeURIComponent(word)}?source=${source}&target=${target}`, { signal: ac.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((d: { terms: string[]; title: string | null; levels?: Levels }) => {
         const entry = { terms: d.terms, title: d.title, levels: d.levels ?? NO_LEVELS };
         wiktCache.set(key, entry);
-        setWikt({ status: "done", ...entry });
+        setWikt({ status: "done", ...entry, key });
       })
       .catch(() => {
-        if (!ac.signal.aborted) setWikt({ ...WIKT_PENDING, status: "error" });
+        if (!ac.signal.aborted) setWikt({ ...WIKT_PENDING, status: "error", key });
       });
     return () => ac.abort();
-  }, [word, source, target, enabled]);
-  return wikt;
+  }, [key, word, source, target, enabled]);
+  // Another word's answer, kept from before, is not this one's: the fallback can switch on
+  // within one word, in the very render Google's line comes back empty.
+  return wikt.key === key ? wikt : WIKT_PENDING;
 }
 
 /** One listed line: a label — a source-language casing, or a part of speech — and its terms. */
@@ -399,9 +402,13 @@ export default function WordCard({
   const googleTerms = showLines ? lines.flatMap((l) => l.terms) : heroTerms;
   const googleShows = status === "done" && googleTerms.length > 0;
 
-  // @spec WIKT-1, WIKT-3
-  // Wiktionary's line, for the pairs it is built for, and only where it adds a term.
-  const wiktOn = translate && hasWiktionary(source, target);
+  // @spec WIKT-1, WIKT-3, WIKT-6
+  // Wiktionary's line, for the pairs it is built for, and only where it adds a term. A pair
+  // with English asks for it only once Google's line has come back with nothing.
+  const wiktOn =
+    translate &&
+    (hasWiktionary(source, target) ||
+      (hasWiktionaryFallback(source, target) && status !== "loading" && !googleShows));
   const wikt = useWiktionary(word, source, target, wiktOn && !pending);
   const onGoogle = new Set(googleTerms.map((t) => t.toLowerCase()));
   const wiktShows =

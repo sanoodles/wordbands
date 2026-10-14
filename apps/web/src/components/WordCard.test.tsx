@@ -308,8 +308,9 @@ describe("WordCard where Google has nothing", () => {
     ["answers with no translation", "Heimweh", "no translation"],
   ] as const)("says what happened and spells out Google Translate when Google %s", async (how, word, status) => {
     vi.stubGlobal("fetch", vi.fn(async () => ANSWERS[how]()));
-    render(<WordCard word={word} forms={[word]} source="de" target="en" onTargetChange={() => {}} />);
-    const link = await screen.findByRole("link", { name: `Google Translate: ${word} in English` });
+    // Japanese, which has no Wiktionary line to stand in.
+    render(<WordCard word={word} forms={[word]} source="de" target="ja" onTargetChange={() => {}} />);
+    const link = await screen.findByRole("link", { name: `Google Translate: ${word} in Japanese` });
     expect(link).toHaveTextContent(/^Google Translate/);
     expect(link).toHaveAttribute("target", "_blank");
     // A control of its own, not the end of the status sentence.
@@ -581,6 +582,9 @@ function mockSources(google: Google | null, wiktionary: Wiktionary, held?: Promi
 
 const NAP = { pos: "noun", terms: ["Nickerchen", "Schläfchen", "Flor", "Strich"] };
 
+/** Every URL the card fetched, in order. */
+const urls = () => (fetch as unknown as { mock: { calls: [string][] } }).mock.calls.map(([u]) => String(u));
+
 /** Every source's line, in the order they show. */
 const sourceLines = (target: string) => [...document.querySelectorAll(`[aria-live] span[lang="${target}"]`)];
 
@@ -638,15 +642,11 @@ describe("WordCard Wiktionary's line", () => {
   });
 
   // @spec WIKT-1
-  it("asks Wiktionary only for the pairs it is built for", async () => {
-    vi.stubGlobal(
-      "fetch",
-      mockSources({ groups: [{ pos: "noun", terms: ["umbrella"] }], translation: "umbrella" }, { terms: ["x"], title: "x" }),
-    );
-    render(<WordCard word="Schirm" forms={["Schirm"]} source="de" target="en" onTargetChange={() => {}} />);
-    await screen.findByText("umbrella");
-    const urls = (fetch as unknown as { mock: { calls: [string][] } }).mock.calls.map(([u]) => String(u));
-    expect(urls.some((u) => u.includes("/api/wiktionary/"))).toBe(false);
+  it("asks Wiktionary only for the pairs it is built for, even when Google fails", async () => {
+    vi.stubGlobal("fetch", mockSources(null, { terms: ["x"], title: "x" }));
+    render(<WordCard word="Schirm" forms={["Schirm"]} source="de" target="ja" onTargetChange={() => {}} />);
+    await screen.findByText("couldn’t translate");
+    expect(urls().some((u) => u.includes("/api/wiktionary/"))).toBe(false);
   });
 
   it("names Wiktionary without a link where its edition has no page for the word", async () => {
@@ -674,5 +674,63 @@ describe("WordCard Wiktionary's line", () => {
     release();
     expect(await screen.findByRole("link", { name: "Wiktionary entry for sesteo" })).toBeInTheDocument();
     expect(sourceLines("de")).toHaveLength(2);
+  });
+});
+
+// Google's dictionary for a pair with English is direct, so Wiktionary's line stands in only
+// where Google's has nothing.
+describe("WordCard Wiktionary standing in for Google", () => {
+  // @spec WIKT-6
+  it("asks nothing of Wiktionary for a pair with English while Google answers", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockSources({ groups: [{ pos: "noun", terms: ["parasol"] }], translation: "parasol" }, { terms: ["x"], title: "x" }),
+    );
+    // A word of its own: `glossCache` keeps whatever another test's stub answered for it.
+    render(<WordCard word="Sonnenschirm" forms={["Sonnenschirm"]} source="de" target="en" onTargetChange={() => {}} />);
+    await screen.findByText("parasol");
+    expect(urls().some((u) => u.includes("/api/wiktionary/"))).toBe(false);
+  });
+
+  // @spec WIKT-6, WIKT-2
+  it.each([
+    ["de", "en", "Regenbogen", ["rainbow"]],
+    ["en", "es", "rainbow", ["arcoíris", "arco iris"]],
+  ] as const)("stands its line in for %s into %s when Google fails", async (source, target, word, terms) => {
+    vi.stubGlobal("fetch", mockSources(null, { terms: [...terms], title: word }));
+    render(<WordCard word={word} forms={[word]} source={source} target={target} onTargetChange={() => {}} />);
+    const wiktionary = await screen.findByRole("link", { name: `Wiktionary entry for ${word}` });
+    expect(wiktionary).toHaveAttribute("href", `https://${source}.wiktionary.org/wiki/${encodeURIComponent(word)}`);
+    expect(reading(sourceLines(target)[0]!)).toBe(terms.join(", "));
+    // Google's line still says what happened and leads to Google's own page.
+    expect(screen.getByText("couldn’t translate")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /google translate/i })).toBeInTheDocument();
+    // Asked only once Google's line had come back with nothing.
+    const asked = urls();
+    expect(asked.findIndex((u) => u.includes("/api/wiktionary/"))).toBeGreaterThan(
+      asked.findIndex((u) => u.includes("/api/translate/")),
+    );
+  });
+
+  // @spec WIKT-6
+  it("stands in where Google answers with nothing, too", async () => {
+    vi.stubGlobal("fetch", mockSources({ groups: [], translation: "" }, { terms: ["windbreak"], title: "Windschutz" }));
+    render(<WordCard word="Windschutz" forms={["Windschutz"]} source="de" target="en" onTargetChange={() => {}} />);
+    expect(await screen.findByRole("link", { name: "Wiktionary entry for Windschutz" })).toBeInTheDocument();
+    expect(screen.getByText("no translation")).toBeInTheDocument();
+  });
+
+  // Each landing would otherwise change the card's height, and the page below it with it.
+  it("keeps translating until Wiktionary's line lands, then lands both lines together", async () => {
+    let release = () => {};
+    const held = new Promise<void>((r) => (release = r));
+    vi.stubGlobal("fetch", mockSources(null, { terms: ["staircase"], title: "Treppenhaus" }, held));
+    render(<WordCard word="Treppenhaus" forms={["Treppenhaus"]} source="de" target="en" onTargetChange={() => {}} />);
+    await waitFor(() => expect(urls().some((u) => u.includes("/api/wiktionary/"))).toBe(true));
+    expect(screen.getByText("Translating…")).toBeInTheDocument();
+    expect(screen.queryByText("couldn’t translate")).not.toBeInTheDocument();
+    release();
+    expect(await screen.findByRole("link", { name: "Wiktionary entry for Treppenhaus" })).toBeInTheDocument();
+    expect(screen.getByText("couldn’t translate")).toBeInTheDocument();
   });
 });

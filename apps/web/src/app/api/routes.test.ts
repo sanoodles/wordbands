@@ -344,9 +344,22 @@ describe("GET /api/wiktionary/[word]", () => {
     expect(title).toBe("Wasser");
   });
 
+  // @spec WIKT-5, WIKT-6
+  it("answers the pairs with English from committed data too", async () => {
+    const spy = vi.fn();
+    vi.stubGlobal("fetch", spy);
+    const into = await (await ask("Wasser", "source=de&target=en")).json();
+    expect(into.terms).toContain("water");
+    expect(into.levels.water).toMatchObject({ key: "A1" });
+    const from = await (await ask("water", "source=en&target=es")).json();
+    expect(from.terms).toContain("agua");
+    expect(from.title).toBe("water");
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("answers no terms for a pair or a word it has none for", async () => {
     for (const [word, query] of [
-      ["siesta", "source=es&target=en"],
+      ["siesta", "source=es&target=ja"],
       [MISSING, "source=es&target=de"],
       ["siesta", "source=es&target=__proto__"],
     ] as const) {

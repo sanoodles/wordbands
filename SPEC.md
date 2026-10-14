@@ -209,7 +209,7 @@ Wiktionary's translations follow the pair.
 | CREDIT-2 | Every language cites the works its defining levels' method follows: Blondin Massé et al. (2008), Vincent-Lamarre et al. (2016), Seidman (1983), West & Endicott (1935) and the Longman Dictionary of Contemporary English (1978) |
 | CREDIT-3 | Every language credits the Leipzig Corpora, since every language's casing is measured from them |
 | CREDIT-4 | Every language credits the lemmatization list under its license, since every language's ranking is lemma-merged |
-| CREDIT-5 | Where the word card shows Wiktionary's translations, the credits name both editions they come from. Elsewhere they name neither for translations |
+| CREDIT-5 | Where the word card can show Wiktionary's translations, the credits name both editions they come from. For a pair with English they say that the editions stand in where Google has nothing. Elsewhere they name neither for translations |
 
 ## ETYM — the etymology link
 
@@ -227,14 +227,17 @@ written in that language.
 Google reaches a pair without English through English, so a word takes on the senses of
 whichever English word it passes through. Each language's own Wiktionary translates into the
 others directly. The card shows both sources, each named, and leaves the reader to weigh them.
+Google's dictionary for a pair with English is direct, so there Wiktionary's line stands in
+only when Google's has nothing.
 
 | ID | Rule |
 | --- | --- |
-| WIKT-1 | Between Spanish, German, French, Italian and Portuguese, every direction shows Wiktionary's translations on a line of their own, beneath Google's. A pair with English, or with any other target, does not |
+| WIKT-1 | Between Spanish, German, French, Italian and Portuguese, every direction shows Wiktionary's translations on a line of their own, beneath Google's. A pair of English and one of those five shows it only as WIKT-6 says, and any other pair never does |
 | WIKT-2 | Each line ends with the name of its source, linked to that source's page for the word: Google Translate, or the entry in the source language's own Wiktionary |
 | WIKT-3 | Wiktionary's line is left out when every term on it is already on Google's |
 | WIKT-4 | Wiktionary's line holds at most four terms, each one word or two. Terms both editions give come first, then the more frequent in the target language |
 | WIKT-5 | Wiktionary's translations are served from committed data, with no call out, so they show when Google fails |
+| WIKT-6 | Between English and Spanish, German, French, Italian or Portuguese, in either direction, the card shows Wiktionary's line only where Google's line has nothing, and asks for it only then |
 
 ## FIG — the defining figure
 
