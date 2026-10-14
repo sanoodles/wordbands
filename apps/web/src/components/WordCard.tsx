@@ -555,9 +555,10 @@ export default function WordCard({
                     />
                   ) : (
                     <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-x-3 tw-gap-y-2">
-                      {/* 44px, so it stays level with the select where the pill wraps below. */}
+                      {/* 44px, so it stays level with the select where the pill wraps below.
+                          A failure names no source: Google's own page still works. */}
                       <span className="tw-flex tw-min-h-[44px] tw-items-center tw-body-medium text-muted-aaa">
-                        no translation
+                        {status === "error" ? "couldn’t translate" : "no translation"}
                       </span>
                       <SourceLink
                         href={googleHref}

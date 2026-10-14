@@ -301,18 +301,19 @@ describe("WordCard where Google has nothing", () => {
       Response.json({ translation: "", senses: [], groups: [], levels: {} }),
   };
 
-  // A word per case, since `glossCache` keeps an answer that landed.
+  // A word per case, since `glossCache` keeps an answer that landed. A failure reads as
+  // temporary, not as a word with no translation.
   it.each([
-    ["fails", "Fernweh"],
-    ["answers with no translation", "Heimweh"],
-  ] as const)("spells out Google Translate beside the status when Google %s", async (how, word) => {
+    ["fails", "Fernweh", "couldn’t translate"],
+    ["answers with no translation", "Heimweh", "no translation"],
+  ] as const)("says what happened and spells out Google Translate when Google %s", async (how, word, status) => {
     vi.stubGlobal("fetch", vi.fn(async () => ANSWERS[how]()));
     render(<WordCard word={word} forms={[word]} source="de" target="en" onTargetChange={() => {}} />);
     const link = await screen.findByRole("link", { name: `Google Translate: ${word} in English` });
     expect(link).toHaveTextContent(/^Google Translate/);
     expect(link).toHaveAttribute("target", "_blank");
     // A control of its own, not the end of the status sentence.
-    expect(screen.getByText("no translation")).not.toContainElement(link);
+    expect(screen.getByText(status)).not.toContainElement(link);
   });
 });
 
@@ -631,8 +632,8 @@ describe("WordCard Wiktionary's line", () => {
     render(<WordCard word="alienígena" forms={["alienígena"]} source="es" target="de" onTargetChange={() => {}} />);
     expect(await screen.findByRole("link", { name: "Wiktionary entry for alienígena" })).toBeInTheDocument();
     expect(reading(sourceLines("de")[0]!)).toBe("Alien, Außerirdischer");
-    // Google's line says it found nothing, and still leads to Google's own page.
-    expect(screen.getByText("no translation")).toBeInTheDocument();
+    // Google's line says its lookup failed, and still leads to Google's own page.
+    expect(screen.getByText("couldn’t translate")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /google translate/i })).toBeInTheDocument();
   });
 

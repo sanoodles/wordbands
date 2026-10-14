@@ -882,7 +882,8 @@ How `build-wiktionary.ts` builds one direction:
 | The source's name trails its line | The line is a translation first. Leading names would also start the two lists at different places |
 | The source's name is `select-none` | A copied line stays the translation, as with the badges |
 | A link only where the edition has a page | In es→de 752 Spanish words have none under any casing, and in de→es 60 German. The name stays, as plain text |
-| Where Google has nothing, its link becomes a pill | The line reads `no translation`, then **Google Translate** in full. Google's page is then the only way to Google's answer. So the pill outranks the etymology link, with full-contrast text and a `line-strong` border. A failed lookup and an empty answer look the same. So does a line with Wiktionary's beneath it, because the pill belongs to Google's line |
+| Where Google has nothing, its line says why | `couldn’t translate` where the lookup failed, `no translation` where Google answered empty. A failure is usually Google refusing our server for a while, so it must not read as a word with no translation. It names no source, because Google's own page still works for the reader |
+| Its link then becomes a pill | **Google Translate**, in full. Google's page is the only way left to Google's answer. So the pill outranks the etymology link, with full-contrast text and a `line-strong` border. A line with Wiktionary's beneath it gets the pill too, because the pill belongs to Google's line |
 
 | Known cost | Detail |
 | --- | --- |
