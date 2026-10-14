@@ -56,8 +56,9 @@ TAB THROUGH THE PAGE
   28. Vincent-Lamarre et al. (2016), link
   29. Seidman, 1983, link
   30. Google Translate, link
-  31. What these words mean, button
-  32. samuelgomezcrespo@gmail.com, link
+  31. English Wiktionary, link
+  32. What these words mean, button
+  33. samuelgomezcrespo@gmail.com, link
 
 THE WORD CLOUD — a listbox of the band's words
 ------------------------------------------------------------------------
