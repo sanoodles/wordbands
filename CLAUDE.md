@@ -725,6 +725,34 @@ for i in $(seq 1 130); do
 done | sort | uniq -c
 ```
 
+### When Google refuses our server
+
+`GATE-8` is the rule. Google refuses Vercel's egress in spells. On 2026-10-09 every
+`/api/translate` call answered a fast 502 from about 15:00 to 15:20 UTC, and again from
+17:56, while the same calls from a local machine succeeded. What Google answers decides
+what can be done about it, so the route says it.
+
+| Where | Reads |
+| --- | --- |
+| The 502's body | The command below |
+| Vercel's runtime logs, filtered on `[translate]` | The same reason, with the pair. Hobby keeps an hour |
+
+A word anyone has looked up comes back 200 from the data cache, refusal or not, so the
+command asks for a new one each time. The gate takes any string without whitespace:
+
+```sh
+curl -s "https://wordbands.vercel.app/api/translate/probe$RANDOM?source=de&target=ja"
+```
+
+| Reading | Points to |
+| --- | --- |
+| `429` from `translate.googleapis.com/translate_a/single` | A rate limit on the `gtx` endpoint for our IP. Another endpoint might still answer. Untested |
+| A path on `www.google.com/sorry` | Google's abuse check, reached by a redirect. Another Google endpoint is unlikely to help |
+| A `TypeError` and a code | The call got no answer at all, such as a reset connection |
+
+Neither names the word. It is what the reader typed, and the pair is enough, because a
+refusal is per IP rather than per word.
+
 ### Keeping the head warm
 
 `WARM-1` to `WARM-5` are the rules.

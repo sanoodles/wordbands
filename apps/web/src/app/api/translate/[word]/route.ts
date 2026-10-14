@@ -18,6 +18,16 @@ import {
 // short TTL. The warm pass owns the head's freshness, so this number is really the tail's.
 export const revalidate = 15552000; // 180 days; a literal, since Next cannot evaluate arithmetic here
 
+/** Google answered with something other than a translation. */
+class UpstreamError extends Error {}
+
+// Never the query, which holds the word.
+function answered(res: Response): string {
+  const at = res.url ? new URL(res.url) : null;
+  const type = res.headers.get("content-type") ?? "no content type";
+  return `${res.status} ${type}${at ? ` from ${at.host}${at.pathname}` : ""}`;
+}
+
 async function gtx(
   word: string,
   source: string,
@@ -25,8 +35,21 @@ async function gtx(
   dict: boolean,
 ): Promise<unknown> {
   const res = await fetch(gtxUrl(word, source, target, dict), { next: { revalidate } });
-  if (!res.ok) throw new Error(String(res.status));
-  return res.json();
+  if (!res.ok) throw new UpstreamError(answered(res));
+  try {
+    return await res.json();
+  } catch {
+    // A refusal can arrive as a 200: an HTML page at the end of a redirect.
+    throw new UpstreamError(answered(res));
+  }
+}
+
+// Name and code only: a message could carry our internals into the response.
+function failure(err: unknown): string {
+  if (err instanceof UpstreamError) return err.message;
+  const name = err instanceof Error ? err.name : "unknown error";
+  const code = (err as { cause?: { code?: unknown } } | null)?.cause?.code;
+  return typeof code === "string" ? `${name} ${code}` : name;
 }
 
 export async function GET(
@@ -80,8 +103,11 @@ export async function GET(
       // @spec BAND-9
       levels: levelsOf(target, [...groups.flatMap((g) => g.terms), translation]),
     });
-  } catch {
-    // @spec GATE-6
-    return new Response("upstream error", { status: 502 });
+  } catch (err) {
+    // The 502 says it too: Hobby keeps an hour of logs, and refusals come in spells.
+    // @spec GATE-6, GATE-8
+    const why = failure(err);
+    console.error(`[translate] ${source}->${target} ${why}`);
+    return new Response(`upstream error: ${why}`, { status: 502 });
   }
 }

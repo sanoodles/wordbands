@@ -124,7 +124,10 @@ function mockGtx(translation: string, pos: string, entries: [string, number][]) 
 const translate = (word: string, qs: string) =>
   translateGET(req(`/api/translate/x?${qs}`), { params: promise({ word }) });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 // This route answers by calling Google, so what it declines to forward matters as much as
 // what it returns: unguarded it is a general-purpose translation relay on our own quota.
@@ -218,7 +221,58 @@ describe("GET /api/translate/[word] output", () => {
   // @spec GATE-6
   it("answers 502 when the upstream call fails", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 500 })));
+    vi.spyOn(console, "error").mockImplementation(() => {});
     expect((await translate("water", "source=en&target=es")).status).toBe(502);
+  });
+
+  /** An answer as Google sends it, from the URL it ended at. */
+  const answer = (body: string, status: number, type: string, url: string) => {
+    const res = new Response(body, { status, headers: { "content-type": type } });
+    Object.defineProperty(res, "url", { value: url });
+    return res;
+  };
+
+  // A refusal is intermittent and Hobby keeps an hour of logs, so the 502 has to say it.
+  // @spec GATE-8
+  it("says what Google answered, in the log and the 502, and never the word", async () => {
+    const refusal = answer(
+      "<html>unusual traffic</html>",
+      429,
+      "text/html; charset=UTF-8",
+      "https://www.google.com/sorry/index?continue=translate&q=fernweh",
+    );
+    vi.stubGlobal("fetch", vi.fn(async () => refusal));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await translate("Fernweh", "source=de&target=en");
+    expect(res.status).toBe(502);
+    const body = await res.text();
+    expect(body).toBe("upstream error: 429 text/html; charset=UTF-8 from www.google.com/sorry/index");
+    const line = log.mock.calls.map((c) => c.join(" ")).find((l) => l.startsWith("[translate]"));
+    expect(line).toBe("[translate] de->en 429 text/html; charset=UTF-8 from www.google.com/sorry/index");
+    expect(`${body} ${line}`.toLowerCase()).not.toContain("fernweh");
+  });
+
+  // Next caches a 200, so this is the refusal that would otherwise go unexplained.
+  // @spec GATE-8
+  it("counts an HTML page at the end of a redirect as a failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => answer("<html>captcha</html>", 200, "text/html", "https://www.google.com/sorry/index")),
+    );
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await translate("water", "source=en&target=es");
+    expect(res.status).toBe(502);
+    expect(await res.text()).toBe("upstream error: 200 text/html from www.google.com/sorry/index");
+  });
+
+  // @spec GATE-8
+  it("names the error that stopped the call, by its name and code alone", async () => {
+    const reset = new TypeError("fetch failed", { cause: { code: "ECONNRESET" } });
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(reset)));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await translate("water", "source=en&target=es");
+    expect(res.status).toBe(502);
+    expect(await res.text()).toBe("upstream error: TypeError ECONNRESET");
   });
 
   // @spec GATE-7

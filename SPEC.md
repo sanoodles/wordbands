@@ -68,6 +68,7 @@ the word card could have made.
 | GATE-5 | A refused request answers 400, and Google is not called |
 | GATE-6 | An upstream failure answers 502 |
 | GATE-7 | Without `dict=1` the word is lowercased; with it the casing is kept |
+| GATE-8 | An upstream failure is logged, and its 502 says what went wrong: Google's status, content type, and the host and path that answered, or the name and code of the error that stopped the call. Neither names the word |
 
 ## WARM — the scheduled pass over the head
 
