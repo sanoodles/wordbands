@@ -659,7 +659,8 @@ function Chart({
       ctx.beginPath();
       ctx.arc(anchorAt[0], anchorAt[1], 4, 0, Math.PI * 2);
       ctx.fill();
-      // The accent is 1.62:1 on the light ground, so the edge is what finds it there.
+      // The edge is what finds the accent: ink on the light ground, the ground itself in dark.
+      if (dark) ctx.globalCompositeOperation = "destination-out";
       ctx.strokeStyle = ink;
       ctx.lineWidth = 1.5;
       ctx.stroke();
