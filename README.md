@@ -82,7 +82,7 @@ pnpm typecheck   # type-check everything
 ```
 
 A push to `main` deploys, so `.githooks/pre-push` type-checks and runs the suite first —
-about ten seconds. Git only looks in `.githooks` once `core.hooksPath` points there, hence
+about forty seconds. Git only looks in `.githooks` once `core.hooksPath` points there, hence
 the one-time setup above. `git push --no-verify` skips it.
 
 ## Rebuild the data

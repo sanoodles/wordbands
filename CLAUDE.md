@@ -1218,7 +1218,7 @@ Both take a target, and `pnpm a11y:check http://localhost:3000` against a runnin
 dev` reads the same as production — so a change of ours can be seen before it is pushed.
 Unlike `decode:check`, the two targets are not expected to differ: nothing here is a
 property of the edge. It stays out of the pre-push hook all the same, since it needs a
-browser and a server and takes about forty seconds against the hook's ten.
+browser and a server, and its forty seconds would double the hook's.
 
 It **asserts nothing**, which is the point. The three layers divide like this:
 

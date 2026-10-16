@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs before `git push`. A push here deploys, so this is the last place a broken commit
-# can be stopped for free — the checks take about ten seconds together.
+# can be stopped for free — the checks take about forty seconds together.
 #
 # Deliberately not `pnpm build`: it writes into apps/web/.next and would corrupt a running
 # `pnpm dev`. Vercel builds on its own anyway, and `next build` type-checks there.
