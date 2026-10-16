@@ -5,9 +5,42 @@ allowBuilds:
   esbuild: true
   sharp: false
 
-# A peer range we accept rather than match. Each entry states its reason on the line above
-# it, and `pnpm ignores:check` fails when the package's own range stops matching the claim.
+# Peer ranges we accept rather than match. Above each entry is the range the package
+# declares, and `pnpm ignores:check` fails when that stops matching the lockfile. Why each
+# is safe is in CLAUDE.md, under Dependency updates.
 peerDependencyRules:
   allowedVersions:
     # accepted-over: eslint-plugin-jsx-a11y peers eslint ^3 || ^4 || ^5 || ^6 || ^7 || ^8 || ^9
     eslint-plugin-jsx-a11y>eslint: "10"
+    # accepted-over: @frontify/fondue peers react ^18
+    "@frontify/fondue>react": "19"
+    # accepted-over: @frontify/fondue peers react-dom ^18
+    "@frontify/fondue>react-dom": "19"
+    # accepted-over: @frontify/fondue-components peers react ^18
+    "@frontify/fondue-components>react": "19"
+    # accepted-over: @frontify/fondue-components peers react-dom ^18
+    "@frontify/fondue-components>react-dom": "19"
+    # accepted-over: @frontify/fondue-icons peers react ^18
+    "@frontify/fondue-icons>react": "19"
+    # accepted-over: @frontify/fondue-charts peers react ^18
+    "@frontify/fondue-charts>react": "19"
+    # accepted-over: @frontify/fondue-charts peers react-dom ^18
+    "@frontify/fondue-charts>react-dom": "19"
+    # accepted-over: @frontify/fondue-rte peers react ^18
+    "@frontify/fondue-rte>react": "19"
+    # accepted-over: @frontify/fondue-rte peers react-dom ^18
+    "@frontify/fondue-rte>react-dom": "19"
+    # accepted-over: react-datepicker peers react ^16.9.0 || ^17 || ^18
+    "react-datepicker>react": "19"
+    # accepted-over: react-datepicker peers react-dom ^16.9.0 || ^17 || ^18
+    "react-datepicker>react-dom": "19"
+    # accepted-over: react-onclickoutside peers react ^15.5.x || ^16.x || ^17.x || ^18.x
+    "react-onclickoutside>react": "19"
+    # accepted-over: react-onclickoutside peers react-dom ^15.5.x || ^16.x || ^17.x || ^18.x
+    "react-onclickoutside>react-dom": "19"
+    # accepted-over: react-popper peers react ^16.8.0 || ^17 || ^18
+    "react-popper>react": "19"
+    # accepted-over: react-popper peers react-dom ^16.8.0 || ^17 || ^18
+    "react-popper>react-dom": "19"
+    # accepted-over: slate-hyperscript peers slate >=0.114.3
+    slate-hyperscript>slate: "0.102"

@@ -1569,16 +1569,19 @@ Reading the installed lockfile is the whole scope on purpose: an upstream releas
 not taken cannot unblock anything, so this fires on the commit that upgrades the blocker
 and needs no schedule of its own.
 
-One peer range is accepted rather than matched, under `peerDependencyRules` in
+Some peer ranges are accepted rather than matched, under `peerDependencyRules` in
 `pnpm-workspace.yaml`:
 
 | Accepted | Over | Why it is safe |
 | --- | --- | --- |
 | eslint 10 for `eslint-plugin-jsx-a11y` | Its peer range, `^3` to `^9`. 6.10.2, from October 2024, is its latest release | Every rule runs under eslint 10. A component with eight known violations reported all eight, with no rule crashing (2026-10-16) |
+| React 19 for `@frontify/fondue`, `fondue-components` and `fondue-icons` | `^18`. 13.10.0 is fondue's latest release | `@frontify/fondue/components` and `/icons` are all we import, and they only re-export the other two. What we use of those — `Select`, `Tooltip`, `ThemeProvider`, `SegmentedControl`, `LoadingCircle`, `TextInput` and the icons — renders under React 19, in the suite and on the deployed page |
+| React 19 for `fondue-charts`, `fondue-rte`, `react-datepicker`, `react-onclickoutside` and `react-popper` | `^18`, or ranges that end at 18 | Nothing we import loads them. They belong to fondue's main entry and its rich-text editor |
+| slate 0.102 for `slate-hyperscript` | `>=0.114.3` | Both belong to fondue's rich-text editor, which nothing we import loads |
 
 Accepting a range is the same kind of decision as an ignore, so it carries the same kind of
 claim: a `# accepted-over:` line above the entry, which `pnpm ignores:check` also compares
-against the lockfile. It fails when the plugin's own range changes, which is the moment to
+against the lockfile. It fails when a package's own range changes, which is the moment to
 see whether the acceptance can go.
 
 ## Vendored skills
