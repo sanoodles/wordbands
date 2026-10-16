@@ -1596,6 +1596,7 @@ upstreams, and nothing in the repo pulls on them, so nothing would notice them r
 | `next-dev-loop` | same | same |
 | `next-partial-prefetching-adoption` | same | same |
 | `next-partial-prefetching-optimizer` | same | same |
+| `next-bundle-optimizer` | same | same |
 | `fondue` | `Frontify/fondue@main`, `packages/sdk/skills/fondue/` | `npx skills update`, Vercel's skills CLI |
 
 | Command | Does |
