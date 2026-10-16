@@ -89,8 +89,10 @@ const PAN = { key: 0.2, button: 0.5 };
 const WHEEL = 0.0016;
 /** How far a press may wander and still be a pick rather than a drag. */
 const SLOP = 6;
-/** How far off the plot a mark can still reach into it: the anchor dot and its ring. */
-const REACH = 5;
+/** The anchor in CSS px: a dot, and a ring around it that the eye finds before the dot. */
+const ANCHOR = { dot: 5, ring: 11, ringWidth: 2, edge: 1.5 };
+/** How far off the plot a mark can still reach into it: the anchor's ring and its edge. */
+const REACH = Math.ceil(ANCHOR.ring + ANCHOR.ringWidth / 2 + ANCHOR.edge);
 /** The least room between two rank labels, and how far one keeps from either end of the row. */
 const TICK = { gap: 56, inset: 16 };
 /** What a rank label may count in, finest first. */
@@ -655,15 +657,26 @@ function Chart({
     }
     ctx.globalAlpha = 1;
     if (anchorAt) {
+      const [ax, ay] = anchorAt;
+      // The edge is what finds the accent: ink on the light ground, the ground itself in dark.
+      const edge = (width: number) => {
+        if (dark) ctx.globalCompositeOperation = "destination-out";
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = width;
+        ctx.stroke();
+        ctx.globalCompositeOperation = "source-over";
+      };
+      ctx.beginPath();
+      ctx.arc(ax, ay, ANCHOR.ring, 0, Math.PI * 2);
+      edge(ANCHOR.ringWidth + 2 * ANCHOR.edge);
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = ANCHOR.ringWidth;
+      ctx.stroke();
       ctx.fillStyle = accent;
       ctx.beginPath();
-      ctx.arc(anchorAt[0], anchorAt[1], 4, 0, Math.PI * 2);
+      ctx.arc(ax, ay, ANCHOR.dot, 0, Math.PI * 2);
       ctx.fill();
-      // The edge is what finds the accent: ink on the light ground, the ground itself in dark.
-      if (dark) ctx.globalCompositeOperation = "destination-out";
-      ctx.strokeStyle = ink;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+      edge(ANCHOR.edge);
     }
     ctx.restore();
     plot.current = { w, h };
