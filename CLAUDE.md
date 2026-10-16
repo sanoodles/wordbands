@@ -1569,6 +1569,18 @@ Reading the installed lockfile is the whole scope on purpose: an upstream releas
 not taken cannot unblock anything, so this fires on the commit that upgrades the blocker
 and needs no schedule of its own.
 
+One peer range is accepted rather than matched, under `peerDependencyRules` in
+`pnpm-workspace.yaml`:
+
+| Accepted | Over | Why it is safe |
+| --- | --- | --- |
+| eslint 10 for `eslint-plugin-jsx-a11y` | Its peer range, `^3` to `^9`. 6.10.2, from October 2024, is its latest release | Every rule runs under eslint 10. A component with eight known violations reported all eight, with no rule crashing (2026-10-16) |
+
+Accepting a range is the same kind of decision as an ignore, so it carries the same kind of
+claim: a `# accepted-over:` line above the entry, which `pnpm ignores:check` also compares
+against the lockfile. It fails when the plugin's own range changes, which is the moment to
+see whether the acceptance can go.
+
 ## Vendored skills
 
 `.claude/skills/` holds four skills and none of them is ours. They come from two
