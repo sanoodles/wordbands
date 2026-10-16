@@ -39,7 +39,7 @@ verifies the claim exists, not that it bites.
 | Prefix | Covers | Proof runs |
 | --- | --- | --- |
 | `GATE` | What `/api/translate` agrees to forward to Google | PR |
-| `WARM` | The scheduled pass that keeps the de<->en head warm | PR |
+| `GTX` | Google's answers for the de<->en head, served from committed data | PR |
 | `ROUTE` | Route params: decoding, status codes, no 5xx | PR, and post-deploy for `ROUTE-1`–`ROUTE-6` |
 | `BAND` | Band definitions, word lookup, levels, typeahead | PR |
 | `FILTER` | What the committed artifacts must and must not contain | PR |
@@ -70,18 +70,16 @@ the word card could have made.
 | GATE-7 | Without `dict=1` the word is lowercased; with it the casing is kept |
 | GATE-8 | An upstream failure is logged, and its 502 says what went wrong: Google's status, content type, and the host and path that answered, or the name and code of the error that stopped the call. Neither names the word |
 
-## WARM — the scheduled pass over the head
+## GTX — Google's answers for the head
 
-A cron walks the A1+A2 head of de<->en, 100 words a day, so the words a learner browses
-are always in the data cache rather than waiting on a first visitor to fetch them.
+Between German and English, the words a learner meets first are answered from committed
+data. Google is asked only about the rest.
 
 | ID | Rule |
 | --- | --- |
-| WARM-1 | The warm route answers 401 without the configured cron secret, and Google is not called. An unset secret refuses every request rather than opening the route |
-| WARM-2 | A day's slice is 100 words, derived from the date alone, and consecutive days cover the whole head before wrapping |
-| WARM-3 | Every word in the pass is one `/api/translate` would accept, and a case-homograph contributes both of its casings |
-| WARM-4 | The pass reports how many of the words it asked for answered without going upstream |
-| WARM-5 | The pass logs its result, since the response is returned to a scheduler that discards it |
+| GTX-1 | Between German and English, in either direction, a head word's dictionary lookup is answered from committed data, and Google is not called. The head is the source language's A1 and A2 bands, with each casing of a case-homograph counted apart |
+| GTX-2 | A word the committed data lacks is asked of Google like any other, so the data may trail the word lists without anything failing |
+| GTX-3 | Every committed answer carries a translation |
 
 ## ROUTE — params, decoding and status
 

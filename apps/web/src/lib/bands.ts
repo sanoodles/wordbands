@@ -328,6 +328,38 @@ export async function getWiktionary(
   return { terms, title };
 }
 
+interface GoogleArtifact {
+  answers: Record<string, unknown>;
+}
+
+// Google's dictionary answers for the head of each pair (built by scripts/build-google.ts).
+// Dynamic for the reason Wiktionary's are: one route reads them, one direction at a time.
+const GOOGLE: Record<string, () => Promise<{ default: GoogleArtifact }>> = {
+  "de-en": () => import("../../data/google.de-en.json"),
+  "en-de": () => import("../../data/google.en-de.json"),
+};
+const googleCache = new Map<string, Map<string, unknown>>();
+
+/** The pairs `getGoogleAnswer` has answers for, as `source-target`. */
+export const GOOGLE_PAIRS = Object.keys(GOOGLE);
+
+/**
+ * Google's committed answer to a dictionary lookup of `word`, as `gtx` returns it.
+ * Undefined where the pair or the word has none, which leaves the lookup to Google.
+ * @spec GTX-1
+ */
+export async function getGoogleAnswer(source: string, target: string, word: string): Promise<unknown> {
+  const pair = `${source}-${target}`;
+  if (!Object.hasOwn(GOOGLE, pair)) return undefined;
+  let answers = googleCache.get(pair);
+  if (!answers) {
+    // A Map, for the reason `resolveForm` uses one: the key is caller input.
+    answers = new Map(Object.entries((await GOOGLE[pair]!()).default.answers));
+    googleCache.set(pair, answers);
+  }
+  return answers.get(word);
+}
+
 /**
  * Everything the defining figure plots: the level of every ranked word, and the words
  * themselves so a point can name itself.

@@ -29,6 +29,34 @@ It runs in `pr.yml` and in the pre-push hook, parses text and needs no network. 
 file needs to talk about a rule it names the ID and says why the rule is what it is; the
 statement itself stays in `SPEC.md`.
 
+## Calling a third party
+
+**Read every outside source slowly.** This holds for build scripts, for probes and for
+one-off measurements alike. A refusal costs far more than a slow run: Google limits calls by
+address, keeps refusing for a long time once it starts, and Vercel's address is shared with
+other customers.
+
+| Rule | Detail |
+| --- | --- |
+| One call at a time | Never several at once to the same host |
+| A pause after each call | Half a second or more. A script names its pace in a constant |
+| Back off on a refusal | A minute or more before the next try, and stop after a few. Never retry at speed |
+| Keep what was fetched | A script saves as it goes and resumes, so stopping costs a wait, not the work |
+| Probes count too | A measurement that calls our own routes calls Google through them, so it keeps the same pace |
+
+Measured on 2026-10-16: four calls at a time with no pause, about 45 a second, were refused
+after about 5,000 calls, and this machine stayed refused for more than half an hour.
+
+**Nor may it block the development loop or take the site down.** A fetch runs on its own,
+and its result arrives as data someone commits.
+
+| Rule | Detail |
+| --- | --- |
+| Out of the loop | Nothing in `pnpm dev`, the pre-push hook, `pr.yml` or the Vercel build calls a third party or waits on data fetched from one. Tests stub the network |
+| Its own command or schedule | A fetch runs as its own command, like `build:google`, or as a scheduled workflow. Either can run in the background while work goes on |
+| Lag is allowed | Fetched data may trail what it describes. The app falls back to the live call, and no check fails on the lag. A script reports it instead, like `build:google --check` |
+| A failure degrades a feature, never the page | Google failing leaves the card with Wiktionary's line or a link to Google Translate. A scheduled job failing leaves the site as it was |
+
 ## Source and target
 
 Two languages. They are `source` and `target` everywhere — symbols, URL, storage keys,
@@ -68,15 +96,16 @@ ours. `source`/`target` map onto them at that one call.
 | `src/lib/scenario.ts` | URL encode / decode, `pageTitle` |
 | `src/lib/site.ts` | `SITE_URL`, `SITE_NAME`, `SITE_DESCRIPTION` — what names the site to a machine |
 | `src/lib/translate.ts` | Google Translate fetching and parsing, and the relay gate |
-| `src/app/api/cron/warm/route.ts` | The scheduled pass that keeps the de<->en head warm |
 | `next.config.mjs` | Response headers, the CSP, `distDir` |
-| `vercel.json` | The build commands, and the cron schedule behind the warm pass |
+| `vercel.json` | The build commands |
 | `scripts/build-bands.ts` | Artifact build, the `LANGS` table |
 | `scripts/build-wiktionary.ts` | Wiktionary translation build, the `LANGS` list |
+| `scripts/build-google.ts` | Google's answers for the head, the `PAIRS` list |
 | `data/wordbands.<code>.json` | Committed artifact, one per language |
 | `data/forms.<code>.json` | Committed artifact: inflected form -> the indexed word it belongs to |
 | `data/defining.<code>.json` | Committed artifact: one defining level per ranked word, emitted by the defining-vocabulary repo |
 | `data/wiktionary.<source>-<target>.json` | Committed artifact: Wiktionary's translations of each source word, and the page titles that differ from it |
+| `data/google.<source>-<target>.json` | Committed artifact: Google's raw answer to each head word's dictionary lookup, de<->en |
 | `node_modules/next/dist/docs/` | Next.js's own guides for the installed version, which is newer than a model's training data. Read the relevant one before using a Next API. `agentRules: false` in `next.config.mjs` stops `next dev` writing this advice into `apps/web/` as its own AGENTS.md and CLAUDE.md |
 
 Paths are relative to `apps/web/`.
@@ -203,6 +232,7 @@ has answered. The licence is named here; the question is not settled here.
 | `pnpm --filter @wordbands/web build:bands` | Rebuild every language |
 | `pnpm --filter @wordbands/web build:bands <code>` | Rebuild one |
 | `pnpm --filter @wordbands/web build:wiktionary` | Rebuild Wiktionary's translations, all 30 directions. About 3m40s, at 2.6GB |
+| `pnpm --filter @wordbands/web build:google` | Fetch Google's answers for the de<->en head that the files lack. `--refresh` fetches every one again, and `--check` reports the gap without fetching. About an hour for all of them |
 
 To add a language: drop its inputs in `data/`, add a `LANGS` entry in the build script, add
 it to `SOURCE_LANG_META` and to `ETYMOLOGY` beside it, and add the registry import in
@@ -737,8 +767,9 @@ what can be done about it, so the route says it.
 | The 502's body | The command below |
 | Vercel's runtime logs, filtered on `[translate]` | The same reason, with the pair. Hobby keeps an hour |
 
-A word anyone has looked up comes back 200 from the data cache, refusal or not, so the
-command asks for a new one each time. The gate takes any string without whitespace:
+A head word of de<->en comes back 200 from committed data, refusal or not, and so can a
+word looked up in the last few hours. So the command asks for a new one each time. The gate
+takes any string without whitespace:
 
 ```sh
 curl -s "https://wordbands.vercel.app/api/translate/probe$RANDOM?source=de&target=ja"
@@ -753,69 +784,71 @@ curl -s "https://wordbands.vercel.app/api/translate/probe$RANDOM?source=de&targe
 Neither names the word. It is what the reader typed, and the pair is enough, because a
 refusal is per IP rather than per word.
 
-### Keeping the head warm
+### Google's answers for the head
 
-`WARM-1` to `WARM-5` are the rules.
+`GTX-1` to `GTX-3` are the rules. Between German and English, the head is answered from
+`data/google.<source>-<target>.json`. Each entry is Google's raw answer to the card's
+dictionary lookup, so the route's parsers read it exactly as they read a live one.
 
 | Number | Value |
 | --- | --- |
-| Head words | 6,114 — ranks 1-3,000 of each language, each casing counted separately |
-| A full pass | 61 days |
-| The entries' own TTL | 180 days |
-
-The pass owns the head's freshness whatever the TTL says, so the TTL covers two other
-things: how stale a *tail* entry may get, and how long the head survives if the pass stops.
-At 180 against a 61-day pass that grace is about 119 days. The outbound rate is about one
-request every fifteen minutes, which is why this does not spend the egress IP the way a
-bulk backfill would; halving the daily slice would still pass inside the TTL.
+| Head words | 6,114: A1 and A2 of each language, ranks 1–3,000, each casing counted apart |
+| Size | 1.9MB de→en, 2.7MB en→de |
+| A full build | About an hour, one call at a time and half a second apart |
 
 | Load-bearing detail | Why |
 | --- | --- |
-| It calls the translate route, not `gtx` directly | The cache key is the gtx URL that route's own fetch builds, so warming any other way fills a key nothing reads. Calling its own URL over HTTP would instead run the pass into the Vercel firewall rule in front of `/api/translate`, keyed by IP at the size of one run |
-| Fail-closed on the secret (`WARM-1`) | This route spends our Google quota on demand, so fail-open is a faucet for anyone who guesses the path |
-| The date rather than a stored cursor (`WARM-2`) | A redeploy or a cold start must not restart the rotation, and a date needs nothing to persist it. It also makes a hand-triggered run idempotent with the scheduled one |
-| Four at a time, `maxDuration = 60` | Running the slice sequentially would risk the function timeout |
-| Daily, `0 18 * * *` | Hobby allows one cron run a day and nothing finer — a sub-daily expression fails the deploy rather than degrading. Its scheduling precision is per-hour, so the run lands somewhere in 18:00-18:59 UTC. The hour is chosen to be a waking one, because Hobby keeps logs for only an hour after the run; the slice comes from the UTC day, so the choice does not change which words are warmed |
+| Built here, not on Vercel | Google limits calls by address, and Vercel's is shared with other customers |
+| One call at a time, half a second apart | The rule in Calling a third party, above. A rerun fetches only what the files lack, so a refusal costs a wait, not the work |
+| The raw answer, not the route's output | The parsers stay live: a change to `MIN_RELATIVE_SCORE` or to the group limit needs no rebuild. Only Google's wording is frozen |
+| Looked up in `gtx()`, before `fetch` | Every Google call goes through it, so the pivot's English hop is answered too when its term is an English head word |
+| Only a dictionary lookup | The card always asks with `dict=1`, which keeps the casing. So the key is the word exactly as the card sends it |
+| Read through a `Map` | The key is caller input, which is why `resolveForm` uses one too |
+| Imported dynamically, one direction at a time | One route reads it, as with Wiktionary's artifacts |
+
+| Known cost | Detail |
+| --- | --- |
+| Google's wording is frozen at the build | It moves slowly. `--refresh` fetches every answer again |
+| Only de<->en | Every other pair's head still goes to Google, through the cache. A pair is one row in `PAIRS` and one in `GOOGLE` |
+| A rebuild of `wordbands.de.json` or `wordbands.en.json` | It changes the head. Until `build:google` runs, the new head words are asked of Google (`GTX-2`), and `build:google --check` says how many |
+
+### Past the head: the data cache
+
+Every other lookup is cached by Next's fetch cache, with `revalidate` at 180 days. That number
+is only how long an entry counts as fresh. Vercel's data cache docs say:
+
+| Rule | What it means here |
+| --- | --- |
+| Each region has its own cache | Hobby runs functions in a single region, so every lookup shares one |
+| It persists across deployments | A deploy does not empty it |
+| On Hobby, every project in the team shares one cache | defining-vocabulary's entries take space from the same limit |
+| A fixed size, with no figure published. When full, the least recently read entries go first | An entry can go long before it goes stale |
+
+Measured on production on 2026-10-14 and 2026-10-16:
+
+| Read after it was stored | Still cached |
+| --- | --- |
+| 10–17 min | 30 of 32 |
+| 40–55 min | 8 of 28 |
+| About 40 hours | 0 of 52 |
+| 1–32 days | 0 of 256 |
+
+So the cache spares a repeat lookup within hours, and not for longer. That is why the head
+is a file.
+
+| Load-bearing detail | Why |
+| --- | --- |
 | A failed lookup is never cached | Next writes to the data cache only on a 200 (`patch-fetch.js`), so a transient Google error 502s and is retried rather than sticking for the TTL. Only a 200 we cannot parse would stick |
 
-`alreadyCached` (`WARM-4`) counts the words that answered without a round trip — free, since
-the run asks for them regardless. The cycle returns to the same words, so after a full pass
-it is also the share of the head still cached.
-
-| `alreadyCached` | Reading |
+| To read the cache | How |
 | --- | --- |
-| Near `asked` | The cache holds across a full pass |
-| Drifting down | Eviction, and the slope is its rate |
-| Near zero | Not persisting — a deploy, a purge, or a per-region cache |
-| Before the first pass completes | Nothing yet. It is only how much real traffic reached those words |
+| Vercel's own count | The Runtime Cache page: hit rate, reads, writes, size and evictions, for 12 hours. It is the one view that reads the cache without changing it: `https://vercel.com/sanoodles-dev/wordbands/observability/runtime-cache` |
+| One lookup at a time | Vercel's request log gives each request's time on the server, as `functionEvents[0].durationMs` in the API `vercel logs --debug` names. A cache read takes 10–15 ms, a Google round trip 41 ms or more. Hobby keeps an hour of it |
+| While Google refuses us | A cached word still answers 200 and an uncached one 502, so no timing is needed |
 
-The response is returned to Vercel's scheduler, which discards it, so the run logs its own
-summary (`WARM-5`). That line is the only place these numbers reach anyone:
-
-```
-[warm] 2026-11-12 slice 4254-4353 asked=100 warmed=100 alreadyCached=98
-```
-
-Read it under Logs, filtered on `requestType: cron`. **Hobby keeps one hour of runtime
-logs** — Pro a day, 30 days with Observability Plus — and the run lands anywhere in a
-59-minute window, which is why the schedule sits at a waking hour rather than overnight.
-Check within about an hour of 18:00 UTC.
-
-The other way to read the number, needing no logs at all, is to trigger the pass yourself
-earlier in the same UTC day and read the response it returns. The window comes from the date, so that run takes
-the day's slice with a genuine count and the scheduled one moves on to the next. Once per
-UTC day only: a second run finds its own warming and reads near 100, which means nothing.
-
-A browsable history instead would need somewhere to keep counts, which is a dependency this
-app does not have.
-
-**The destination is the assumption underneath all of it.** The data cache is the only place
-a server can write without taking one on, and its eviction and regionality are Vercel's.
-`alreadyCached` is where that would show up. The alternative depending on none of it is a
-committed artifact of the same head, built the way `wordbands.<code>.json` is — not what
-this does, because a server cannot commit to git, so that path is a build step someone runs
-and reviews rather than a schedule. It also answers a different question: an artifact never
-expires, where the point here is that entries stay fresh on their own.
+| Measured and rejected | Why not |
+| --- | --- |
+| Keeping the head in the data cache with a scheduled pass | Nothing lasts a day there, so a schedule keeps nothing |
 
 ### English is Google's hub
 
@@ -833,7 +866,7 @@ sense wrong ("noche" → "Abend", "casa" → "heim"). So when neither side is En
 (`needsPivot`) the route pivots through English. `pivotTerm` takes the best-scoring sense
 of the source→en dictionary, then en→target is looked up and `alignGroup` keeps the group
 matching the source word's part of speech. The two fetches run together, so a pivot costs
-one extra round trip: about 150ms cold, then nothing until the entry expires.
+one extra round trip: about 150ms cold, then nothing while the cache keeps the entry.
 
 | Load-bearing detail | Why |
 | --- | --- |

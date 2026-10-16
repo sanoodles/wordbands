@@ -10,7 +10,6 @@ import { GET as bandsGET } from "./bands/[view]/route";
 import { GET as bandGET } from "./band/[view]/[key]/route";
 import { GET as translateGET } from "./translate/[word]/route";
 import { GET as wiktionaryGET } from "./wiktionary/[word]/route";
-import { GET as warmGET } from "./cron/warm/route";
 
 const REAL = getBand("en", "freq", "1")!.words[0]!;
 const req = (url: string) => new Request(`http://test${url}`);
@@ -53,20 +52,6 @@ const HOSTILE = [
 ];
 
 const POSITIONS: { name: string; call: (bad: string) => Promise<Response> }[] = [
-  {
-    // No params of its own; the authorization header is the only input it reads.
-    name: "/api/cron/warm authorization",
-    call: async (b) => {
-      let r: Request;
-      try {
-        r = new Request("http://test/api/cron/warm", { headers: { authorization: b } });
-      } catch {
-        // A header value the HTTP layer would never deliver cannot reach the route.
-        return new Response(null, { status: 400 });
-      }
-      return warmGET(r);
-    },
-  },
   {
     name: "/api/word/[word]",
     call: (b) => wordGET(req("/api/word/x"), { params: promise({ word: b }) }),

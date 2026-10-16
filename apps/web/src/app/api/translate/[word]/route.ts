@@ -1,4 +1,4 @@
-import { levelsOf } from "@/lib/bands";
+import { getGoogleAnswer, levelsOf } from "@/lib/bands";
 import { isSourceLang } from "@/lib/languages";
 import {
   alignGroup,
@@ -15,7 +15,7 @@ import {
 } from "@/lib/translate";
 
 // A word's translation is stable, and the rare tail is looked up too seldom to survive a
-// short TTL. The warm pass owns the head's freshness, so this number is really the tail's.
+// short TTL. The head is committed data, so this number is the tail's alone.
 export const revalidate = 15552000; // 180 days; a literal, since Next cannot evaluate arithmetic here
 
 /** Google answered with something other than a translation. */
@@ -34,6 +34,10 @@ async function gtx(
   target: string,
   dict: boolean,
 ): Promise<unknown> {
+  // A head word of de<->en answers from committed data, whatever Google or the cache do.
+  // @spec GTX-1
+  const kept = dict ? await getGoogleAnswer(source, target, word) : undefined;
+  if (kept !== undefined) return kept;
   const res = await fetch(gtxUrl(word, source, target, dict), { next: { revalidate } });
   if (!res.ok) throw new UpstreamError(answered(res));
   try {
