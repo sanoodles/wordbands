@@ -1586,7 +1586,7 @@ see whether the acceptance can go.
 
 ## Vendored skills
 
-`.claude/skills/` holds four skills and none of them is ours. They come from two
+`.claude/skills/` holds the skills below, and none of them is ours. They come from two
 upstreams, and nothing in the repo pulls on them, so nothing would notice them rotting.
 
 | Skill | Upstream | Refreshed by |
@@ -1594,21 +1594,23 @@ upstreams, and nothing in the repo pulls on them, so nothing would notice them r
 | `next-cache-components-adoption` | `vercel/next.js@canary`, `skills/` | `scripts/sync-next-skills.mjs` |
 | `next-cache-components-optimizer` | same | same |
 | `next-dev-loop` | same | same |
+| `next-partial-prefetching-adoption` | same | same |
+| `next-partial-prefetching-optimizer` | same | same |
 | `fondue` | `Frontify/fondue@main`, `packages/sdk/skills/fondue/` | `npx skills update`, Vercel's skills CLI |
 
 | Command | Does |
 | --- | --- |
-| `pnpm skills:check` | Verify the fondue install, then report drift in the Next.js three. Writes nothing, exits 1 on either |
+| `pnpm skills:check` | Verify the fondue install, then report drift in the Next.js skills. Writes nothing, exits 1 on either |
 | `pnpm skills:sync` | Write both upstreams over ours |
 
-`skills:check` reports *drift* only for the Next.js three, because the skills CLI has no
+`skills:check` reports *drift* only for the Next.js skills, because the skills CLI has no
 dry run: its `update` either changes fondue or does not. What it checks for fondue is that
 the install is intact, which is the half a clone can get wrong.
 
 Which of the Next.js skills are vendored is read off the disk: any directory in
 `.claude/skills/` that also exists upstream is synced, and upstream skills absent here are
-listed as `not vendored`. The directory name is the whole declaration, so vendoring a
-fourth is a `mkdir` plus `pnpm skills:sync`, with no edit to the script.
+listed as `not vendored`. The directory name is the whole declaration, so vendoring
+another is a `mkdir` plus `pnpm skills:sync`, with no edit to the script.
 
 ### How fondue is laid out
 
@@ -1645,7 +1647,7 @@ checkout that wrote the symlink as text because `core.symlinks` was off.
 `.github/workflows/skills-freshness.yml` runs both syncs weekly and opens a PR on the
 `chore/skills-sync` branch when either upstream has moved. Keeping copies rather than
 installing Vercel's Next.js plugin is a deliberate trade: the plugin would track `canary`
-on its own, but it clones a 2.42GB monorepo for three markdown files and pins nothing.
+on its own, but it clones a 2.42GB monorepo for a few markdown files and pins nothing.
 
 | Trap | Detail |
 | --- | --- |
