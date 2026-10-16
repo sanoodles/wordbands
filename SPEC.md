@@ -43,6 +43,7 @@ verifies the claim exists, not that it bites.
 | `ROUTE` | Route params: decoding, status codes, no 5xx | PR, and post-deploy for `ROUTE-1`–`ROUTE-6` |
 | `BAND` | Band definitions, word lookup, levels, typeahead | PR |
 | `FILTER` | What the committed artifacts must and must not contain | PR |
+| `FORM` | Looking a word up by an inflected form, and the line that says it redirected | PR |
 | `HEAD` | Response headers and the CSP | PR |
 | `URL` | Deeplink state, history entries and the page title | PR |
 | `CREDIT` | Which sources and works the page credits | PR |
