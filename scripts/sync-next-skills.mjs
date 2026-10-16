@@ -24,10 +24,14 @@ const headers = {
   ...(process.env.GITHUB_TOKEN ? { authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
 };
 
+// One download at a time, half a second apart: CLAUDE.md's rule for calling a third party.
+const PAUSE_MS = 500;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 // A weekly cron must not fail on a transient upstream 5xx. The two statuses worth
 // failing fast on are a 4xx, which will not fix itself, and a rate limit, where backoff
 // cannot clear a budget that refills hourly and retrying spends the next window too.
-async function fetchRetry(url, init, tries = 4) {
+async function fetchRetry(url, init, tries = 3) {
   let last;
   for (let attempt = 1; attempt <= tries; attempt++) {
     let res;
@@ -53,7 +57,7 @@ async function fetchRetry(url, init, tries = 4) {
       if (res.status < 500) throw last;
     }
 
-    if (attempt < tries) await new Promise((r) => setTimeout(r, 2 ** attempt * 500));
+    if (attempt < tries) await sleep(60_000 * attempt);
   }
   throw last;
 }
@@ -69,7 +73,9 @@ async function upstreamTree() {
 async function upstreamFile(path) {
   const url = `https://raw.githubusercontent.com/${REPO}/${REF}/${UPSTREAM_DIR}/${path}`;
   const res = await fetchRetry(url, { headers: { "user-agent": headers["user-agent"] } });
-  return res.text();
+  const text = await res.text();
+  await sleep(PAUSE_MS);
+  return text;
 }
 
 async function walk(dir, base = dir) {

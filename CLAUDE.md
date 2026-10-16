@@ -755,6 +755,9 @@ for i in $(seq 1 130); do
 done | sort | uniq -c
 ```
 
+This loop is the one burst that Calling a third party allows. It has to cross 100 requests a
+minute to test the limit, and none of its requests reaches Google.
+
 ### When Google refuses our server
 
 `GATE-8` is the rule. Google refuses Vercel's egress in spells. On 2026-10-09 every

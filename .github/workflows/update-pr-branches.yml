@@ -65,6 +65,8 @@ jobs:
                   --json number,headRefName,headRefOid,headRepositoryOwner,isDraft,mergeable)
 
           while read -r pr; do
+            # One PR at a time, a second apart: CLAUDE.md's rule for calling a third party.
+            sleep 1
             num=$(jq -r .number <<<"$pr")
             head=$(jq -r .headRefName <<<"$pr")
             oid=$(jq -r .headRefOid <<<"$pr")
