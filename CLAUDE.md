@@ -839,6 +839,11 @@ Measured on production on 2026-10-14 and 2026-10-16:
 So the cache spares a repeat lookup within hours, and not for longer. That is why the head
 is a file.
 
+**Nothing may rely on it.** Vercel promises no retention: its docs call the cache ephemeral,
+and say another project's writes can evict our entries. A hit saves a Google call, and that
+is all it may do. No rule, check or design may depend on an entry being there, and why it
+drops one is not worth chasing.
+
 | Load-bearing detail | Why |
 | --- | --- |
 | A failed lookup is never cached | Next writes to the data cache only on a 200 (`patch-fetch.js`), so a transient Google error 502s and is retried rather than sticking for the TTL. Only a 200 we cannot parse would stick |

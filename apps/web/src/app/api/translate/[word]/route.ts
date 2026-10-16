@@ -14,8 +14,7 @@ import {
   type SenseGroup,
 } from "@/lib/translate";
 
-// A word's translation is stable, and the rare tail is looked up too seldom to survive a
-// short TTL. The head is committed data, so this number is the tail's alone.
+// How long a tail answer may be reused. Vercel may drop it sooner, and nothing relies on it.
 export const revalidate = 15552000; // 180 days; a literal, since Next cannot evaluate arithmetic here
 
 /** Google answered with something other than a translation. */
