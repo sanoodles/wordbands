@@ -39,7 +39,7 @@ verifies the claim exists, not that it bites.
 | Prefix | Covers | Proof runs |
 | --- | --- | --- |
 | `GATE` | What `/api/translate` agrees to forward to Google | PR |
-| `GTX` | Google's answers for the de<->en head, served from committed data | PR |
+| `GTX` | Google's answers for the head between English and the other five languages, served from committed data | PR |
 | `ROUTE` | Route params: decoding, status codes, no 5xx | PR, and post-deploy for `ROUTE-1`–`ROUTE-6` |
 | `BAND` | Band definitions, word lookup, levels, typeahead | PR |
 | `FILTER` | What the committed artifacts must and must not contain | PR |
@@ -73,12 +73,12 @@ the word card could have made.
 
 ## GTX — Google's answers for the head
 
-Between German and English, the words a learner meets first are answered from committed
-data. Google is asked only about the rest.
+Between English and each of the other five indexed languages, the words a learner meets
+first are answered from committed data. Google is asked only about the rest.
 
 | ID | Rule |
 | --- | --- |
-| GTX-1 | Between German and English, in either direction, a head word's dictionary lookup is answered from committed data, and Google is not called. The head is the source language's A1 and A2 bands, with each casing of a case-homograph counted apart |
+| GTX-1 | Between English and each of the other five indexed languages, in either direction, a head word's dictionary lookup is answered from committed data, and Google is not called. The head is the source language's A1 and A2 bands, with each casing of a case-homograph counted apart |
 | GTX-2 | A word the committed data lacks is asked of Google like any other, so the data may trail the word lists without anything failing |
 | GTX-3 | Every committed answer carries a translation |
 

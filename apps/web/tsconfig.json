@@ -12,6 +12,6 @@
     "baseUrl": ".",
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["next-env.d.ts", "src", "scripts", "data/**/*.json", ".next/types/**/*.ts"],
+  "include": ["next-env.d.ts", "src", "scripts", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }

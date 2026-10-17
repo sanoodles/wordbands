@@ -333,7 +333,7 @@ describe("Google's committed answers", () => {
 
   // @spec GTX-3
   it("answers every word with a translation", () => {
-    expect(GOOGLE_PAIRS).toEqual(["de-en", "en-de"]);
+    expect(GOOGLE_PAIRS).toEqual(["de-en", "en-de", "en-es", "es-en", "fr-en", "pt-en", "it-en", "en-fr", "en-pt", "en-it"]);
     const blank: string[] = [];
     for (const pair of GOOGLE_PAIRS) {
       const { source, target, answers } = load(pair);

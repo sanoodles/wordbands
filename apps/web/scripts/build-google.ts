@@ -1,9 +1,10 @@
-// Build Google's answers for the head of German and English, the words a learner meets
+// Build Google's answers for the head of each pair in `PAIRS`, the words a learner meets
 // first, so the translate route answers them without calling Google. One artifact per
 // direction, `data/google.<source>-<target>.json`: the raw `gtx` answer to the dictionary
 // lookup the word card makes, keyed by the word as the card sends it.
 //
-//   tsx scripts/build-google.ts             fetch only the words the artifacts lack
+//   tsx scripts/build-google.ts             fetch the words the artifacts lack, most frequent first
+//   tsx scripts/build-google.ts --top 500   only each direction's 500 most frequent head words
 //   tsx scripts/build-google.ts --refresh   fetch every answer again
 //   tsx scripts/build-google.ts --check     report how far the artifacts trail the head, fetching nothing
 //
@@ -20,14 +21,22 @@ const DATA = resolve(here, "../data");
 const PAIRS = [
   ["de", "en"],
   ["en", "de"],
+  ["en", "es"],
+  ["es", "en"],
+  ["fr", "en"],
+  ["pt", "en"],
+  ["it", "en"],
+  ["en", "fr"],
+  ["en", "pt"],
+  ["en", "it"],
 ] as const;
 const HEAD_BANDS = ["A1", "A2"];
-// One call at a time, half a second apart: CLAUDE.md's rule for calling a third party.
-const CONCURRENCY = 1;
-const PAUSE_MS = 500;
+// One call every ten seconds: a cache has no deadline, so the pace stays far below Google's limit.
+const PAUSE_MS = 10_000;
 const ATTEMPTS = 3;
-// Written this often, so an interrupted run keeps what it fetched.
-const SAVE_EVERY = 500;
+// A run takes this many words of each direction in turn, so one that Google cuts short has
+// spent its calls on every direction's most frequent words. Each round is written as it ends.
+const ROUND = 500;
 
 interface WordsArtifact {
   ranked: string[];
@@ -49,86 +58,106 @@ function head(source: string): string[] {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Google's answer to the card's lookup of `word`, retried with a growing pause. */
+/**
+ * It asks Google the card's dictionary lookup of `word`. A refusal stops the run at once. Only
+ * a call that got no answer at all, such as a dropped connection, is tried again.
+ */
 async function ask(word: string, source: string, target: string): Promise<unknown> {
-  let why = "";
-  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+  const what = `${source}->${target} "${word}"`;
+  for (let attempt = 1; ; attempt++) {
+    let res: Response;
     try {
-      const res = await fetch(gtxUrl(word, source, target, true));
-      if (res.ok) {
-        const data: unknown = await res.json();
-        if (Array.isArray(data)) return data;
-        why = "an answer that is not an array";
-      } else {
-        why = `status ${res.status}`;
-      }
+      res = await fetch(gtxUrl(word, source, target, true));
     } catch (err) {
-      why = err instanceof Error ? err.message : String(err);
+      const why = err instanceof Error ? err.message : String(err);
+      if (attempt === ATTEMPTS) throw new Error(`${what}: ${why} after ${ATTEMPTS} attempts`);
+      await sleep(60_000 * attempt);
+      continue;
     }
-    if (attempt < ATTEMPTS) await sleep(60_000 * attempt);
+    const data: unknown = res.ok ? await res.json().catch(() => null) : null;
+    if (!Array.isArray(data)) throw new Error(`${what}: refused with status ${res.status}`);
+    return data;
   }
-  throw new Error(`${source}->${target} "${word}": ${why} after ${ATTEMPTS} attempts`);
 }
 
-function save(path: string, source: string, target: string, words: string[], answers: Map<string, unknown>) {
+interface Direction {
+  source: string;
+  target: string;
+  path: string;
+  words: string[];
+  answers: Map<string, unknown>;
+}
+
+const pathOf = (source: string, target: string) => resolve(DATA, `google.${source}-${target}.json`);
+
+const stored = (path: string): Record<string, unknown> =>
+  existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")) as { answers: Record<string, unknown> }).answers : {};
+
+/** It loads a direction's head words, with the answers its file already holds for them. */
+function load(source: string, target: string): Direction {
+  const path = pathOf(source, target);
+  const words = head(source);
+  const kept = stored(path);
+  const answers = new Map<string, unknown>();
+  for (const w of words) if (Object.hasOwn(kept, w)) answers.set(w, kept[w]);
+  return { source, target, path, words, answers };
+}
+
+function save({ source, target, path, words, answers }: Direction) {
   const entries = words.filter((w) => answers.has(w)).map((w) => [w, answers.get(w)] as const);
   writeFileSync(path, JSON.stringify({ source, target, answers: Object.fromEntries(entries) }));
 }
 
 const refresh = process.argv.includes("--refresh");
 const check = process.argv.includes("--check");
+const topAt = process.argv.indexOf("--top");
+const top = topAt < 0 ? Infinity : Number(process.argv[topAt + 1]);
 
 async function main() {
-  for (const [source, target] of PAIRS) {
-    const path = resolve(DATA, `google.${source}-${target}.json`);
-    const words = head(source);
-    if (check) {
-      const stored = existsSync(path)
-        ? Object.keys((JSON.parse(readFileSync(path, "utf8")) as { answers: Record<string, unknown> }).answers)
-        : [];
-      const has = new Set(stored);
+  if (top !== Infinity && !(Number.isInteger(top) && top > 0)) throw new Error("--top takes a whole number of words");
+  if (check) {
+    for (const [source, target] of PAIRS) {
+      const words = head(source);
+      const keys = Object.keys(stored(pathOf(source, target)));
+      const has = new Set(keys);
       const want = new Set(words);
       const missing = words.filter((w) => !has.has(w)).length;
-      const stale = stored.filter((w) => !want.has(w)).length;
+      const stale = keys.filter((w) => !want.has(w)).length;
       console.log(`${source}->${target}: ${words.length} head words, ${missing} without an answer, ${stale} answers for words no longer in the head`);
-      continue;
     }
-    const answers = new Map<string, unknown>();
-    if (!refresh && existsSync(path)) {
-      const kept = JSON.parse(readFileSync(path, "utf8")) as { answers: Record<string, unknown> };
-      for (const w of words) if (Object.hasOwn(kept.answers, w)) answers.set(w, kept.answers[w]);
-    }
-    const todo = words.filter((w) => !answers.has(w));
-    console.log(`${source}->${target}: ${words.length} head words, ${answers.size} kept, ${todo.length} to fetch`);
+    return;
+  }
 
-    let next = 0;
-    let fetched = 0;
-    let failure: Error | null = null;
-    const worker = async () => {
-      while (!failure && next < todo.length) {
-        const word = todo[next++]!;
+  const directions = PAIRS.map(([source, target]) => load(source, target));
+  // A refresh asks about every word again, and keeps each old answer until its new one lands.
+  const owed = (d: Direction, words: string[]) => (refresh ? words : words.filter((w) => !d.answers.has(w)));
+  for (const d of directions) {
+    console.log(`${d.source}->${d.target}: ${d.words.length} head words, ${d.answers.size} kept, ${owed(d, d.words.slice(0, top)).length} to fetch`);
+  }
+
+  const end = Math.min(top, Math.max(...directions.map((d) => d.words.length)));
+  for (let from = 0; from < end; from += ROUND) {
+    for (const d of directions) {
+      const todo = owed(d, d.words.slice(from, Math.min(from + ROUND, end)));
+      if (!todo.length) continue;
+      for (const word of todo) {
         try {
-          answers.set(word, await ask(word, source, target));
+          d.answers.set(word, await ask(word, d.source, d.target));
         } catch (err) {
-          failure = err as Error;
-          return;
+          save(d);
+          console.error(`stopped: ${(err as Error).message}. Run again later to fetch the rest.`);
+          process.exit(1);
         }
         await sleep(PAUSE_MS);
-        if (++fetched % SAVE_EVERY === 0) {
-          save(path, source, target, words, answers);
-          console.log(`  ${fetched}/${todo.length}`);
-        }
       }
-    };
-    await Promise.all(Array.from({ length: CONCURRENCY }, worker));
-    save(path, source, target, words, answers);
-    if (failure) {
-      console.error(`stopped: ${(failure as Error).message}. Run again to fetch the rest.`);
-      process.exit(1);
+      save(d);
+      console.log(`  ${d.source}->${d.target}: ${d.answers.size} of ${d.words.length}`);
     }
+  }
 
-    const blank = words.filter((w) => !parseGtx(answers.get(w)));
-    console.log(`  wrote ${path}: ${answers.size} answers${blank.length ? `, ${blank.length} without a translation: ${blank.slice(0, 10).join(", ")}` : ""}`);
+  for (const d of directions) {
+    const blank = d.words.filter((w) => d.answers.has(w) && !parseGtx(d.answers.get(w)));
+    console.log(`${d.source}->${d.target}: ${d.answers.size} of ${d.words.length} answered${blank.length ? `, ${blank.length} without a translation: ${blank.slice(0, 10).join(", ")}` : ""}`);
   }
 }
 

@@ -39,13 +39,15 @@ other customers.
 | Rule | Detail |
 | --- | --- |
 | One call at a time | Never several at once to the same host |
-| A pause after each call | Half a second or more. A script names its pace in a constant |
-| Back off on a refusal | A minute or more before the next try, and stop after a few. Never retry at speed |
+| No deadline for a cache | Data fetched to spare later calls is built eventually, at a pace far below any limit, over days if need be. `build:google` makes one call every ten seconds |
+| A pause after each call | A probe or a one-off measurement pauses half a second or more after each call. A script names its pace in a constant |
+| Stop at the first refusal | A refusal means the pace was too fast. Slow it down, and wait an hour or more before the next run. Only a call that got no answer at all is tried again |
 | Keep what was fetched | A script saves as it goes and resumes, so stopping costs a wait, not the work |
 | Probes count too | A measurement that calls our own routes calls Google through them, so it keeps the same pace |
 
 Measured on 2026-10-16: four calls at a time with no pause, about 45 a second, were refused
-after about 5,000 calls, and this machine stayed refused for more than half an hour.
+after about 5,000 calls, and this machine stayed refused for more than half an hour. The
+same afternoon, one call every 0.6 seconds was refused after 1,456 calls.
 
 **Nor may it block the development loop or take the site down.** A fetch runs on its own,
 and its result arrives as data someone commits.
@@ -105,7 +107,7 @@ ours. `source`/`target` map onto them at that one call.
 | `data/forms.<code>.json` | Committed artifact: inflected form -> the indexed word it belongs to |
 | `data/defining.<code>.json` | Committed artifact: one defining level per ranked word, emitted by the defining-vocabulary repo |
 | `data/wiktionary.<source>-<target>.json` | Committed artifact: Wiktionary's translations of each source word, and the page titles that differ from it |
-| `data/google.<source>-<target>.json` | Committed artifact: Google's raw answer to each head word's dictionary lookup, de<->en |
+| `data/google.<source>-<target>.json` | Committed artifact: Google's raw answer to each head word's dictionary lookup, between English and the other five |
 | `node_modules/next/dist/docs/` | Next.js's own guides for the installed version, which is newer than a model's training data. Read the relevant one before using a Next API. `agentRules: false` in `next.config.mjs` stops `next dev` writing this advice into `apps/web/` as its own AGENTS.md and CLAUDE.md |
 
 Paths are relative to `apps/web/`.
@@ -232,7 +234,7 @@ has answered. The licence is named here; the question is not settled here.
 | `pnpm --filter @wordbands/web build:bands` | Rebuild every language |
 | `pnpm --filter @wordbands/web build:bands <code>` | Rebuild one |
 | `pnpm --filter @wordbands/web build:wiktionary` | Rebuild Wiktionary's translations, all 30 directions. About 3m40s, at 2.6GB |
-| `pnpm --filter @wordbands/web build:google` | Fetch Google's answers for the de<->en head that the files lack. `--refresh` fetches every one again, and `--check` reports the gap without fetching. About an hour for all of them |
+| `pnpm --filter @wordbands/web build:google` | Fetch Google's answers for the head that the files lack, between English and the other five, most frequent first. `--top N` stops at each direction's N most frequent, `--refresh` fetches every one again, and `--check` reports the gap without fetching. At one call every ten seconds all of them take about 85 hours, so it runs in the background over days |
 
 To add a language: drop its inputs in `data/`, add a `LANGS` entry in the build script, add
 it to `SOURCE_LANG_META` and to `ETYMOLOGY` beside it, and add the registry import in
@@ -770,9 +772,9 @@ what can be done about it, so the route says it.
 | The 502's body | The command below |
 | Vercel's runtime logs, filtered on `[translate]` | The same reason, with the pair. Hobby keeps an hour |
 
-A head word of de<->en comes back 200 from committed data, refusal or not, and so can a
-word looked up in the last few hours. So the command asks for a new one each time. The gate
-takes any string without whitespace:
+Between English and the other five, a head word the files hold comes back 200 from committed
+data, refusal or not, and so can a word looked up in the last few hours. So the command asks
+for a new one each time. The gate takes any string without whitespace:
 
 ```sh
 curl -s "https://wordbands.vercel.app/api/translate/probe$RANDOM?source=de&target=ja"
@@ -789,31 +791,37 @@ refusal is per IP rather than per word.
 
 ### Google's answers for the head
 
-`GTX-1` to `GTX-3` are the rules. Between German and English, the head is answered from
-`data/google.<source>-<target>.json`. Each entry is Google's raw answer to the card's
-dictionary lookup, so the route's parsers read it exactly as they read a live one.
+`GTX-1` to `GTX-3` are the rules. Between English and each of the other five languages, the
+head is answered from `data/google.<source>-<target>.json`. Each entry is Google's raw
+answer to the card's dictionary lookup, so the route's parsers read it exactly as they read
+a live one.
 
 | Number | Value |
 | --- | --- |
-| Head words | 6,114: A1 and A2 of each language, ranks 1–3,000, each casing counted apart |
-| Size | 1.9MB de→en, 2.7MB en→de |
-| A full build | About an hour, one call at a time and half a second apart |
+| Head words | There are 30,118 in ten directions. They are the source's A1 and A2 bands, ranks 1–3,000, with each casing counted apart |
+| Size | The full de→en file weighs 1.9MB, and the full en→de file 2.7MB. The ten will weigh about 24MB once all are full |
+| A full build | It takes about 85 hours of calls, at one call every ten seconds. Nothing waits on it |
 
 | Load-bearing detail | Why |
 | --- | --- |
 | Built here, not on Vercel | Google limits calls by address, and Vercel's is shared with other customers |
-| One call at a time, half a second apart | The rule in Calling a third party, above. A rerun fetches only what the files lack, so a refusal costs a wait, not the work |
+| One call every ten seconds | Calling a third party, above, asks for this pace: the files are a cache, and they fill in eventually. A rerun fetches only what the files lack, so a refusal costs a wait, not the work |
+| Most frequent first | A run takes 500 head words of each direction in turn, so a run cut short leaves every direction its most-used words. `--top N` stops each direction at N |
 | The raw answer, not the route's output | The parsers stay live: a change to `MIN_RELATIVE_SCORE` or to the group limit needs no rebuild. Only Google's wording is frozen |
 | Looked up in `gtx()`, before `fetch` | Every Google call goes through it, so the pivot's English hop is answered too when its term is an English head word |
 | Only a dictionary lookup | The card always asks with `dict=1`, which keeps the casing. So the key is the word exactly as the card sends it |
 | Read through a `Map` | The key is caller input, which is why `resolveForm` uses one too |
 | Imported dynamically, one direction at a time | One route reads it, as with Wiktionary's artifacts |
+| The import path is a template literal, and tsconfig's `include` names no `data/**/*.json` | TypeScript then reads none of the files. Imported with literal paths, they took `tsc --noEmit` from 11.7s to 14.3s and its memory from 2.5GB to 3.0GB, measured on 2026-10-17 while they held 9.2MB. Turbopack still bundles each file the template matches, as a chunk of its own |
 
 | Known cost | Detail |
 | --- | --- |
 | Google's wording is frozen at the build | It moves slowly. `--refresh` fetches every answer again |
-| Only de<->en | Every other pair's head still goes to Google, through the cache. A pair is one row in `PAIRS` and one in `GOOGLE` |
-| A rebuild of `wordbands.de.json` or `wordbands.en.json` | It changes the head. Until `build:google` runs, the new head words are asked of Google (`GTX-2`), and `build:google --check` says how many |
+| The files fill in over days | A file may hold only the most frequent part of its head. The rest is asked of Google (`GTX-2`), and `build:google --check` says how much is left |
+| Only the five pairs with English | A pair into a language outside the six, like en→ja, asks Google for every word. A pair is one row in `PAIRS` and one in `GOOGLE_PAIRS` |
+| A pair without English still needs Google | Its direct lookup goes to Google, and the route fails when that fails, so es→de still 502s while Google refuses us. Wiktionary's line shows all the same (`WIKT-5`). Of its two English hops, the first answers from the files for every head word. The second answers from the files where the pivot term is an English head word. That held for 2,183 of 3,113 German head words, measured on 2026-10-16 |
+| A rebuild of a `wordbands.<code>.json` | It changes the head. Until `build:google` runs, the new head words are asked of Google (`GTX-2`), and `build:google --check` says how many |
+| A new file can be invisible to a local test run | vitest keeps its transform of `bands.ts` in `node_modules/.vitest-cache`, keyed on that file's text alone. The transform lists the files the template import matched, so a `google.<source>-<target>.json` written later fails to import with "Unknown variable dynamic import". `pnpm --filter @wordbands/web exec vitest --clearCache` clears the cache. CI starts without it |
 
 ### Past the head: the data cache
 

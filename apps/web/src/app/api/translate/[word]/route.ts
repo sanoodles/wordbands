@@ -33,7 +33,8 @@ async function gtx(
   target: string,
   dict: boolean,
 ): Promise<unknown> {
-  // A head word of de<->en answers from committed data, whatever Google or the cache do.
+  // A head word between English and the other five answers from committed data, whatever
+  // Google or the cache do.
   // @spec GTX-1
   const kept = dict ? await getGoogleAnswer(source, target, word) : undefined;
   if (kept !== undefined) return kept;

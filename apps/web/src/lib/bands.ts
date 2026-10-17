@@ -332,16 +332,14 @@ interface GoogleArtifact {
   answers: Record<string, unknown>;
 }
 
+/** The pairs `getGoogleAnswer` has answers for, as `source-target`. */
+export const GOOGLE_PAIRS = ["de-en", "en-de", "en-es", "es-en", "fr-en", "pt-en", "it-en", "en-fr", "en-pt", "en-it"];
 // Google's dictionary answers for the head of each pair (built by scripts/build-google.ts).
 // Dynamic for the reason Wiktionary's are: one route reads them, one direction at a time.
-const GOOGLE: Record<string, () => Promise<{ default: GoogleArtifact }>> = {
-  "de-en": () => import("../../data/google.de-en.json"),
-  "en-de": () => import("../../data/google.en-de.json"),
-};
+// A template literal, so TypeScript infers no type for the files' megabytes of JSON.
+const loadGoogle = (pair: string): Promise<{ default: GoogleArtifact }> =>
+  import(`../../data/google.${pair}.json`);
 const googleCache = new Map<string, Map<string, unknown>>();
-
-/** The pairs `getGoogleAnswer` has answers for, as `source-target`. */
-export const GOOGLE_PAIRS = Object.keys(GOOGLE);
 
 /**
  * Google's committed answer to a dictionary lookup of `word`, as `gtx` returns it.
@@ -350,11 +348,11 @@ export const GOOGLE_PAIRS = Object.keys(GOOGLE);
  */
 export async function getGoogleAnswer(source: string, target: string, word: string): Promise<unknown> {
   const pair = `${source}-${target}`;
-  if (!Object.hasOwn(GOOGLE, pair)) return undefined;
+  if (!GOOGLE_PAIRS.includes(pair)) return undefined;
   let answers = googleCache.get(pair);
   if (!answers) {
     // A Map, for the reason `resolveForm` uses one: the key is caller input.
-    answers = new Map(Object.entries((await GOOGLE[pair]!()).default.answers));
+    answers = new Map(Object.entries((await loadGoogle(pair)).default.answers));
     googleCache.set(pair, answers);
   }
   return answers.get(word);

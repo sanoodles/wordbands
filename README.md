@@ -52,10 +52,13 @@ learning order than any dictionary-structure metric, so the ranking rests on it 
   ([Seidman, 1983](https://doi.org/10.1016/0378-8733(83)90028-X)). Restricted defining
   vocabularies go back to West & Endicott (1935) and the *Longman Dictionary of
   Contemporary English* (1978).
-- **Translations** — the word card's short meaning — are fetched live from
-  [Google Translate](https://translate.google.com/) (its public `gtx` endpoint) in the
-  reader's chosen language, and cached. This is the only source consulted at runtime;
-  everything above is baked into the committed artifacts at build time.
+- **Translations** — the word card's short meaning — come from
+  [Google Translate](https://translate.google.com/) (its public `gtx` endpoint), in the
+  reader's chosen language. Between English and the other five languages, Google's answers
+  for the A1 and A2 words are fetched ahead of time and committed. For every other word, the
+  server asks Google, and Vercel's data cache keeps the answer for a few hours. Google is the
+  only outside service the server calls while it runs. Everything in the bullets above is
+  built into the committed artifacts ahead of time.
 
 This keeps the data footprint small and **scales to other languages**: add a frequency
 list and a lemmatization list for the language, register it, and rebuild.

@@ -169,14 +169,15 @@ describe("GET /api/translate/[word] input", () => {
 });
 
 // Google ranks a translation's alternatives by confidence, not difficulty, so the card badges
-// each with its level in the language it's written in — "agua" A1 beside "orina" B1.
+// each with its level in the language it's written in — "casa" A1 beside "domicilio" B1.
+// The words looked up are past the head, which would answer from committed data instead.
 describe("GET /api/translate/[word] levels", () => {
   it("levels every dictionary term in the target language", async () => {
-    vi.stubGlobal("fetch", mockGtx("agua", "noun", [["agua", 0.6], ["orina", 0.02]]));
-    const { levels } = await (await translate("water", "source=en&target=es&dict=1")).json();
-    expect(levels.agua.key).toBe("A1");
-    expect(levels.agua.rank).toBeGreaterThan(0);
-    expect(levels.orina.key).not.toBe("A1");
+    vi.stubGlobal("fetch", mockGtx("casa", "noun", [["casa", 0.6], ["domicilio", 0.02]]));
+    const { levels } = await (await translate("residence", "source=en&target=es&dict=1")).json();
+    expect(levels.casa.key).toBe("A1");
+    expect(levels.casa.rank).toBeGreaterThan(0);
+    expect(levels.domicilio.key).not.toBe("A1");
   });
 
   it("levels the plain translation too, which is all there is without a dictionary", async () => {
@@ -204,10 +205,10 @@ describe("GET /api/translate/[word] levels", () => {
 
   // Phrases and words the list has no headword for are ordinary, and go unbadged.
   it("skips a term the target language has no entry for", async () => {
-    vi.stubGlobal("fetch", mockGtx("naja", "noun", [["naja", 0.6], ["cuchillo", 0.5]]));
-    const { levels } = await (await translate("knife", "source=en&target=es&dict=1")).json();
-    expect(levels.cuchillo).toBeDefined();
-    expect(levels.naja).toBeUndefined();
+    vi.stubGlobal("fetch", mockGtx("navaja", "noun", [["navaja", 0.6], ["cortaplumas", 0.5]]));
+    const { levels } = await (await translate("penknife", "source=en&target=es&dict=1")).json();
+    expect(levels.navaja).toBeDefined();
+    expect(levels.cortaplumas).toBeUndefined();
   });
 });
 
@@ -296,18 +297,24 @@ describe("GET /api/translate/[word] output", () => {
   });
 });
 
-// The head of de<->en is committed, so it answers whether or not Google does.
+// The head of every pair with English is committed, so it answers whether or not Google does.
 describe("GET /api/translate/[word] head", () => {
   // @spec GTX-1
-  it("answers a head word from committed data, calling no one", async () => {
+  it.each([
+    ["de", "Wasser"],
+    ["es", "agua"],
+    ["fr", "eau"],
+    ["it", "acqua"],
+    ["pt", "água"],
+  ])("answers a head word between %s and English from committed data, calling no one", async (lang, word) => {
     const upstream = vi.fn();
     vi.stubGlobal("fetch", upstream);
-    const de = await translate("Wasser", "source=de&target=en&dict=1");
-    expect(de.status).toBe(200);
-    expect((await de.json()).senses).toContain("water");
-    const en = await translate("water", "source=en&target=de&dict=1");
-    expect(en.status).toBe(200);
-    expect((await en.json()).senses).toContain("Wasser");
+    const from = await translate(word, `source=${lang}&target=en&dict=1`);
+    expect(from.status).toBe(200);
+    expect((await from.json()).senses).toContain("water");
+    const into = await translate("water", `source=en&target=${lang}&dict=1`);
+    expect(into.status).toBe(200);
+    expect((await into.json()).senses).toContain(word);
     expect(upstream).not.toHaveBeenCalled();
   });
 
