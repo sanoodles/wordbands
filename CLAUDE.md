@@ -699,6 +699,9 @@ keeps it legible as a redirect rather than as the answer.
 
 Every word card fetches `dict=1`, which adds Google's `dt=bd` dictionary block.
 
+`docs/translation.md` draws the order a lookup tries its sources in, and the variables each
+step reads. Change it with the code it draws.
+
 | Rule | Why |
 | --- | --- |
 | Translate from the dictionary terms, not the plain translation | The plain translation of a lone word is sometimes just wrong: "acqua" → "waterfall" |
