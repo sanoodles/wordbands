@@ -74,11 +74,12 @@ the word card could have made.
 ## GTX — Google's answers for the head
 
 Between English and each of the other five indexed languages, the words a learner meets
-first are answered from committed data. Google is asked only about the rest.
+first are answered from committed data, as far as that data holds them. Google is asked
+about the rest.
 
 | ID | Rule |
 | --- | --- |
-| GTX-1 | Between English and each of the other five indexed languages, in either direction, a head word's dictionary lookup is answered from committed data, and Google is not called. The head is the source language's A1 and A2 bands, with each casing of a case-homograph counted apart |
+| GTX-1 | Between English and each of the other five indexed languages, in either direction, a head word's dictionary lookup is answered from committed data when that data holds the word, and Google is not called. The head is the source language's A1 and A2 bands, with each casing of a case-homograph counted apart |
 | GTX-2 | A word the committed data lacks is asked of Google like any other, so the data may trail the word lists without anything failing |
 | GTX-3 | Every committed answer carries a translation |
 

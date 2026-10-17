@@ -55,7 +55,7 @@ and its result arrives as data someone commits.
 | Rule | Detail |
 | --- | --- |
 | Out of the loop | Nothing in `pnpm dev`, the pre-push hook, `pr.yml` or the Vercel build calls a third party or waits on data fetched from one. Tests stub the network |
-| Its own command or schedule | A fetch runs as its own command, like `build:google`, or as a scheduled workflow. Either can run in the background while work goes on |
+| Its own command or schedule | A fetch runs as its own command, like `build:google`, or as a scheduled workflow. A fetch that takes hours runs on a server, so that it keeps no developer's machine busy |
 | Lag is allowed | Fetched data may trail what it describes. The app falls back to the live call, and no check fails on the lag. A script reports it instead, like `build:google --check` |
 | A failure degrades a feature, never the page | Google failing leaves the card with Wiktionary's line or a link to Google Translate. A scheduled job failing leaves the site as it was |
 
@@ -234,7 +234,7 @@ has answered. The licence is named here; the question is not settled here.
 | `pnpm --filter @wordbands/web build:bands` | Rebuild every language |
 | `pnpm --filter @wordbands/web build:bands <code>` | Rebuild one |
 | `pnpm --filter @wordbands/web build:wiktionary` | Rebuild Wiktionary's translations, all 30 directions. About 3m40s, at 2.6GB |
-| `pnpm --filter @wordbands/web build:google` | Fetch Google's answers for the head that the files lack, between English and the other five, most frequent first. `--top N` stops at each direction's N most frequent, `--refresh` fetches every one again, and `--check` reports the gap without fetching. At one call every ten seconds all of them take about 85 hours, so it runs in the background over days |
+| `pnpm --filter @wordbands/web build:google` | Fetch Google's answers for the head that the files lack, between English and the other five, most frequent first. `--top N` stops at each direction's N most frequent, `--refresh` fetches every one again, and `--check` reports the gap without fetching. At one call every ten seconds all of them take about 85 hours, so the fill belongs on a server rather than on a developer's machine |
 
 To add a language: drop its inputs in `data/`, add a `LANGS` entry in the build script, add
 it to `SOURCE_LANG_META` and to `ETYMOLOGY` beside it, and add the registry import in
@@ -795,9 +795,9 @@ refusal is per IP rather than per word.
 ### Google's answers for the head
 
 `GTX-1` to `GTX-3` are the rules. Between English and each of the other five languages, the
-head is answered from `data/google.<source>-<target>.json`. Each entry is Google's raw
-answer to the card's dictionary lookup, so the route's parsers read it exactly as they read
-a live one.
+head is answered from `data/google.<source>-<target>.json` wherever the file holds the word.
+Each entry is Google's raw answer to the card's dictionary lookup, so the route's parsers
+read it exactly as they read a live one.
 
 | Number | Value |
 | --- | --- |

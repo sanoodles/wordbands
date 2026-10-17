@@ -55,8 +55,9 @@ learning order than any dictionary-structure metric, so the ranking rests on it 
 - **Translations** — the word card's short meaning — come from
   [Google Translate](https://translate.google.com/) (its public `gtx` endpoint), in the
   reader's chosen language. Between English and the other five languages, Google's answers
-  for the A1 and A2 words are fetched ahead of time and committed. For every other word, the
-  server asks Google, and Vercel's data cache keeps the answer for a few hours.
+  for the A1 and A2 words are fetched ahead of time, most frequent first, and committed. The
+  files do not hold all of those words yet. For any word they do not hold, the server asks
+  Google, and Vercel's data cache keeps the answer for a few hours.
   [docs/translation.md](docs/translation.md) draws the order the sources are tried in. Google
   is the only outside service the server calls while it runs. Everything in the bullets above
   is built into the committed artifacts ahead of time.

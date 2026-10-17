@@ -28,7 +28,7 @@ flowchart TD
   req -- "The firewall and the gate let the request through." --> hop
 
   subgraph gtx ["Server: gtx(), in order"]
-    s1["Step 1: The server looks in the committed file data/google.‹source›-‹target›.json.<br/>The file is part of each deployment, so this step makes no network call.<br/>A file exists for each pair in GOOGLE_PAIRS.<br/>The file holds the words of the A1 and A2 bands."]
+    s1["Step 1: The server looks in the committed file data/google.‹source›-‹target›.json.<br/>The file is part of each deployment, so this step makes no network call.<br/>A file exists for each pair in GOOGLE_PAIRS.<br/>The file holds Google's answers for the words of the A1 and A2 bands, most frequent first.<br/>It may not hold all of those words yet."]
     s2["Step 2: The server looks in Next's data cache, which Vercel keeps for the server.<br/>The cache may keep an answer for 180 days, which is revalidate.<br/>In practice Vercel drops the entries within hours."]
     s3["Step 3: The server asks Google at translate.googleapis.com.<br/>It asks for the translation, dt=t, and for the dictionary block, dt=bd."]
     s1 -- "The file does not have the answer." --> s2
