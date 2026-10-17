@@ -609,13 +609,33 @@ describe("full screen", () => {
     expect(rowGap(dialog)).toBeCloseTo(50 * Math.exp(0.8));
   });
 
-  // @spec FIG-2
+  // @spec FIG-2, FIG-10
   it("zooms by pinch, following the fingers", async () => {
     const { dialog, canvas } = await open();
     const touch = { pointerType: "touch" };
     fireEvent.pointerDown(canvas, { ...touch, pointerId: 1, clientX: 300, clientY: 200 });
     fireEvent.pointerDown(canvas, { ...touch, pointerId: 2, clientX: 500, clientY: 200 });
     fireEvent.pointerMove(canvas, { ...touch, pointerId: 2, clientX: 700, clientY: 200 });
+    expect(rowGap(dialog)).toBeCloseTo(100);
+  });
+
+  // @spec FIG-2, FIG-10
+  it("zooms by a trackpad's pinch, following the fingers", async () => {
+    const { dialog, canvas } = await open();
+    // Chromium sends it as wheels with ctrl held, of −100 ln(scale) in all.
+    const step = { deltaY: (-100 * Math.log(2)) / 4, ctrlKey: true, clientX: 400, clientY: 200 };
+    for (let i = 0; i < 4; i++) expect(fireEvent.wheel(canvas, step)).toBe(false);
+    expect(rowGap(dialog)).toBeCloseTo(100);
+  });
+
+  // @spec FIG-2, FIG-10
+  it("zooms by Safari's trackpad pinch, following the fingers", async () => {
+    const { dialog, canvas } = await open();
+    const at = { clientX: 400, clientY: 200 };
+    const gesture = (type: string, scale = 1) =>
+      fireEvent(canvas, Object.assign(new Event(type, { cancelable: true }), { ...at, scale }));
+    gesture("gesturestart");
+    gesture("gesturechange", 2);
     expect(rowGap(dialog)).toBeCloseTo(100);
   });
 

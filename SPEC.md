@@ -255,3 +255,4 @@ static picture. Full screen, it zooms and pans, so one word in the crowd can be 
 | FIG-7 | Leaving the browser's own full screen leaves the figure's too |
 | FIG-8 | Fully zoomed on a phone, no two points stand closer than 10mm |
 | FIG-9 | The label naming a point stays between the figure's left and right edges, whatever its word, on a screen as narrow as 320px |
+| FIG-10 | A pinch zooms the figure by the factor that the gap between the fingers grows or shrinks by, on a trackpad as on a touch screen |

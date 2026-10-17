@@ -87,6 +87,9 @@ const ZOOM_STEP = 2;
 const PAN = { key: 0.2, button: 0.5 };
 /** Zoom per pixel of wheel. */
 const WHEEL = 0.0016;
+// @spec FIG-10
+/** Zoom per pixel of a trackpad pinch, which Chromium sends as deltaY = −100 ln(scale). */
+const PINCH = 0.01;
 /** How far a press may wander and still be a pick rather than a drag. */
 const SLOP = 6;
 /** The anchor in CSS px: a dot, and a ring around it that the eye finds before the dot. */
@@ -759,7 +762,7 @@ function Chart({
     return { kind: "pinch", start, span: span(a, b), from: fraction(mid(a, b)) };
   };
 
-  // @spec FIG-2, FIG-4
+  // @spec FIG-2, FIG-4, FIG-10
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     // A fingertip covers about 40px of glass and hides what is under it, so it gets a
     // target that size; a mouse keeps the small one, so what the label names stays what
@@ -825,7 +828,7 @@ function Chart({
 
   // A native listener, because React's wheel listener is passive and cannot keep the page
   // from scrolling.
-  // @spec FIG-2
+  // @spec FIG-2, FIG-10
   const onView = zoom?.onView;
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -838,8 +841,10 @@ function Chart({
       e.preventDefault();
       // Firefox counts lines.
       const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? canvas.clientHeight : 1;
+      // A trackpad pinch arrives as a wheel with ctrl held.
+      const rate = e.ctrlKey ? PINCH : WHEEL;
       const to = fraction(local(e));
-      onView((v) => zoomView(v, Math.exp(-e.deltaY * unit * WHEEL), to));
+      onView((v) => zoomView(v, Math.exp(-e.deltaY * unit * rate), to));
     };
     // Safari reports a trackpad pinch as gesture events, where other browsers send a wheel
     // with ctrl held.

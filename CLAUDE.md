@@ -1405,8 +1405,8 @@ WCAG 1.4.13 asks that it be dismissible and hoverable, and it is neither by defa
 
 ### The figure full screen
 
-`FIG-1` to `FIG-7` are the rules. In the page the figure is one static picture. Full screen
-is where it zooms and pans.
+`FIG-1` to `FIG-8` and `FIG-10` are the rules. In the page the figure is one static picture.
+Full screen is where it zooms and pans.
 
 | Detail | Why |
 | --- | --- |
@@ -1421,6 +1421,7 @@ is where it zooms and pans.
 | No tooltip inside it | Radix portals a tooltip to `<body>`, which sits under the top layer and outside the fullscreen element, so it would never show. The buttons' own text names them, and shows from 900px |
 | A pick stays full screen | The word is looked up behind it and marked in it. Leaving on every pick would throw the zoom away mid-search |
 | Safari's trackpad pinch | Safari sends `gesturechange`, not a ctrl+wheel. A pinch on glass sends both, so the gesture handler stands down while a pointer is down |
+| A wheel with ctrl held zooms at `PINCH`, not at `WHEEL` (`FIG-10`) | It is a trackpad pinch. Chromium sends a pinch as wheels with ctrl held, and their deltaY sums to −100 ln(scale), as measured in headless Brave on 2026-10-17. At `PINCH` the figure then zooms by the fingers' own factor, as it does for Safari's gesture and for a pinch on glass. A mouse wheel turned with ctrl held is read at `PINCH` too, so it zooms faster than without ctrl |
 | `MAX_ZOOM` is 512 (`FIG-8`) | The first doubling at which the densest row fits its words 10mm apart on a phone. At 256 French cannot: 1,342 of its words would sit closer. A desktop never needs this much, and the extra costs it nothing |
 | 10mm is room for a large or a shaking fingertip | It is the closest pair that has to be pickable, not the typical one. A view of the densest row at full zoom holds two or three points, and a reader who needs less stops zooming sooner |
 | A word keeps its hashed offset unless that lands within 10mm of a word already in its row | The hashed offsets alone put 189 to 1,004 pairs per language within 0.05px of each other on a phone at 1×, and only 11,800× to 24,600× would pull the closest pair 10mm apart. The rule moves 5–10% of the words, and 17.5% in English, whose 20 rows are the thinnest. 87% to 98% of the moves are in the bottom two rows, so the picture is still the one the hash draws |
