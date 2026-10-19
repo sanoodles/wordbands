@@ -61,7 +61,7 @@ flowchart TD
 | `glossCache` | [`WordCard.tsx`](../apps/web/src/components/WordCard.tsx) | In the browser | It holds the answers this tab has received, for words with one casing. | It decides whether the browser asks the server again. |
 | `dict` | The query string | The browser sends it, and the server reads it. | The card always sends `dict=1`. | On the server, step 1 answers only a lookup with `dict=1`. Only such a lookup keeps the word's casing. |
 | `GOOGLE_PAIRS` | [`bands.ts`](../apps/web/src/lib/bands.ts) | On the server | It lists English with es, de, fr, it and pt, in both directions. | It decides which pairs have a committed file. `PAIRS` in `build-google.ts` builds the same ten directions. |
-| `HEAD_BANDS` | [`build-google.ts`](../apps/web/scripts/build-google.ts) | In the build script, on a developer's machine | It lists A1 and A2. | It decides which words a committed file holds. |
+| `HEAD_BANDS` | [`build-google.ts`](../apps/web/scripts/build-google.ts) | In the build script, which a GitHub workflow runs once a day | It lists A1 and A2. | It decides which words a committed file holds. |
 | `revalidate` | [`route.ts`](../apps/web/src/app/api/translate/%5Bword%5D/route.ts) | On the server | It is 180 days. | It decides how long the data cache may reuse an answer. In practice Vercel drops the entries within hours. |
 | `needsPivot` | [`translate.ts`](../apps/web/src/lib/translate.ts) | On the server | It is true when neither language is `en`. | It decides whether the server translates through English. |
 | `MIN_RELATIVE_SCORE` | [`translate.ts`](../apps/web/src/lib/translate.ts) | On the server | It is 0.01 of the best score in the group. | It decides which senses a group keeps. |

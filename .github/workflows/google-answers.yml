@@ -1,0 +1,140 @@
+name: Google's answers for the head
+
+# The translate route answers a head word from apps/web/data/google.<source>-<target>.json and
+# asks Google only for a word those files lack. This fills the files in on GitHub's runners,
+# at the pace CLAUDE.md's "Calling a third party" asks for, and lands them on main. No
+# developer's machine stays busy for the days the fill takes.
+#
+# Off the hour and away from the other schedules. GitHub disables a schedule after 60 days of
+# repo quiet, and workflow_dispatch is the way back.
+on:
+  schedule:
+    - cron: "47 2 * * *"
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: How many minutes the run may call Google
+        type: number
+        default: 330
+
+# `fetch` runs the installed packages and `land` writes, so no job does both.
+permissions: {}
+
+# Two runs never call Google at the same time.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  FILES: apps/web/data/google.*.json
+  BRANCH: chore/google-answers
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # One call every ten seconds, so 330 minutes make about 1,930 calls. GitHub stops a job
+      # at 360. The script saves after every answer, so a refusal that fails this step still
+      # leaves the answers before it to land.
+      - timeout-minutes: 350
+        env:
+          MINUTES: ${{ inputs.minutes || 330 }}
+        run: pnpm --filter @wordbands/web build:google --minutes "$MINUTES"
+
+      - id: diff
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -n "$(git status --porcelain -- $FILES)" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+
+      - if: ${{ !cancelled() && steps.diff.outputs.changed == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: google-answers
+          path: ${{ env.FILES }}
+          retention-days: 7
+
+  # It runs no installed code, only git, gh and jq.
+  land:
+    needs: fetch
+    if: ${{ !cancelled() && needs.fetch.outputs.changed == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # To start pr.yml on the branch and to read its result.
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: google-answers
+          path: ${{ runner.temp }}/answers
+
+      # Main requires pr.yml's `check`, and a push made with github.token starts no workflow.
+      # So the commit goes to a branch, pr.yml is started there, and once it passes the same
+      # commit goes to main. GitHub accepts that push without admin rights. Vercel builds no
+      # preview of the branch (`git.deploymentEnabled` in apps/web/vercel.json).
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          count() { jq -s 'map(.answers | length) | add' $FILES; }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          before=$(count)
+          cp "$RUNNER_TEMP"/answers/google.*.json apps/web/data/
+          added=$(( $(count) - before ))
+          subject="feat(web): update Google's committed answers"
+          if [ "$added" -gt 0 ]; then
+            subject="feat(web): commit Google's answers for $(sed -E ':a;s/^([0-9]+)([0-9]{3})/\1,\2/;ta' <<<"$added") more head words"
+          fi
+          git add -- $FILES
+          git commit -q -m "$subject" -m "Fetched by .github/workflows/google-answers.yml, at one call every ten seconds."
+
+          for attempt in 1 2 3; do
+            git fetch -q --depth=1 origin main
+            if [ "$(git rev-parse FETCH_HEAD)" != "$(git rev-parse HEAD^)" ]; then
+              # Main moved during the run. Only this workflow writes the files, so a conflict
+              # means someone ran build:google by hand meanwhile.
+              commit=$(git rev-parse HEAD)
+              git checkout -q --detach FETCH_HEAD
+              git cherry-pick "$commit" > /dev/null || fail "Main changed the answers during this run. The run's artifact holds its own."
+            elif [ "$attempt" -gt 1 ]; then
+              fail "Main refused the push. The branch $BRANCH holds the answers."
+            fi
+
+            sha=$(git rev-parse HEAD)
+            git push -q --force origin "HEAD:refs/heads/$BRANCH"
+            gh workflow run pr.yml --ref "$BRANCH"
+            result=
+            for _ in $(seq 90); do
+              sleep 20
+              result=$(gh run list --workflow pr.yml --commit "$sha" --json status,conclusion \
+                         --jq '.[0] | select(.status == "completed") | .conclusion' || true)
+              [ -z "$result" ] || break
+            done
+            [ "$result" = success ] || fail "pr.yml ended '${result:-unfinished}' on $sha. The branch $BRANCH holds the answers."
+
+            if git push -q origin "HEAD:refs/heads/main"; then
+              git push -q origin --delete "$BRANCH" || true
+              exit 0
+            fi
+          done
+          fail "Main moved three times while pr.yml ran. The branch $BRANCH holds the answers."

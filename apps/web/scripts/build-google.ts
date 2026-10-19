@@ -3,14 +3,16 @@
 // direction, `data/google.<source>-<target>.json`: the raw `gtx` answer to the dictionary
 // lookup the word card makes, keyed by the word as the card sends it.
 //
-//   tsx scripts/build-google.ts             fetch the words the artifacts lack, most frequent first
-//   tsx scripts/build-google.ts --top 500   only each direction's 500 most frequent head words
-//   tsx scripts/build-google.ts --refresh   fetch every answer again
-//   tsx scripts/build-google.ts --check     report how far the artifacts trail the head, fetching nothing
+//   tsx scripts/build-google.ts              fetch the words the artifacts lack, most frequent first
+//   tsx scripts/build-google.ts --top 500    only each direction's 500 most frequent head words
+//   tsx scripts/build-google.ts --minutes 60 stop after an hour, keeping every answer fetched
+//   tsx scripts/build-google.ts --refresh    fetch every answer again
+//   tsx scripts/build-google.ts --check      report how far the artifacts trail the head, fetching nothing
 //
-// Run it here rather than from production: Google limits calls by address, and Vercel's
-// is shared. CLAUDE.md holds the measurements behind the choice.
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+// `.github/workflows/google-answers.yml` runs it every day on GitHub's runners, not from
+// production: Google limits calls by address, and Vercel's is shared. CLAUDE.md holds the
+// measurements behind the choice.
+import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gtxUrl, parseGtx } from "../src/lib/translate";
@@ -35,7 +37,7 @@ const HEAD_BANDS = ["A1", "A2"];
 const PAUSE_MS = 10_000;
 const ATTEMPTS = 3;
 // A run takes this many words of each direction in turn, so one that Google cuts short has
-// spent its calls on every direction's most frequent words. Each round is written as it ends.
+// spent its calls on every direction's most frequent words.
 const ROUND = 500;
 
 interface WordsArtifact {
@@ -86,6 +88,8 @@ interface Direction {
   path: string;
   words: string[];
   answers: Map<string, unknown>;
+  /** The words Google answered without a translation in this run. */
+  blank: string[];
 }
 
 const pathOf = (source: string, target: string) => resolve(DATA, `google.${source}-${target}.json`);
@@ -100,21 +104,26 @@ function load(source: string, target: string): Direction {
   const kept = stored(path);
   const answers = new Map<string, unknown>();
   for (const w of words) if (Object.hasOwn(kept, w)) answers.set(w, kept[w]);
-  return { source, target, path, words, answers };
+  return { source, target, path, words, answers, blank: [] };
 }
 
 function save({ source, target, path, words, answers }: Direction) {
   const entries = words.filter((w) => answers.has(w)).map((w) => [w, answers.get(w)] as const);
-  writeFileSync(path, JSON.stringify({ source, target, answers: Object.fromEntries(entries) }));
+  // Written beside the file and renamed over it, so a run killed mid-write leaves the last whole file.
+  writeFileSync(`${path}.tmp`, JSON.stringify({ source, target, answers: Object.fromEntries(entries) }));
+  renameSync(`${path}.tmp`, path);
 }
 
 const refresh = process.argv.includes("--refresh");
 const check = process.argv.includes("--check");
 const topAt = process.argv.indexOf("--top");
 const top = topAt < 0 ? Infinity : Number(process.argv[topAt + 1]);
+const minutesAt = process.argv.indexOf("--minutes");
+const minutes = minutesAt < 0 ? Infinity : Number(process.argv[minutesAt + 1]);
 
 async function main() {
   if (top !== Infinity && !(Number.isInteger(top) && top > 0)) throw new Error("--top takes a whole number of words");
+  if (minutes !== Infinity && !(minutes > 0)) throw new Error("--minutes takes a positive number of minutes");
   if (check) {
     for (const [source, target] of PAIRS) {
       const words = head(source);
@@ -135,29 +144,37 @@ async function main() {
     console.log(`${d.source}->${d.target}: ${d.words.length} head words, ${d.answers.size} kept, ${owed(d, d.words.slice(0, top)).length} to fetch`);
   }
 
+  const deadline = Date.now() + minutes * 60_000;
   const end = Math.min(top, Math.max(...directions.map((d) => d.words.length)));
-  for (let from = 0; from < end; from += ROUND) {
+  fill: for (let from = 0; from < end; from += ROUND) {
     for (const d of directions) {
       const todo = owed(d, d.words.slice(from, Math.min(from + ROUND, end)));
       if (!todo.length) continue;
       for (const word of todo) {
+        if (Date.now() >= deadline) {
+          console.log(`stopped after ${minutes} minutes. Run again to fetch the rest.`);
+          break fill;
+        }
+        let answer: unknown;
         try {
-          d.answers.set(word, await ask(word, d.source, d.target));
+          answer = await ask(word, d.source, d.target);
         } catch (err) {
-          save(d);
           console.error(`stopped: ${(err as Error).message}. Run again later to fetch the rest.`);
           process.exit(1);
         }
+        // GTX-3 forbids an answer without a translation, so it is not kept. A later run asks again.
+        if (parseGtx(answer)) {
+          d.answers.set(word, answer);
+          save(d);
+        } else d.blank.push(word);
         await sleep(PAUSE_MS);
       }
-      save(d);
       console.log(`  ${d.source}->${d.target}: ${d.answers.size} of ${d.words.length}`);
     }
   }
 
   for (const d of directions) {
-    const blank = d.words.filter((w) => d.answers.has(w) && !parseGtx(d.answers.get(w)));
-    console.log(`${d.source}->${d.target}: ${d.answers.size} of ${d.words.length} answered${blank.length ? `, ${blank.length} without a translation: ${blank.slice(0, 10).join(", ")}` : ""}`);
+    console.log(`${d.source}->${d.target}: ${d.answers.size} of ${d.words.length} answered${d.blank.length ? `, ${d.blank.length} without a translation: ${d.blank.slice(0, 10).join(", ")}` : ""}`);
   }
 }
 
