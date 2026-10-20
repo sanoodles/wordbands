@@ -1,4 +1,4 @@
-import { getGoogleAnswer, levelsOf } from "@/lib/bands";
+import { levelsOf } from "@/lib/bands";
 import { isSourceLang } from "@/lib/languages";
 import {
   alignGroup,
@@ -14,7 +14,7 @@ import {
   type SenseGroup,
 } from "@/lib/translate";
 
-// How long a tail answer may be reused. Vercel may drop it sooner, and nothing relies on it.
+// How long Google's answer may be reused. Vercel may drop it sooner, and nothing relies on it.
 export const revalidate = 15552000; // 180 days; a literal, since Next cannot evaluate arithmetic here
 
 /** Google answered with something other than a translation. */
@@ -33,11 +33,6 @@ async function gtx(
   target: string,
   dict: boolean,
 ): Promise<unknown> {
-  // A head word that the committed data holds answers from that data, whatever Google or
-  // the cache do.
-  // @spec GTX-1
-  const kept = dict ? await getGoogleAnswer(source, target, word) : undefined;
-  if (kept !== undefined) return kept;
   const res = await fetch(gtxUrl(word, source, target, dict), { next: { revalidate } });
   if (!res.ok) throw new UpstreamError(answered(res));
   try {

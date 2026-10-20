@@ -1,8 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { getWord, GOOGLE_PAIRS, resolveForm, WIKTIONARY_PAIRS } from "@/lib/bands";
-import { parseGtx } from "@/lib/translate";
+import { getWord, resolveForm, WIKTIONARY_PAIRS } from "@/lib/bands";
 import formsEn from "../../data/forms.en.json";
 import formsEs from "../../data/forms.es.json";
 import formsFr from "../../data/forms.fr.json";
@@ -318,28 +317,5 @@ describe("Wiktionary's translations", () => {
   it("leaves out the dialects and dropped words the English edition files under a language", () => {
     // Alemannic net, nit, nüt and nöt, and Bavarian ned, are filed under German.
     expect(direction("en", "de").get("not")).toEqual(["nicht"]);
-  });
-});
-
-// Built by scripts/build-google.ts. Only what is stored is checked: the answers may trail the
-// word lists, and `build:google --check` reports by how much.
-describe("Google's committed answers", () => {
-  const load = (pair: string) =>
-    JSON.parse(readFileSync(new URL(`../../data/google.${pair}.json`, import.meta.url), "utf8")) as {
-      source: string;
-      target: string;
-      answers: Record<string, unknown>;
-    };
-
-  // @spec GTX-3
-  it("answers every word with a translation", () => {
-    expect(GOOGLE_PAIRS).toEqual(["de-en", "en-de", "en-es", "es-en", "fr-en", "pt-en", "it-en", "en-fr", "en-pt", "en-it"]);
-    const blank: string[] = [];
-    for (const pair of GOOGLE_PAIRS) {
-      const { source, target, answers } = load(pair);
-      expect(`${source}-${target}`).toBe(pair);
-      for (const [word, answer] of Object.entries(answers)) if (!parseGtx(answer)) blank.push(`${pair} ${word}`);
-    }
-    expect(blank).toEqual([]);
   });
 });

@@ -39,7 +39,7 @@ other customers.
 | Rule | Detail |
 | --- | --- |
 | One call at a time | Never several at once to the same host |
-| No deadline for a cache | Data fetched to spare later calls is built eventually, at a pace far below any limit, over days if need be. `build:google` makes one call every ten seconds |
+| No deadline for a cache | Data fetched to spare later calls is built eventually, at a pace far below any limit, over days if need be |
 | A pause after each call | A probe or a one-off measurement pauses half a second or more after each call. A script names its pace in a constant |
 | Stop at the first refusal | A refusal means the pace was too fast. Slow it down, and wait an hour or more before the next run. Only a call that got no answer at all is tried again |
 | Keep what was fetched | A script saves as it goes and resumes, so stopping costs a wait, not the work |
@@ -47,7 +47,12 @@ other customers.
 
 Measured on 2026-10-16: four calls at a time with no pause, about 45 a second, were refused
 after about 5,000 calls, and this machine stayed refused for more than half an hour. The
-same afternoon, one call every 0.6 seconds was refused after 1,456 calls.
+same afternoon, one call every 0.6 seconds was refused after 1,456 calls. From that evening
+to the next morning, one call every ten seconds made 5,000 calls, and Google refused none.
+
+GitHub's runners fare worse. On 2026-10-19 and 2026-10-20, Google answered one call from each
+of two runners and refused the next with a 429, ten seconds later. So a fetch from Google
+cannot run on them.
 
 **Nor may it block the development loop or take the site down.** A fetch runs on its own,
 and its result arrives as data someone commits.
@@ -55,8 +60,8 @@ and its result arrives as data someone commits.
 | Rule | Detail |
 | --- | --- |
 | Out of the loop | Nothing in `pnpm dev`, the pre-push hook, `pr.yml` or the Vercel build calls a third party or waits on data fetched from one. Tests stub the network |
-| Its own command or schedule | A fetch runs as its own command, like `build:google`, or as a scheduled workflow, like `google-answers.yml`. A fetch that takes hours runs on a server, so that it keeps no developer's machine busy |
-| Lag is allowed | Fetched data may trail what it describes. The app falls back to the live call, and no check fails on the lag. A script reports it instead, like `build:google --check` |
+| Its own command or schedule | A fetch runs as its own command, like `pnpm skills:sync`, or as a scheduled workflow, like `skills-freshness.yml`. A fetch that takes hours runs on a server, so that it keeps no developer's machine busy |
+| Lag is allowed | Fetched data may trail what it describes, and no check fails on the lag. A script reports it instead, like `pnpm skills:check` |
 | A failure degrades a feature, never the page | Google failing leaves the card with Wiktionary's line or a link to Google Translate. A scheduled job failing leaves the site as it was |
 
 ## Source and target
@@ -99,15 +104,13 @@ ours. `source`/`target` map onto them at that one call.
 | `src/lib/site.ts` | `SITE_URL`, `SITE_NAME`, `SITE_DESCRIPTION` — what names the site to a machine |
 | `src/lib/translate.ts` | Google Translate fetching and parsing, and the relay gate |
 | `next.config.mjs` | Response headers, the CSP, `distDir` |
-| `vercel.json` | The build commands, and the branch Vercel does not build |
+| `vercel.json` | The build commands |
 | `scripts/build-bands.ts` | Artifact build, the `LANGS` table |
 | `scripts/build-wiktionary.ts` | Wiktionary translation build, the `LANGS` list |
-| `scripts/build-google.ts` | Google's answers for the head, the `PAIRS` list |
 | `data/wordbands.<code>.json` | Committed artifact, one per language |
 | `data/forms.<code>.json` | Committed artifact: inflected form -> the indexed word it belongs to |
 | `data/defining.<code>.json` | Committed artifact: one defining level per ranked word, emitted by the defining-vocabulary repo |
 | `data/wiktionary.<source>-<target>.json` | Committed artifact: Wiktionary's translations of each source word, and the page titles that differ from it |
-| `data/google.<source>-<target>.json` | Committed artifact: Google's raw answer to each head word's dictionary lookup, between English and the other five |
 | `node_modules/next/dist/docs/` | Next.js's own guides for the installed version, which is newer than a model's training data. Read the relevant one before using a Next API. `agentRules: false` in `next.config.mjs` stops `next dev` writing this advice into `apps/web/` as its own AGENTS.md and CLAUDE.md |
 
 Paths are relative to `apps/web/`.
@@ -234,7 +237,6 @@ has answered. The licence is named here; the question is not settled here.
 | `pnpm --filter @wordbands/web build:bands` | Rebuild every language |
 | `pnpm --filter @wordbands/web build:bands <code>` | Rebuild one |
 | `pnpm --filter @wordbands/web build:wiktionary` | Rebuild Wiktionary's translations, all 30 directions. About 3m40s, at 2.6GB |
-| `pnpm --filter @wordbands/web build:google` | Fetch Google's answers for the head that the files lack, between English and the other five, most frequent first. `--top N` stops at each direction's N most frequent, `--minutes N` stops after N minutes, `--refresh` fetches every one again, and `--check` reports the gap without fetching. At one call every ten seconds all of them take about 85 hours, so `google-answers.yml` runs it on GitHub every day rather than on a developer's machine |
 
 To add a language: drop its inputs in `data/`, add a `LANGS` entry in the build script, add
 it to `SOURCE_LANG_META` and to `ETYMOLOGY` beside it, and add the registry import in
@@ -775,9 +777,8 @@ what can be done about it, so the route says it.
 | The 502's body | The command below |
 | Vercel's runtime logs, filtered on `[translate]` | The same reason, with the pair. Hobby keeps an hour |
 
-Between English and the other five, a head word the files hold comes back 200 from committed
-data, refusal or not, and so can a word looked up in the last few hours. So the command asks
-for a new one each time. The gate takes any string without whitespace:
+A word looked up in the last few hours can come back 200 from the data cache, refusal or not.
+So the command asks for a new one each time. The gate takes any string without whitespace:
 
 ```sh
 curl -s "https://wordbands.vercel.app/api/translate/probe$RANDOM?source=de&target=ja"
@@ -792,62 +793,9 @@ curl -s "https://wordbands.vercel.app/api/translate/probe$RANDOM?source=de&targe
 Neither names the word. It is what the reader typed, and the pair is enough, because a
 refusal is per IP rather than per word.
 
-### Google's answers for the head
+### The data cache
 
-`GTX-1` to `GTX-3` are the rules. Between English and each of the other five languages, the
-head is answered from `data/google.<source>-<target>.json` wherever the file holds the word.
-Each entry is Google's raw answer to the card's dictionary lookup, so the route's parsers
-read it exactly as they read a live one.
-
-| Number | Value |
-| --- | --- |
-| Head words | There are 30,118 in ten directions. They are the source's A1 and A2 bands, ranks 1–3,000, with each casing counted apart |
-| Size | The full de→en file weighs 1.9MB, and the full en→de file 2.7MB. The ten will weigh about 24MB once all are full |
-| A full build | It takes about 85 hours of calls, at one call every ten seconds. The daily run makes about 1,930 of them. Nothing waits on it |
-
-| Load-bearing detail | Why |
-| --- | --- |
-| Built on GitHub's runners, not on Vercel | Google limits calls by address, and Vercel's is shared with other customers. A Vercel function also cannot write into its own deployment, so the answers would need a store of their own |
-| One call every ten seconds | Calling a third party, above, asks for this pace: the files are a cache, and they fill in eventually. A rerun fetches only what the files lack, so a refusal costs a wait, not the work |
-| Most frequent first | A run takes 500 head words of each direction in turn, so a run cut short leaves every direction its most-used words. `--top N` stops each direction at N |
-| The raw answer, not the route's output | The parsers stay live: a change to `MIN_RELATIVE_SCORE` or to the group limit needs no rebuild. Only Google's wording is frozen |
-| Looked up in `gtx()`, before `fetch` | Every Google call goes through it, so the pivot's English hop is answered too when its term is an English head word |
-| Only a dictionary lookup | The card always asks with `dict=1`, which keeps the casing. So the key is the word exactly as the card sends it |
-| Read through a `Map` | The key is caller input, which is why `resolveForm` uses one too |
-| Imported dynamically, one direction at a time | One route reads it, as with Wiktionary's artifacts |
-| The import path is a template literal, and tsconfig's `include` names no `data/**/*.json` | TypeScript then reads none of the files. Imported with literal paths, they took `tsc --noEmit` from 11.7s to 14.3s and its memory from 2.5GB to 3.0GB, measured on 2026-10-17 while they held 9.2MB. Turbopack still bundles each file the template matches, as a chunk of its own |
-
-| Known cost | Detail |
-| --- | --- |
-| Google's wording is frozen at the build | It moves slowly. `--refresh` fetches every answer again |
-| The files fill in over days | A file may hold only the most frequent part of its head. The rest is asked of Google (`GTX-2`), and `build:google --check` says how much is left |
-| Only the five pairs with English | A pair into a language outside the six, like en→ja, asks Google for every word. A pair is one row in `PAIRS` and one in `GOOGLE_PAIRS` |
-| A pair without English still needs Google | Its direct lookup goes to Google, and the route fails when that fails, so es→de still 502s while Google refuses us. Wiktionary's line shows all the same (`WIKT-5`). Of its two English hops, the first answers from the files for every head word. The second answers from the files where the pivot term is an English head word. That held for 2,183 of 3,113 German head words, measured on 2026-10-16 |
-| A rebuild of a `wordbands.<code>.json` | It changes the head. Until a daily run fetches them, the new head words are asked of Google (`GTX-2`), and `build:google --check` says how many |
-| A new file can be invisible to a local test run | vitest keeps its transform of `bands.ts` in `node_modules/.vitest-cache`, keyed on that file's text alone. The transform lists the files the template import matched, so a `google.<source>-<target>.json` written later fails to import with "Unknown variable dynamic import". `pnpm --filter @wordbands/web exec vitest --clearCache` clears the cache. CI starts without it |
-
-#### The daily fill
-
-`.github/workflows/google-answers.yml` runs `build:google --minutes 330` on GitHub's runners
-once a day, and it lands the answers on `main`. Nothing runs on a developer's machine, and a
-developer gets the answers with the next pull.
-
-| Detail | Why |
-| --- | --- |
-| A run calls Google for 330 minutes | GitHub stops a job at 360 minutes. At one call every ten seconds, 330 minutes make about 1,930 calls |
-| The script saves after every answer | A run that is cut short keeps every answer it fetched |
-| The script keeps no answer without a translation | `GTX-3` forbids one. The next run asks for that word again |
-| A refusal fails the run | The answers before the refusal still land. The next day's run tries again on a new runner, which usually has another address |
-| `fetch` and `land` are separate jobs | `fetch` runs the installed packages with a token that cannot write. `land` writes, and it runs only git, gh and jq |
-| `land` pushes to a branch first | `main` requires `pr.yml`'s `check`, and a push made with `github.token` starts no workflow. So `land` pushes `chore/google-answers`, starts `pr.yml` on it, and pushes the same commit to `main` once `check` passes. GitHub accepts that push without admin rights |
-| `land` waits on `pr.yml`'s run, not on a check named `check` | `deployed-a11y.yml` and `deployed-decodes.yml` name their jobs `check` as well |
-| Vercel builds no preview of that branch | `git.deploymentEnabled` in `vercel.json` turns the preview off. Nobody reads it, and its deployment would start the two deployed checks |
-| Only the workflow writes the files | When `main` changed the answers during a run, `land` fails rather than overwrite them. That run's answers stay in its artifact for seven days |
-| A failed `land` names its case in the run's log | A branch that is left over holds the answers. The next run overwrites the branch, and a later run fetches those words again |
-
-### Past the head: the data cache
-
-Every other lookup is cached by Next's fetch cache, with `revalidate` at 180 days. That number
+Every lookup is cached by Next's fetch cache, with `revalidate` at 180 days. That number
 is only how long an entry counts as fresh. Vercel's data cache docs say:
 
 | Rule | What it means here |
@@ -866,8 +814,7 @@ Measured on production on 2026-10-14 and 2026-10-16:
 | About 40 hours | 0 of 52 |
 | 1–32 days | 0 of 256 |
 
-So the cache spares a repeat lookup within hours, and not for longer. That is why the head
-is a file.
+So the cache spares a repeat lookup within hours, and not for longer.
 
 **Nothing may rely on it.** Vercel promises no retention: its docs call the cache ephemeral,
 and say another project's writes can evict our entries. A hit saves a Google call, and that
@@ -886,7 +833,8 @@ drops one is not worth chasing.
 
 | Measured and rejected | Why not |
 | --- | --- |
-| Keeping the head in the data cache with a scheduled pass | Nothing lasts a day there, so a schedule keeps nothing |
+| Keeping the most frequent words in the data cache with a scheduled pass | Nothing lasts a day there, so a schedule keeps nothing |
+| Committing Google's answers for the most frequent words | Filling the A1 and A2 words of the ten directions with English takes about 85 hours of calls, and no place runs that unattended. Google refuses GitHub's runners, a Vercel function cannot write into its own deployment, and a fill must not keep a developer's machine busy |
 
 ### English is Google's hub
 

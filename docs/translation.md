@@ -3,8 +3,8 @@
 The word card runs in the reader's browser. It shows what a word means in the reader's
 language. To find that meaning, the browser and the server try several sources in a fixed
 order, and they use the first source that has the answer. On the server, the route's
-function `gtx()` tries three sources for every answer it needs from Google. When a
-translation goes through English, each English step on the server tries the same three
+function `gtx()` tries two sources for every answer it needs from Google. When a
+translation goes through English, each English step on the server tries the same two
 sources. In the end the card shows up to three lines in the browser.
 
 ```mermaid
@@ -28,17 +28,15 @@ flowchart TD
   req -- "The firewall and the gate let the request through." --> hop
 
   subgraph gtx ["Server: gtx(), in order"]
-    s1["Step 1: The server looks in the committed file data/google.‹source›-‹target›.json.<br/>The file is part of each deployment, so this step makes no network call.<br/>A file exists for each pair in GOOGLE_PAIRS.<br/>The file holds Google's answers for the words of the A1 and A2 bands, most frequent first.<br/>It may not hold all of those words yet."]
-    s2["Step 2: The server looks in Next's data cache, which Vercel keeps for the server.<br/>The cache may keep an answer for 180 days, which is revalidate.<br/>In practice Vercel drops the entries within hours."]
-    s3["Step 3: The server asks Google at translate.googleapis.com.<br/>It asks for the translation, dt=t, and for the dictionary block, dt=bd."]
-    s1 -- "The file does not have the answer." --> s2
-    s2 -- "The data cache does not have the answer." --> s3
+    s1["Step 1: The server looks in Next's data cache, which Vercel keeps for the server.<br/>The cache may keep an answer for 180 days, which is revalidate.<br/>In practice Vercel drops the entries within hours."]
+    s2["Step 2: The server asks Google at translate.googleapis.com.<br/>It asks for the translation, dt=t, and for the dictionary block, dt=bd."]
+    s1 -- "The data cache does not have the answer." --> s2
   end
 
   hop --> s1
   gtx -- "The server takes the first answer it found." --> groups
   groups["The server reads the dictionary groups with parseSenseGroups.<br/>It drops a sense that scores under MIN_RELATIVE_SCORE of its group's best."]
-  groups -- "There are no groups, and neither language is English." --> pivot["The server translates through English.<br/>pivotTerm takes the best English sense, if it scores at least MIN_PIVOT_SCORE.<br/>gtx(term, en, target) looks that English word up, with steps 1 to 3 again.<br/>alignGroup keeps the group with the source word's part of speech."]
+  groups -- "There are no groups, and neither language is English." --> pivot["The server translates through English.<br/>pivotTerm takes the best English sense, if it scores at least MIN_PIVOT_SCORE.<br/>gtx(term, en, target) looks that English word up, with steps 1 and 2 again.<br/>alignGroup keeps the group with the source word's part of speech."]
   groups -- "There are groups, or one language is English." --> resp["The server answers the browser with the translation, the senses, the groups and their levels."]
   pivot --> resp
 
@@ -51,7 +49,7 @@ flowchart TD
   end
 
   resp --> line1
-  s3 -- "Google refused, or the call failed. The server answers the browser with a 502." --> line1
+  s2 -- "Google refused, or the call failed. The server answers the browser with a 502." --> line1
 ```
 
 ## The variables it reads
@@ -59,9 +57,7 @@ flowchart TD
 | Variable | File | Where it is used | Its value | What it decides |
 | --- | --- | --- | --- | --- |
 | `glossCache` | [`WordCard.tsx`](../apps/web/src/components/WordCard.tsx) | In the browser | It holds the answers this tab has received, for words with one casing. | It decides whether the browser asks the server again. |
-| `dict` | The query string | The browser sends it, and the server reads it. | The card always sends `dict=1`. | On the server, step 1 answers only a lookup with `dict=1`. Only such a lookup keeps the word's casing. |
-| `GOOGLE_PAIRS` | [`bands.ts`](../apps/web/src/lib/bands.ts) | On the server | It lists English with es, de, fr, it and pt, in both directions. | It decides which pairs have a committed file. `PAIRS` in `build-google.ts` builds the same ten directions. |
-| `HEAD_BANDS` | [`build-google.ts`](../apps/web/scripts/build-google.ts) | In the build script, which a GitHub workflow runs once a day | It lists A1 and A2. | It decides which words a committed file holds. |
+| `dict` | The query string | The browser sends it, and the server reads it. | The card always sends `dict=1`. | It makes the server ask Google for the dictionary block, `dt=bd`, and keep the word's casing. |
 | `revalidate` | [`route.ts`](../apps/web/src/app/api/translate/%5Bword%5D/route.ts) | On the server | It is 180 days. | It decides how long the data cache may reuse an answer. In practice Vercel drops the entries within hours. |
 | `needsPivot` | [`translate.ts`](../apps/web/src/lib/translate.ts) | On the server | It is true when neither language is `en`. | It decides whether the server translates through English. |
 | `MIN_RELATIVE_SCORE` | [`translate.ts`](../apps/web/src/lib/translate.ts) | On the server | It is 0.01 of the best score in the group. | It decides which senses a group keeps. |
@@ -72,5 +68,5 @@ flowchart TD
 ## The rules
 
 [`SPEC.md`](../SPEC.md) states what each step must do. Its `GATE` rules cover what the server
-passes on to Google. Its `GTX` rules cover the committed answers. Its `WIKT` rules cover
+passes on to Google. Its `WIKT` rules cover
 Wiktionary's line.

@@ -25,6 +25,3 @@ apps/web/data/names.txt
 apps/web/data/*.dic
 apps/web/data/*.aff
 apps/web/data/wiktextract-*.jsonl.gz
-
-# Left behind when build:google is killed while it writes a file
-apps/web/data/*.tmp

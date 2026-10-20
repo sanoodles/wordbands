@@ -2,10 +2,5 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
-  "buildCommand": "cd ../.. && bash apps/web/scripts/vercel-build.sh",
-  "git": {
-    "deploymentEnabled": {
-      "chore/google-answers": false
-    }
-  }
+  "buildCommand": "cd ../.. && bash apps/web/scripts/vercel-build.sh"
 }

@@ -170,7 +170,6 @@ describe("GET /api/translate/[word] input", () => {
 
 // Google ranks a translation's alternatives by confidence, not difficulty, so the card badges
 // each with its level in the language it's written in — "casa" A1 beside "domicilio" B1.
-// The words looked up are past the head, which would answer from committed data instead.
 describe("GET /api/translate/[word] levels", () => {
   it("levels every dictionary term in the target language", async () => {
     vi.stubGlobal("fetch", mockGtx("casa", "noun", [["casa", 0.6], ["domicilio", 0.02]]));
@@ -286,7 +285,7 @@ describe("GET /api/translate/[word] output", () => {
   });
 
   // dt=bd is casing-sensitive — "Tiefe" is depth, "tiefe" is deep — so the casing is the
-  // question being asked. A word past the head, which Google is still asked about.
+  // question being asked.
   // @spec GATE-7
   it("keeps the casing when asking for the dictionary block", async () => {
     const upstream = mockGtx("depth", "noun", [["depth", 0.6]]);
@@ -294,45 +293,6 @@ describe("GET /api/translate/[word] output", () => {
     const res = await translate("Tiefe", "source=de&target=en&dict=1");
     expect(urlOf(upstream).searchParams.get("q")).toBe("Tiefe");
     expect((await res.json()).word).toBe("Tiefe");
-  });
-});
-
-// The head of every pair with English is committed, so it answers whether or not Google does.
-describe("GET /api/translate/[word] head", () => {
-  // @spec GTX-1
-  it.each([
-    ["de", "Wasser"],
-    ["es", "agua"],
-    ["fr", "eau"],
-    ["it", "acqua"],
-    ["pt", "água"],
-  ])("answers a head word between %s and English from committed data, calling no one", async (lang, word) => {
-    const upstream = vi.fn();
-    vi.stubGlobal("fetch", upstream);
-    const from = await translate(word, `source=${lang}&target=en&dict=1`);
-    expect(from.status).toBe(200);
-    expect((await from.json()).senses).toContain("water");
-    const into = await translate("water", `source=en&target=${lang}&dict=1`);
-    expect(into.status).toBe(200);
-    expect((await into.json()).senses).toContain(word);
-    expect(upstream).not.toHaveBeenCalled();
-  });
-
-  // @spec GTX-1
-  it("keeps the two casings of a case-homograph apart", async () => {
-    vi.stubGlobal("fetch", vi.fn());
-    const noun = await (await translate("Essen", "source=de&target=en&dict=1")).json();
-    const verb = await (await translate("essen", "source=de&target=en&dict=1")).json();
-    expect(noun.senses).toContain("food");
-    expect(verb.senses).toContain("eat");
-  });
-
-  // @spec GTX-2
-  it("still asks Google about a word the committed data lacks", async () => {
-    const upstream = mockGtx("depth", "noun", [["depth", 0.6]]);
-    vi.stubGlobal("fetch", upstream);
-    expect((await translate("Tiefe", "source=de&target=en&dict=1")).status).toBe(200);
-    expect(upstream).toHaveBeenCalledOnce();
   });
 });
 
