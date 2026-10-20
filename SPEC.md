@@ -70,6 +70,7 @@ the word card could have made.
 | GATE-6 | An upstream failure answers 502 |
 | GATE-7 | Without `dict=1` the word is lowercased; with it the casing is kept |
 | GATE-8 | An upstream failure is logged, and its 502 says what went wrong: Google's status, content type, and the host and path that answered, or the name and code of the error that stopped the call. Neither names the word |
+| GATE-9 | Between two languages neither of which is English, a lookup asks Google through English first, and for the plain translation only where English yields nothing to go through or no sense of the word's part of speech |
 
 ## ROUTE — params, decoding and status
 

@@ -75,23 +75,21 @@ export async function GET(
   const text = dict ? word : word.toLowerCase();
 
   try {
-    // The English hop is worth starting up front: a pair Google has no dictionary for
-    // always ends up needing it, and this keeps the pivot to one extra round trip.
-    const pivoting = dict && needsPivot(source, target);
-    const [data, viaEn] = await Promise.all([
-      gtx(text, source, target, dict),
-      pivoting ? gtx(text, source, "en", true) : null,
-    ]);
-
-    let groups: SenseGroup[] = dict ? parseSenseGroups(data) : [];
-    if (!groups.length && viaEn) {
-      const pivot = pivotTerm(viaEn);
+    let groups: SenseGroup[] = [];
+    let translation = "";
+    // Google has no dictionary between two languages that are not English, so the meaning
+    // comes through English, and the plain translation only where that finds none. @spec GATE-9
+    if (dict && needsPivot(source, target)) {
+      const pivot = pivotTerm(await gtx(text, source, "en", true));
       if (pivot) {
         groups = alignGroup(parseSenseGroups(await gtx(pivot.term, "en", target, true)), pivot.pos);
       }
     }
-
-    const translation = parseGtx(data);
+    if (!groups.length) {
+      const data = await gtx(text, source, target, dict);
+      if (dict) groups = parseSenseGroups(data);
+      translation = parseGtx(data);
+    }
     return Response.json(
       {
         word: text,

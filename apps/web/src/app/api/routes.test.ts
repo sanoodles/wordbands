@@ -297,6 +297,44 @@ describe("GET /api/translate/[word] output", () => {
   });
 });
 
+// Between two languages that are not English, Google's dictionary is empty and its plain
+// translation of a bare word is weak, so the meaning comes through English.
+describe("GET /api/translate/[word] between two languages that are not English", () => {
+  const dictOf = (pos: string, entries: [string, number][]) => [
+    [[entries[0]![0], "x", null, null, 1]],
+    [[pos, entries.map(([t]) => t), entries.map(([t, s]) => [t, [], null, s])]],
+  ];
+  // Google's answers by pair, and the pairs the route asked for, in order.
+  const google = (answers: Record<string, unknown>) =>
+    vi.fn(async (url: string | URL) => {
+      const u = new URL(String(url));
+      return new Response(JSON.stringify(answers[`${u.searchParams.get("sl")}-${u.searchParams.get("tl")}`] ?? [[]]));
+    });
+  const asked = (f: ReturnType<typeof google>) =>
+    f.mock.calls.map(([url]) => {
+      const u = new URL(String(url));
+      return `${u.searchParams.get("sl")}-${u.searchParams.get("tl")}`;
+    });
+
+  // @spec GATE-9
+  it("asks through English, and not for the plain translation it would not show", async () => {
+    const f = google({ "es-en": dictOf("noun", [["water", 0.5]]), "en-de": dictOf("noun", [["Wasser", 0.5]]) });
+    vi.stubGlobal("fetch", f);
+    const res = await translate("agua", "source=es&target=de&dict=1");
+    expect((await res.json()).groups).toEqual([{ pos: "noun", terms: ["Wasser"] }]);
+    expect(asked(f)).toEqual(["es-en", "en-de"]);
+  });
+
+  // @spec GATE-9
+  it("asks for the plain translation where English yields nothing to go through", async () => {
+    const f = google({ "es-en": dictOf("noun", [["friend", 0.004]]), "es-de": [[["Freund", "x", null, null, 1]]] });
+    vi.stubGlobal("fetch", f);
+    const res = await translate("amigo", "source=es&target=de&dict=1");
+    expect((await res.json()).translation).toBe("Freund");
+    expect(asked(f)).toEqual(["es-en", "es-de"]);
+  });
+});
+
 describe("GET /api/band/[view]/[key]", () => {
   it("returns a band's words in frequency order", async () => {
     const res = await bandGET(req("/api/band/x/x"), { params: promise({ view: "cefr", key: "A1" }) });

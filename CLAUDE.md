@@ -851,8 +851,10 @@ the number wrong (es→de "mujer" → "Frauen"), the case wrong ("feliz" → "Gl
 sense wrong ("noche" → "Abend", "casa" → "heim"). So when neither side is English
 (`needsPivot`) the route pivots through English. `pivotTerm` takes the best-scoring sense
 of the source→en dictionary, then en→target is looked up and `alignGroup` keeps the group
-matching the source word's part of speech. The two fetches run together, so a pivot costs
-one extra round trip: about 150ms cold, then nothing while the cache keeps the entry.
+matching the source word's part of speech. The two fetches run in series, so a pivot takes
+two round trips. The plain source→target translation is asked for only where the pivot
+finds nothing (`GATE-9`), since the card shows it only then. That makes two Google calls
+for most lookups, and three, in series, for a word the pivot misses.
 
 | Load-bearing detail | Why |
 | --- | --- |
