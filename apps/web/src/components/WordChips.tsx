@@ -18,7 +18,7 @@ const GAP = 8; // tw-gap-2, in px — the space between chips, horizontally and 
 // rows meet — and a row's footprint stops fitting inside one `stride`.
 const RING = 4;
 const OVERSCAN = 4; // extra rows kept mounted above and below the viewport
-const SELECT_DEBOUNCE = 300; // ms to settle on a chip before keyboard nav looks it up
+const SELECT_DEBOUNCE = 700; // ms to settle on a chip before keyboard nav looks it up. @spec CALL-3
 
 // Half height on a phone, where a 30rem cloud buries the card above it. The
 // virtualizer follows via its ResizeObserver, so fewer rows simply render.

@@ -241,7 +241,7 @@ async function transcribe(send, on) {
   await send("Accessibility.enable");
 
   // Each section that presses a key starts from a freshly loaded page. Arrowing the cloud
-  // queues a lookup that lands 300ms later and opens that word's band — which, left alone,
+  // queues a lookup that lands 700ms later and opens that word's band — which, left alone,
   // arrives in the middle of the next section and reverts the tab it just moved.
   const reset = async () => {
     await send("Page.navigate", { url: TARGET + SCENARIO });

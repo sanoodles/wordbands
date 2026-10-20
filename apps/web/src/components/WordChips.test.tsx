@@ -137,12 +137,13 @@ describe("set semantics", () => {
 });
 
 describe("keyboard selection", () => {
-  it("looks the focused word up after a 300ms debounce", () => {
+  // @spec CALL-3
+  it("looks the focused word up after a 700ms debounce", () => {
     vi.useFakeTimers();
     try {
       const { onPick, group } = setup();
       fireEvent.keyDown(group, { key: "ArrowRight" }); // active 0 -> 1 ("be")
-      vi.advanceTimersByTime(299);
+      vi.advanceTimersByTime(699);
       expect(onPick).not.toHaveBeenCalled();
       vi.advanceTimersByTime(1);
       expect(onPick).toHaveBeenCalledTimes(1);
@@ -152,18 +153,20 @@ describe("keyboard selection", () => {
     }
   });
 
+  // Two steps a second is a learner reading as they go, and it looks nothing up on the way.
+  // @spec CALL-3
   it("fires once for the settled word when arrows sweep several chips", () => {
     vi.useFakeTimers();
     try {
       const { onPick, group } = setup();
       fireEvent.keyDown(group, { key: "ArrowRight" }); // -> "be"
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(500);
       fireEvent.keyDown(group, { key: "ArrowRight" }); // -> "water", debounce resets
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(500);
       fireEvent.keyDown(group, { key: "ArrowRight" }); // -> "mountain", resets again
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(500);
       expect(onPick).not.toHaveBeenCalled(); // never settled long enough
-      vi.advanceTimersByTime(100);
+      vi.advanceTimersByTime(200);
       expect(onPick).toHaveBeenCalledTimes(1);
       expect(onPick).toHaveBeenCalledWith("mountain");
     } finally {
@@ -179,7 +182,7 @@ describe("keyboard selection", () => {
       fireEvent.click(screen.getByRole("option", { name: "water" }));
       expect(onPick).toHaveBeenCalledTimes(1);
       expect(onPick).toHaveBeenCalledWith("water");
-      vi.advanceTimersByTime(300); // the queued "be" must not fire
+      vi.advanceTimersByTime(700); // the queued "be" must not fire
       expect(onPick).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();

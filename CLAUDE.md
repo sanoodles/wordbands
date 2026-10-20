@@ -1220,7 +1220,7 @@ one component, and none of them was on anyone's list.
 | --- | --- |
 | It runs against the deployed page | Fondue builds part of the markup and CSS decides what is in the tree at all. jsdom has neither |
 | `/api/translate` is stubbed | Google can reword a translation any afternoon, and the subject here is our markup, not today's dictionary |
-| Each section that presses a key reloads first | Arrowing the cloud queues a lookup that lands 300ms later and opens that word's band — mid-way through the next section, reverting the tab it had just moved |
+| Each section that presses a key reloads first | Arrowing the cloud queues a lookup that lands 700ms later and opens that word's band — mid-way through the next section, reverting the tab it had just moved |
 | Every wait is keyed on the page, never on a number of seconds | A tab takes focus in its key handler and its `aria-selected` a render later, and its panel is a fetch after that. Reading straight away catches it selected on some runs and not others |
 | Post-deploy and weekly, not on a PR | It reads a deployed page, and a preview sits behind Deployment Protection, which answers a 302 to a Vercel login |
 | Names and descriptions come from Chrome; **roles and states do not** | A name is computed, and half the markup is Fondue's, so there is no reading it off the source. A role is authored — and Chrome renames them between versions (`img` became `image`), which would make this a transcript of whichever Chrome the runner shipped that week |
@@ -1343,6 +1343,7 @@ Two ways of reaching 44 that do not:
 | The chips' widths | Measured on a canvas from a hidden probe chip, never from the DOM, since the rows are packed before they are rendered. A `ResizeObserver` watches the probe as well as the container, so a text-spacing override (1.4.12) or a late font re-measures rather than clipping the last chip of every row |
 | The rows are inset by `RING` | The scroller clips whatever leaves it, so the first row and the first chip of every row lost the top and left of their focus ring (2.4.13). The rows sit 4px in and `packRows` is given 8px less width. `GAP` has to stay at least twice `RING`, or a row's ring no longer fits inside one `stride` — which is what the scroll and the virtualizer window both assume |
 | The "Back to" button and the keyboard | `scrollToRow` stops the cloud's usable bottom above the button while it shows, so a focused chip is never under it (2.4.12). A chip can sit under it while fully in view, so a plain scroll-into-view does not reach this. `JUMP_STRIP` is that footprint — the button's height plus its offset, and it has to move when `JUMP` does. Whether the button shows is asked at the scroll the move is about to make, since stepping past the anchor is the move that summons it |
+| A keyboard lookup waits 700 ms (`CALL-3`) | Each lookup costs at least two function calls and a call to Google. At 700 ms one person arrowing through the cloud can ask for at most 86 translations a minute, under the firewall rule's 100. A learner stepping twice a second asks for nothing until they stop |
 
 ### The figure
 

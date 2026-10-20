@@ -255,3 +255,4 @@ Google as well.
 | --- | --- |
 | CALL-1 | A switch of view or language asks only for bands the new view lists |
 | CALL-2 | The card asks to translate only a word found in the language being studied. A swap or a switch of language asks for no translation of the word it leaves |
+| CALL-3 | Moving through the word cloud with the keys looks a word up only once the focus has rested on it for 700 ms |
