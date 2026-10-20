@@ -158,10 +158,10 @@ jobs:
           fi
 
       # A push made with github.token raises no pull_request event, so pr.yml never runs
-      # and the `check` status that branch protection requires never reports — the PR
-      # would sit unmergeable. Dispatching pr.yml on the branch puts a `check` run on the
-      # same head commit, which is what the rule reads. If it still does not report,
-      # closing and reopening the PR by hand fires the events from a human actor.
+      # on the PR. Dispatching it on the branch runs it all the same, and the result shows
+      # in the Actions tab. GitHub neither counts a dispatched run's `check` toward the one
+      # branch protection requires nor shows it on the PR. Closing and reopening the PR by
+      # hand fires the events from a human actor, and that run counts.
       - env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run pr.yml --ref "$BRANCH"
