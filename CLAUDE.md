@@ -1473,6 +1473,22 @@ The theme cookie takes `; secure` only over https. Unconditional would break a d
 reached over plain http on the LAN, where the browser drops a Secure cookie and the theme
 stops persisting between loads.
 
+### The CDN in front of the API
+
+`HEAD-6` is the rule, and `keptAtCdn` in `lib/cdn.ts` writes the header. A repeat of a URL
+that Vercel's CDN has kept is answered at the edge, with no function run and no trip to
+iad1. The page itself is not kept, since it reads the country header and the theme cookie.
+
+| Detail | Why |
+| --- | --- |
+| `Vercel-CDN-Cache-Control`, not `Cache-Control` | The browser never receives it. A browser holding an answer from an older deploy could hand it to a newer client that reads a different shape |
+| A year, and 180 days for a translation | Vercel's cache key includes the deployment, so a deploy empties it, and nothing kept is older than the data it was read from. A translation takes `revalidate`, the same bound as the data cache |
+| A 404 is kept, a 502 is not | A word missing from this deploy's list stays missing. Google refusing us is a spell, so the next lookup has to ask again |
+| Nothing may rely on it | The cache is per region, and Vercel drops a rarely read entry early. Every push to `main` deploys, so a day of pushes keeps it nearly empty |
+| It does not save CDN requests | A hit is still one. It saves invocations, Active CPU and Google calls, which is where the Hobby quotas and the refusals are |
+
+The second request for a URL answers `x-vercel-cache: HIT` once the CDN has kept the first.
+
 ## Verifying a build while the web dev server is running
 
 `next dev` and `next build` both default to `apps/web/.next`. Building into it while a dev

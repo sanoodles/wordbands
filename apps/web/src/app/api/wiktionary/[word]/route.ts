@@ -1,5 +1,6 @@
 import { getWiktionary, levelsOf } from "@/lib/bands";
 import { DEFAULT_SOURCE, isSourceLang } from "@/lib/languages";
+import { keptAtCdn } from "@/lib/cdn";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +19,12 @@ export async function GET(
   const source = q.get("source") ?? DEFAULT_SOURCE;
   const target = q.get("target") ?? "";
   // @spec ROUTE-9
-  if (!isSourceLang(source)) return new Response("unknown language", { status: 404 });
+  if (!isSourceLang(source)) return new Response("unknown language", { status: 404, headers: keptAtCdn() });
   // @spec ROUTE-8
   const found = await getWiktionary(source, target, word.toLowerCase());
   const terms = found?.terms ?? [];
-  return Response.json({ terms, title: found?.title ?? null, levels: levelsOf(target, terms) });
+  return Response.json(
+    { terms, title: found?.title ?? null, levels: levelsOf(target, terms) },
+    { headers: keptAtCdn() },
+  );
 }

@@ -1,4 +1,5 @@
 import { levelsOf } from "@/lib/bands";
+import { keptAtCdn } from "@/lib/cdn";
 import { isSourceLang } from "@/lib/languages";
 import {
   alignGroup,
@@ -91,17 +92,21 @@ export async function GET(
     }
 
     const translation = parseGtx(data);
-    return Response.json({
-      word: text,
-      source,
-      target,
-      translation,
-      senses: flattenSenses(groups),
-      // Per-part-of-speech readings, so the card can show a word's distinct meanings.
-      groups,
-      // @spec BAND-9
-      levels: levelsOf(target, [...groups.flatMap((g) => g.terms), translation]),
-    });
+    return Response.json(
+      {
+        word: text,
+        source,
+        target,
+        translation,
+        senses: flattenSenses(groups),
+        // Per-part-of-speech readings, so the card can show a word's distinct meanings.
+        groups,
+        // @spec BAND-9
+        levels: levelsOf(target, [...groups.flatMap((g) => g.terms), translation]),
+      },
+      // Only an answer: a 502 is asked again. @spec HEAD-6
+      { headers: keptAtCdn(revalidate) },
+    );
   } catch (err) {
     // The 502 says it too: Hobby keeps an hour of logs, and refusals come in spells.
     // @spec GATE-6, GATE-8

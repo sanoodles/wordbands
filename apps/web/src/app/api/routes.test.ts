@@ -6,6 +6,7 @@ import { GET as bandsGET } from "./bands/[view]/route";
 import { GET as bandGET } from "./band/[view]/[key]/route";
 import { GET as translateGET } from "./translate/[word]/route";
 import { GET as wiktionaryGET } from "./wiktionary/[word]/route";
+import { GET as definingGET } from "./defining/route";
 
 // A guaranteed-present headword (the single most frequent) and an absent one.
 const REAL = getBand("en", "freq", "1")!.words[0]!;
@@ -372,5 +373,44 @@ describe("GET /api/wiktionary/[word]", () => {
   // @spec ROUTE-9
   it("404s for an unknown source language", async () => {
     expect((await ask("siesta", "source=xx&target=de")).status).toBe(404);
+  });
+});
+
+// An answer from committed data is the same for every visitor until the next deploy, and
+// Vercel's CDN keys its cache on the deployment. So it may serve the answer again itself.
+describe("what Vercel's CDN may keep", () => {
+  const kept = (res: Response) => res.headers.get("Vercel-CDN-Cache-Control");
+  const word = (w: string) => wordGET(req("/api/word/x"), { params: promise({ word: w }) });
+
+  // @spec HEAD-6
+  it("keeps every answer read from committed data, found or not", async () => {
+    const answers = [
+      await word(REAL),
+      await word(MISSING),
+      await word("branched"),
+      await suggestGET(req("/api/suggest?q=wat")),
+      await bandsGET(req("/api/bands/x"), { params: promise({ view: "cefr" }) }),
+      await bandGET(req("/api/band/x/x"), { params: promise({ view: "cefr", key: "A1" }) }),
+      await bandGET(req("/api/band/x/x"), { params: promise({ view: "cefr", key: "Z9" }) }),
+      await definingGET(req("/api/defining?source=de")),
+      await wiktionaryGET(req("/api/wiktionary/x?source=es&target=de"), { params: promise({ word: "siesta" }) }),
+      await wordGET(req("/api/word/x?source=xx"), { params: promise({ word: REAL }) }),
+    ];
+    expect(answers.map((r) => r.status)).toEqual([200, 404, 200, 200, 200, 200, 404, 200, 200, 404]);
+    for (const res of answers) expect(kept(res)).toMatch(/^max-age=\d+$/);
+  });
+
+  // @spec HEAD-6
+  it("keeps an answer Google gave, and never a failure", async () => {
+    vi.stubGlobal("fetch", mockGtx("agua", "noun", [["agua", 0.5]]));
+    const answered = await translate("water", "source=en&target=es");
+    expect(answered.status).toBe(200);
+    expect(kept(answered)).toMatch(/^max-age=\d+$/);
+
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 500 })));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const failed = await translate("water", "source=en&target=es");
+    expect(failed.status).toBe(502);
+    expect(kept(failed)).toBeNull();
   });
 });

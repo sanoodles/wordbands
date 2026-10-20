@@ -168,6 +168,7 @@ The build merges every inflection onto its lemma, so a form is not an entry of i
 | HEAD-3 | `default-src`, `object-src`, `frame-ancestors`, `base-uri` and `form-action` are all closed |
 | HEAD-4 | Production carries neither `unsafe-eval` nor a websocket source |
 | HEAD-5 | The framework is not named in a response header |
+| HEAD-6 | Every answer an API route reads from committed data, found or not, may be kept at Vercel's CDN until the next deploy, and so may a translation Google gave. A failed translation may not be kept |
 
 ## URL — deeplink state and history
 
