@@ -30,6 +30,9 @@ const SECURITY_HEADERS = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
 ];
 
+// The browser asks for both on every visit, and each ask is a CDN request. @spec HEAD-7
+const KEPT_A_DAY = [{ key: "Cache-Control", value: "public, max-age=86400" }];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // `next dev` and `next build` both default to `.next`; building into it while a
@@ -43,7 +46,11 @@ const nextConfig = {
   // The agent instructions live in the root CLAUDE.md, not in files `next dev` writes here.
   agentRules: false,
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+    return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
+      { source: "/manifest.webmanifest", headers: KEPT_A_DAY },
+      { source: "/icon.svg", headers: KEPT_A_DAY },
+    ];
   },
 };
 

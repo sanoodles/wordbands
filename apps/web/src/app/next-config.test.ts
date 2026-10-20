@@ -5,12 +5,11 @@
 import { describe, expect, it } from "vitest";
 import nextConfig from "../../next.config.mjs";
 
-async function sentHeaders(): Promise<Record<string, string>> {
+async function sentHeaders(source = "/:path*"): Promise<Record<string, string>> {
   const rules = await nextConfig.headers!();
-  expect(rules).toHaveLength(1);
-  const rule = rules[0]!;
-  expect(rule.source).toBe("/:path*");
-  return Object.fromEntries(rule.headers.map((h) => [h.key, h.value]));
+  const rule = rules.find((r) => r.source === source);
+  expect(rule).toBeDefined();
+  return Object.fromEntries(rule!.headers.map((h) => [h.key, h.value]));
 }
 
 const directives = (csp: string) =>
@@ -39,6 +38,20 @@ describe("response headers", () => {
   // @spec HEAD-5
   it("does not name the framework", () => {
     expect(nextConfig.poweredByHeader).toBe(false);
+  });
+
+  // @spec HEAD-7
+  it("lets the browser keep the manifest and the icon for a day", async () => {
+    for (const path of ["/manifest.webmanifest", "/icon.svg"]) {
+      expect((await sentHeaders(path))["Cache-Control"]).toBe("public, max-age=86400");
+    }
+  });
+
+  // Only those two: the page and the API must never be kept by the browser across a deploy.
+  it("lets the browser keep nothing else", async () => {
+    const rules = await nextConfig.headers!();
+    const keeping = rules.filter((r) => r.headers.some((h) => h.key === "Cache-Control"));
+    expect(keeping.map((r) => r.source).sort()).toEqual(["/icon.svg", "/manifest.webmanifest"]);
   });
 });
 

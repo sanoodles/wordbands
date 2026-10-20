@@ -1492,6 +1492,11 @@ iad1. The page itself is not kept, since it reads the country header and the the
 
 The second request for a URL answers `x-vercel-cache: HIT` once the CDN has kept the first.
 
+`HEAD-7` is the one place the browser keeps anything we serve, apart from the hashed static
+chunks. The browser asks for the manifest and the icon on every visit, and each ask is a CDN
+request. A day bounds how long a changed icon takes to show. `next-config.test.ts` fails if
+any other path gains a `Cache-Control`.
+
 ## Verifying a build while the web dev server is running
 
 `next dev` and `next build` both default to `apps/web/.next`. Building into it while a dev
