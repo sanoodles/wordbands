@@ -187,7 +187,7 @@ lemma-merged word ranking plus the band definitions.
 | `casing-<code>.txt` | all | Leipzig Corpora *sentences* file, from `downloads.wortschatz-leipzig.de` | Named by `casingFile`. **Which corpus each language took is not recorded** — see below |
 | `names.txt` | shared | `smashew/NameDatabases` | Personal-name gazetteer, one name a line |
 | `<base>.{dic,aff}` | all | `LibreOffice/dictionaries` | Hunspell spell checkers. Named by `spellDict`, one base per file, listed below |
-| `wiktextract-<code>.jsonl.gz` | es de fr it pt en | kaikki.org, Wiktextract's extract of that language's own Wiktionary | Read by `build:wiktionary` alone. The same files the defining-vocabulary repo downloads, so a symlink to them serves. 1.7GB for the six |
+| `wiktextract-<code>.jsonl.gz` | es de fr it pt en | kaikki.org, Wiktextract's extract of that language's own Wiktionary | Read by `build:wiktionary` alone. The same files the defining-vocabulary repo downloads, so a symlink to them serves. 1.7GB for the six. That repo's README records which kaikki dump each one is |
 
 Take `_full.txt` because the cut belongs in code, where it is version-controlled, not in
 whichever file someone happened to download.
