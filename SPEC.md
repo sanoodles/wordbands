@@ -49,6 +49,7 @@ verifies the claim exists, not that it bites.
 | `ETYM` | The word card's link to the word's etymology | PR |
 | `WIKT` | Wiktionary's translations, beside Google's on the word card | PR |
 | `FIG` | The defining figure: full screen, zoom and pan | PR |
+| `CALL` | What the browser asks our server for | PR |
 
 Not covered yet, and deliberately: visual design, copy, component layout, the
 accessibility contract (its proof is the transcript, which detects change rather than
@@ -243,3 +244,13 @@ static picture. Full screen, it zooms and pans, so one word in the crowd can be 
 | FIG-8 | Fully zoomed on a phone, no two points stand closer than 10mm |
 | FIG-9 | The label naming a point stays between the figure's left and right edges, whatever its word, on a screen as narrow as 320px |
 | FIG-10 | A pinch zooms the figure by the factor that the gap between the fingers grows or shrinks by, on a trackpad as on a touch screen |
+
+## CALL — what the browser asks our server for
+
+Each request to an API route runs a function on the server, and `/api/translate` calls
+Google as well.
+
+| ID | Rule |
+| --- | --- |
+| CALL-1 | A switch of view or language asks only for bands the new view lists |
+| CALL-2 | The card asks to translate only a word found in the language being studied. A swap or a switch of language asks for no translation of the word it leaves |

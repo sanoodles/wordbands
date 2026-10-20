@@ -189,4 +189,25 @@ describe("BandBrowser", () => {
       expect(screen.getByRole("tab", { name: /A1/ })).toBeInTheDocument(),
     );
   });
+
+  // @spec CALL-1
+  it("asks only for bands the view it switches to lists", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <BandBrowser view="cefr" source="en" anchorWord="govern" anchorBandKey="B1" onSelect={() => {}} />,
+    );
+    await screen.findByRole("option", { name: /govern/ });
+    await user.click(screen.getByRole("tab", { name: /A1/ }));
+    await screen.findByRole("option", { name: /water/ });
+
+    rerender(<BandBrowser view="freq" source="en" anchorWord="mountain" anchorBandKey="2" onSelect={() => {}} />);
+    await screen.findByRole("option", { name: /mountain/ });
+
+    const asked = vi
+      .mocked(fetch)
+      .mock.calls.map(([url]) => String(url).match(/\/api\/band\/(\w+)\/([^/?]+)/))
+      .filter((m) => m !== null)
+      .map((m) => `${m[1]}:${decodeURIComponent(m[2]!)}`);
+    expect(asked).toEqual(["cefr:B1", "cefr:A1", "freq:2"]);
+  });
 });

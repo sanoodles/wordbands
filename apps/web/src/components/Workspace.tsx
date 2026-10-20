@@ -731,7 +731,8 @@ export default function Workspace({ country }: { country?: string | null }) {
                 ? { ...info.cefr, rank: info.rank }
                 : undefined
             }
-            forms={info?.forms ?? null}
+            // Pending while the word on screen is from the language just left. @spec CALL-2
+            forms={info && info.source === source ? info.forms : null}
             source={source}
             target={target}
             onTargetChange={setTarget}

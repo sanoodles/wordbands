@@ -116,11 +116,15 @@ export default function BandBrowser({
   /** A view's figure, drawn above its word list. Only the defining view has one. */
   figure?: ReactNode;
 }) {
-  const [summary, setSummary] = useState<BandSummary[] | null>(null);
+  // Tagged with the view and language it lists, so a switch never reads the old one.
+  const [loaded, setLoaded] = useState<{ of: string; bands: BandSummary[] } | null>(null);
+  const summary = loaded?.of === `${source}:${view}` ? loaded.bands : null;
   const [selectedKey, setSelectedKey] = useState<string | null>(bandKey);
   const [band, setBand] = useState<Band | null>(null);
   // Warm-cache bands by `view:key` so re-selecting is instant.
   const cache = useRef<Record<string, Band>>({});
+  // A band already asked for is not asked for again while its answer is on the way.
+  const inflight = useRef<Record<string, Promise<Band | null>>>({});
   // The tabs name the panel they open, so both need stable ids.
   const baseId = useId();
   const tabId = (key: string) => `${baseId}-tab-${key}`;
@@ -130,31 +134,51 @@ export default function BandBrowser({
   // Load the summary (the tabs) whenever the view or source language changes.
   useEffect(() => {
     let live = true;
-    setSummary(null);
     setBand(null);
     void fetch(`/api/bands/${view}?source=${source}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((s) => live && s && setSummary(s as BandSummary[]));
+      .then((s) => live && s && setLoaded({ of: `${source}:${view}`, bands: s as BandSummary[] }));
     return () => {
       live = false;
     };
   }, [view, source]);
 
-  // Show the explicitly-picked band; else the anchor's band; else the first.
+  const fetchBand = useCallback(
+    async (key: string) => {
+      const ck = `${source}:${view}:${key}`;
+      const hit = cache.current[ck];
+      if (hit) {
+        setBand(hit);
+        return;
+      }
+      inflight.current[ck] ??= fetch(`/api/band/${view}/${encodeURIComponent(key)}?source=${source}`)
+        .then((r) => (r.ok ? (r.json() as Promise<Band>) : null))
+        .finally(() => delete inflight.current[ck]);
+      const b = await inflight.current[ck];
+      if (!b) return;
+      cache.current[ck] = b;
+      setBand(b);
+    },
+    [view, source],
+  );
+
+  // Show the explicitly-picked band; else the anchor's band; else the first. @spec CALL-1
   useEffect(() => {
     if (!summary) return;
     const keys = summary.map((b) => b.key);
-    setSelectedKey(
+    const key =
       bandKey && keys.includes(bandKey)
         ? bandKey
         : anchorBandKey && keys.includes(anchorBandKey)
           ? anchorBandKey
-          : (keys[0] ?? null),
-    );
-  }, [summary, bandKey, anchorBandKey]);
+          : (keys[0] ?? null);
+    setSelectedKey(key);
+    if (key) void fetchBand(key);
+  }, [summary, bandKey, anchorBandKey, fetchBand]);
 
   const pickBand = (key: string) => {
     setSelectedKey(key);
+    void fetchBand(key);
     onBandChange?.(key);
   };
 
@@ -178,27 +202,6 @@ export default function BandBrowser({
     pickBand(key);
     tabRefs.current[key]?.focus();
   };
-
-  const fetchBand = useCallback(
-    async (key: string) => {
-      const ck = `${source}:${view}:${key}`;
-      const hit = cache.current[ck];
-      if (hit) {
-        setBand(hit);
-        return;
-      }
-      const res = await fetch(`/api/band/${view}/${encodeURIComponent(key)}?source=${source}`);
-      if (!res.ok) return;
-      const b = (await res.json()) as Band;
-      cache.current[ck] = b;
-      setBand(b);
-    },
-    [view, source],
-  );
-
-  useEffect(() => {
-    if (selectedKey) void fetchBand(selectedKey);
-  }, [selectedKey, fetchBand]);
 
   // Spotlight the anchor only in the band it actually belongs to.
   const anchorInBand = band && band.key === anchorBandKey ? anchorWord : null;

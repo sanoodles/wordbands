@@ -671,6 +671,50 @@ describe("Workspace", () => {
     });
   });
 
+  const translations = () =>
+    vi
+      .mocked(fetch)
+      .mock.calls.map(([url]) => new URL(String(url), "http://localhost"))
+      .filter((u) => u.pathname.startsWith("/api/translate/"))
+      .map((u) => `${decodeURIComponent(u.pathname.split("/").pop()!)} ${u.searchParams.get("source")}→${u.searchParams.get("target")}`);
+
+  // @spec CALL-2
+  it("asks for no translation of the word a swap leaves", async () => {
+    // Answered late, as over a network, so the swap renders before its lookup lands.
+    const answer = mockFetch();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL) => {
+        if (String(url).includes("/api/word/water?source=en")) await new Promise((r) => setTimeout(r, 50));
+        return answer(url);
+      }),
+    );
+    window.history.replaceState(null, "", "/?source=de&word=wasser&target=en");
+    const user = userEvent.setup();
+    render(<Workspace />);
+    await screen.findByText("water, aqua");
+
+    await user.click(swapButton());
+    await screen.findByRole("region", { name: /meaning of water/i });
+    await screen.findByText("water, aqua");
+
+    expect(translations()).not.toContain("Wasser en→de");
+  });
+
+  // @spec CALL-2
+  it("asks for no translation of the word a switch of language leaves", async () => {
+    const user = userEvent.setup();
+    render(<Workspace />);
+    await screen.findByRole("region", { name: /meaning of water/i });
+    await user.click(screen.getByRole("combobox", { name: /source language/i }));
+    await user.click(await screen.findByRole("option", { name: /Español/ }));
+    await screen.findByRole("region", { name: /meaning of agua/i });
+
+    await screen.findByText("water, aqua");
+
+    expect(translations()).not.toContain("water es→en");
+  });
+
   // Only the six indexed languages have a word list to browse.
   it("refuses to swap into a language that cannot be studied", async () => {
     window.history.replaceState(null, "", "/?source=de&word=wasser&target=ja");
