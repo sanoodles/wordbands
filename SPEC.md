@@ -247,6 +247,8 @@ static picture. Full screen, it zooms and pans, so one word in the crowd can be 
 | FIG-8 | Fully zoomed on a phone, no two points stand closer than 10mm |
 | FIG-9 | The label naming a point stays between the figure's left and right edges, whatever its word, on a screen as narrow as 320px |
 | FIG-10 | A pinch zooms the figure by the factor that the gap between the fingers grows or shrinks by, on a trackpad as on a touch screen |
+| FIG-11 | The figure's vertical lines divide its ranks into the bands of the CEFR view, and the row beneath names each band. Rare is among them wherever a list reaches past C2 |
+| FIG-12 | Each line between two bands falls between the last word of the one and the first word of the next, at every zoom |
 
 ## CALL — what the browser asks our server for
 

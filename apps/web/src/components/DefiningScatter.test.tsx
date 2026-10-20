@@ -8,10 +8,12 @@ import DefiningScatter, {
   nearestWord,
   panView,
   rankTicks,
+  stripesOf,
   tipStyle,
+  uOf,
   zoomView,
 } from "./DefiningScatter";
-import { getDefiningPoints } from "@/lib/bands";
+import { getBandSummary, getDefiningPoints } from "@/lib/bands";
 import { SOURCE_LANGS, type SourceLang } from "@/lib/languages";
 
 // `paint` bails on the zero-size wrap that jsdom reports, before it reaches the context
@@ -315,6 +317,31 @@ describe("the axis under the plot", () => {
     const { written } = await axis();
     // `total` is where the ranking happens to stop, not a boundary anything falls on.
     expect(written.filter((t) => /^\d/.test(t))).toEqual(["1k", "3k", "6k", "12k", "25k"]);
+  });
+
+  // @spec FIG-11
+  it("ends at C2 where the list stops inside it", async () => {
+    const { written } = await axis();
+    expect(written).not.toContain("Rare");
+    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("through C2 at the right");
+    expect(document.querySelector("figcaption")!.textContent).toContain("C2 the rarest");
+  });
+
+  // @spec FIG-11
+  it("names Rare past C2 where the list reaches it, as German's does", async () => {
+    serve({
+      ...wide,
+      levels: "1".repeat(55_000),
+      words: Array.from({ length: 55_000 }, (_, i) => `w${i}`),
+    });
+    const { written, at } = await axis("de");
+    expect(written.filter((t) => /^\d/.test(t))).toEqual(["1k", "3k", "6k", "12k", "25k", "50k"]);
+    expect(at("C2")).toBeLessThan(at("50k"));
+    expect(at("Rare")).toBeGreaterThan(at("50k"));
+    expect(screen.getByRole("img").getAttribute("aria-label")).toContain(
+      "A1 at the left through Rare, past C2, at the right",
+    );
+    expect(document.querySelector("figcaption")!.textContent).toContain("Rare the words past C2");
   });
 
   // The levels are the other axis, and they were canvas pixels too.
@@ -775,5 +802,41 @@ describe("the figure in the page", () => {
     fireEvent.pointerMove(canvas, { ...finger, clientX: 300, clientY: 100 });
     fireEvent.pointerUp(canvas, { ...finger, clientX: 300, clientY: 100 });
     expect(labelsIn(fig).top("D4")).toBe(before);
+  });
+});
+
+// The figure keeps its own copy of the thresholds, since `bands.ts` is server-only.
+describe("the bands the figure divides", () => {
+  // @spec FIG-11
+  it("are the CEFR view's own, in every language", () => {
+    for (const source of SOURCE_LANGS) {
+      const total = getDefiningPoints(source).words.length;
+      const view = getBandSummary(source, "cefr");
+      const stripes = stripesOf(total);
+      expect(stripes.map((s) => s.name.toLowerCase()), source).toEqual(
+        view.map((b) => b.key.toLowerCase()),
+      );
+      stripes.forEach((s, i) => {
+        const from = i === 0 ? 0 : stripes[i - 1]!.max!;
+        expect((s.max ?? total) - from, `${source} ${s.name}`).toBe(view[i]!.count);
+      });
+    }
+  });
+
+  // @spec FIG-12
+  it("are drawn between the last word of one band and the first of the next", () => {
+    const total = 55_000;
+    const { u } = layoutOf({
+      levels: "1".repeat(total),
+      levelCount: 1,
+      words: Array.from({ length: total }, (_, i) => `w${i}`),
+    });
+    const lines = stripesOf(total).slice(0, -1);
+    for (const { max, end } of lines) {
+      expect(uOf(end, total)).toBeGreaterThan(u[max! - 1]!);
+      expect(uOf(end, total)).toBeLessThan(u[max!]!);
+    }
+    // A zoom only scales the gap, and the rank labels sit on the lines.
+    expect(rankTicks(WHOLE, W, total, false).map((t) => t.at)).toEqual(lines.map((s) => s.end));
   });
 });

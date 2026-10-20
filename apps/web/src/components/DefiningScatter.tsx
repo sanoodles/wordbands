@@ -40,18 +40,23 @@ import { DEFINING_EXAMPLE, definingLevel, type SourceLang } from "@/lib/language
  */
 
 /**
- * The CEFR bands as `cefrBands` cuts them, each with the rank it tops out at; C2 runs to
- * the end of whatever the language ranks, so it has none. Marked by the vertical lines
- * and named under them, because a band nobody can name is just a gap between two lines.
+ * The CEFR bands as `cefrBands` cuts them, each with the rank it tops out at. Marked by the
+ * vertical lines and named under them, because a band nobody can name is just a gap
+ * between two lines. A copy, since `bands.ts` is server-only; the tests hold it to the
+ * artifacts.
  */
-const CEFR_BANDS: { key: string; max: number | null }[] = [
-  { key: "A1", max: 1000 },
-  { key: "A2", max: 3000 },
-  { key: "B1", max: 6000 },
-  { key: "B2", max: 12000 },
-  { key: "C1", max: 25000 },
-  { key: "C2", max: null },
+// @spec FIG-11
+const CEFR_BANDS: { name: string; max: number }[] = [
+  { name: "A1", max: 1000 },
+  { name: "A2", max: 3000 },
+  { name: "B1", max: 6000 },
+  { name: "B2", max: 12000 },
+  { name: "C1", max: 25000 },
+  { name: "C2", max: 50000 },
+  { name: "Rare", max: Infinity },
 ];
+/** A line between bands, in ranks: past the last word of one, short of the next one's first. */
+const BETWEEN = 0.5;
 // Two label rows sit under the plot: the ranks the stripes break at, then the band names.
 const PAD = { top: 10, right: 12, bottom: 40, left: 38 };
 /** Point radius, and the hit radius around the pointer, in CSS pixels. */
@@ -174,8 +179,21 @@ export function panView(view: View, du: number, dv: number): View {
  * 1-1,000 two thirds of the width. Sqrt gives each CEFR band a roughly equal share of it,
  * which is what makes a stripe readable.
  */
-function uOf(rank: number, total: number): number {
+export function uOf(rank: number, total: number): number {
   return Math.sqrt(rank) / Math.sqrt(total);
+}
+
+/**
+ * The bands a list of `total` words reaches, as the CEFR view offers them. `max` is the rank
+ * a band tops out at, and `end` is where its stripe ends, in ranks. The last band runs to
+ * the end of the list, so it has no `max`.
+ */
+// @spec FIG-11, FIG-12
+export function stripesOf(total: number): { name: string; max: number | null; end: number }[] {
+  const reached = CEFR_BANDS.filter((_, i) => i === 0 || CEFR_BANDS[i - 1]!.max < total);
+  return reached.map(({ name, max }, i) =>
+    i < reached.length - 1 ? { name, max, end: max + BETWEEN } : { name, max: null, end: total },
+  );
 }
 
 // @spec BAND-15
@@ -279,12 +297,14 @@ export function rankTicks(
   w: number,
   total: number,
   fine: boolean,
-): { rank: number; edge: boolean }[] {
+): { rank: number; at: number; edge: boolean }[] {
   const x = (r: number) => sx(uOf(r, total), view, w);
   const shows = (r: number) => x(r) >= PAD.left + TICK.inset && x(r) <= w - TICK.inset;
   // Every break but the last: the right edge is wherever the list ends, not a boundary.
-  const edges = CEFR_BANDS.flatMap((b) => (b.max !== null && shows(b.max) ? [b.max] : []));
-  const ticks = edges.map((rank) => ({ rank, edge: true }));
+  const edges = stripesOf(total).flatMap(({ max, end }) =>
+    max !== null && shows(end) ? [{ rank: max, at: end, edge: true }] : [],
+  );
+  const ticks = [...edges];
   if (!fine) return ticks;
   const first = view.u ** 2 * total;
   const last = (view.u + 1 / view.k) ** 2 * total;
@@ -295,8 +315,8 @@ export function rankTicks(
       return top - s < 1 || x(top) - x(top - s) >= TICK.gap;
     }) ?? STEPS[STEPS.length - 1]!;
   for (let r = Math.max(step, Math.ceil(first / step) * step); r <= last; r += step) {
-    if (shows(r) && edges.every((e) => Math.abs(x(e) - x(r)) >= TICK.gap))
-      ticks.push({ rank: r, edge: false });
+    if (shows(r) && edges.every((e) => Math.abs(x(e.at) - x(r)) >= TICK.gap))
+      ticks.push({ rank: r, at: r, edge: false });
   }
   return ticks.sort((a, b) => a.rank - b.rank);
 }
@@ -337,7 +357,7 @@ function Labels({
   fine: boolean;
 }) {
   const { w, h } = size;
-  const edges = [0, ...CEFR_BANDS.map((b) => b.max ?? total)];
+  const stripes = stripesOf(total);
   const xAt = (rank: number) => sx(uOf(rank, total), view, w);
   const yAt = (v: number) => sy(v, view, h);
   const rows = Array.from({ length: levelCount }, (_, i) => i + 1).flatMap((l) => {
@@ -345,9 +365,10 @@ function Labels({
     const at = nameAt(a, b, PAD.top, h - PAD.bottom, NAME_ROOM.row);
     return at === null ? [] : [{ l, at }];
   });
-  const bands = CEFR_BANDS.flatMap((b, i) => {
-    const at = nameAt(xAt(edges[i]!), xAt(edges[i + 1]!), PAD.left, w - PAD.right, NAME_ROOM.band);
-    return at === null ? [] : [{ key: b.key, at }];
+  const bands = stripes.flatMap(({ name, end }, i) => {
+    const from = i === 0 ? 0 : stripes[i - 1]!.end;
+    const at = nameAt(xAt(from), xAt(end), PAD.left, w - PAD.right, NAME_ROOM.band);
+    return at === null ? [] : [{ name, at }];
   });
   // Everything in the gutter ends on the same line, 6px off the plot, so the corner reads
   // as one column of labels rather than three things that happen to be on the left.
@@ -373,11 +394,11 @@ function Labels({
       <span className={label} style={{ left: gutter, top: rankRow, ...atRight }}>
         rank
       </span>
-      {rankTicks(view, w, total, fine).map(({ rank }) => (
+      {rankTicks(view, w, total, fine).map(({ rank, at }) => (
         <span
           key={rank}
           className={label}
-          style={{ left: xAt(rank), top: rankRow, transform: "translateX(-50%)" }}
+          style={{ left: xAt(at), top: rankRow, transform: "translateX(-50%)" }}
         >
           {rank >= 1000 ? `${rank / 1000}k` : rank}
         </span>
@@ -388,13 +409,13 @@ function Labels({
       {/* Heavier than the row above, which is the pair's order: the band name is what ties
           a stripe to the CEFR tab. Weight rather than a second colour, so both rows can
           hold 7:1 (1.4.6). */}
-      {bands.map(({ key, at }) => (
+      {bands.map(({ name, at }) => (
         <span
-          key={key}
+          key={name}
           className={`${label} tw-font-medium`}
           style={{ left: at, top: bandRow, transform: "translateX(-50%)" }}
         >
-          {key}
+          {name}
         </span>
       ))}
     </div>
@@ -611,10 +632,10 @@ function Chart({
       ctx.lineTo(x, to);
       ctx.stroke();
     };
-    for (const { max } of CEFR_BANDS) {
+    for (const { max, end } of stripesOf(total)) {
       if (max === null) continue;
-      const x = sx(uOf(max, total), view, w);
-      if (x >= PAD.left && x <= w - PAD.right) line(max, PAD.top, bottom);
+      const x = sx(uOf(end, total), view, w);
+      if (x >= PAD.left && x <= w - PAD.right) line(end, PAD.top, bottom);
     }
     // A rank labelled between two edges gets a tick under the plot.
     for (const { rank, edge } of rankTicks(view, w, total, fine)) {
@@ -1206,7 +1227,9 @@ export default function DefiningScatter({
 
   const levelled = layout.u.length;
   const example = DEFINING_EXAMPLE[source];
-  const label = `Frequency against defining level: ${levelled.toLocaleString()} words plotted, commonest at the left, D1 at the top. The vertical lines divide the CEFR bands, A1 at the left through C2 at the right. Within any one frequency range the words still spread across every level.`;
+  // @spec FIG-11
+  const rare = stripesOf(points.words.length).some((s) => s.name === "Rare");
+  const label = `Frequency against defining level: ${levelled.toLocaleString()} words plotted, commonest at the left, D1 at the top. The vertical lines divide the CEFR bands, A1 at the left through ${rare ? "Rare, past C2," : "C2"} at the right. Within any one frequency range the words still spread across every level.`;
   const chart = { points, layout, source, anchorWord, label, onSelect };
 
   return (
@@ -1260,7 +1283,8 @@ export default function DefiningScatter({
             dictionary&rsquo;s usage reveals, rather than one an editor fixes in advance. The
             numbers across the bottom are ranks, not counts: 6k is the 6,000th commonest word, so
             the further right a point sits, the rarer it is. The vertical lines divide the CEFR
-            bands, named in the row beneath — A1 the first thousand words, C2 the rarest.{" "}
+            bands, named in the row beneath — A1 the first thousand words,{" "}
+            {rare ? "Rare the words past C2" : "C2 the rarest"}.{" "}
             <span lang={source}>{example}</span> is A1 vocabulary sitting at
             D{points.levelCount}, which is what &ldquo;not a difficulty scale&rdquo; means.{" "}
             Pick a point to look it up.
