@@ -1597,6 +1597,15 @@ claim: a `# accepted-over:` line above the entry, which `pnpm ignores:check` als
 against the lockfile. It fails when a package's own range changes, which is the moment to
 see whether the acceptance can go.
 
+### Node and pnpm
+
+Dependabot moves neither version.
+
+| Version | Set in | Read by |
+| --- | --- | --- |
+| Node | `.node-version`, a major alone | The workflows, through `node-version-file`. Vercel reads no version file, so `apps/web/package.json` repeats the major as `engines.node`, and `node-version.test.ts` fails when the two differ. pnpm warns on a machine running another major, and installs anyway |
+| pnpm | `packageManager` in the root `package.json` | `pnpm/action-setup`, in `pr.yml` |
+
 ## Vendored skills
 
 `.claude/skills/` holds the skills below, and none of them is ours. They come from two

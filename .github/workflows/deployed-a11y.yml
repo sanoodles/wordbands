@@ -49,7 +49,7 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version-file: .node-version
 
       # No pnpm install: the script is plain Node driving a browser over CDP, with no
       # dependencies. It needs a Chromium-family browser, which the runner image ships —
