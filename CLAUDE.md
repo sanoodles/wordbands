@@ -1554,9 +1554,11 @@ instead: `/api/word/<word>?source=<code>` for what the artifacts hold,
 
 ## Dependency updates
 
-`.github/dependabot.yml` watches npm and the workflows' actions, weekly. It groups npm's
-minor and patch updates, and leaves every major a PR of its own. Two things about the npm
-entry are load-bearing.
+`.github/dependabot.yml` watches npm and the workflows' actions, weekly. It groups minor
+and patch updates, and leaves every major a PR of its own. Each action is pinned to a
+commit with its version beside it, `@<sha> # v4.4.0`, and a new `uses:` line takes the same
+form, or Dependabot cannot tell which release it holds. Two things about the npm entry are
+load-bearing.
 
 | Detail | Why |
 | --- | --- |
