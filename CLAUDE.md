@@ -1604,7 +1604,7 @@ Dependabot moves neither version.
 | Version | Set in | Read by |
 | --- | --- | --- |
 | Node | `.node-version`, a major alone | The workflows, through `node-version-file`. Vercel reads no version file, so `apps/web/package.json` repeats the major as `engines.node`, and `node-version.test.ts` fails when the two differ. pnpm warns on a machine running another major, and installs anyway |
-| pnpm | `packageManager` in the root `package.json` | `pnpm/action-setup`, in `pr.yml` |
+| pnpm | `packageManager` in the root `package.json` | `pnpm/action-setup`, in `pr.yml`. pnpm also writes its own version, with each platform binary's integrity, into the first of `pnpm-lock.yaml`'s two YAML documents, so a bump of `packageManager` changes the lockfile too. On a machine with no cache, the first install checks every locked package against npm's registry, about 1,000 requests and 20 seconds |
 
 `pnpm versions:check` compares both pins with upstream: Node with its newest LTS line, and
 pnpm with its latest release. It compares majors only, changes nothing, and exits 1 when a

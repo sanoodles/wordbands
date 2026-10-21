@@ -4,7 +4,7 @@
   "private": true,
   "description": "wordbands — a vocabulary learning tool: every English word placed on a frequency and CEFR learning band.",
   "type": "module",
-  "packageManager": "pnpm@11.5.2",
+  "packageManager": "pnpm@12.14.0",
   "engines": {
     "node": ">=20"
   },
