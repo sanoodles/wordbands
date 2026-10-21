@@ -43,3 +43,23 @@ updates:
       development:
         dependency-type: "development"
         update-types: ["minor", "patch"]
+
+  - package-ecosystem: "github-actions"
+    # The workflows pin each action by its major tag, so nothing moves them unless this
+    # does. "/" is where Dependabot looks for .github/workflows.
+    directories:
+      - "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    # The pin is a major tag, so every PR here is a new major, and each gets a read of its
+    # own. The two artifact actions are the exception: skills-freshness.yml uploads with one
+    # and downloads with the other, and v4 could not read what v3 had uploaded.
+    groups:
+      artifacts:
+        patterns:
+          - "actions/upload-artifact"
+          - "actions/download-artifact"

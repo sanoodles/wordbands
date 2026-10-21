@@ -1554,8 +1554,9 @@ instead: `/api/word/<word>?source=<code>` for what the artifacts hold,
 
 ## Dependency updates
 
-`.github/dependabot.yml` runs weekly, groups minor and patch, and leaves every major a PR
-of its own. Two things about it are load-bearing.
+`.github/dependabot.yml` watches npm and the workflows' actions, weekly. It groups npm's
+minor and patch updates, and leaves every major a PR of its own. Two things about the npm
+entry are load-bearing.
 
 | Detail | Why |
 | --- | --- |
