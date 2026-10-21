@@ -41,7 +41,7 @@ jobs:
 
       # Reads the pnpm version from the root package.json `packageManager` field, so this
       # cannot drift from what the repo actually builds with.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v4
         with:
