@@ -1606,6 +1606,12 @@ Dependabot moves neither version.
 | Node | `.node-version`, a major alone | The workflows, through `node-version-file`. Vercel reads no version file, so `apps/web/package.json` repeats the major as `engines.node`, and `node-version.test.ts` fails when the two differ. pnpm warns on a machine running another major, and installs anyway |
 | pnpm | `packageManager` in the root `package.json` | `pnpm/action-setup`, in `pr.yml` |
 
+`pnpm versions:check` compares both pins with upstream: Node with its newest LTS line, and
+pnpm with its latest release. It compares majors only, changes nothing, and exits 1 when a
+pin trails, since taking a major is a decision. `versions-freshness.yml` runs it weekly,
+and GitHub emails a failed scheduled run to whoever last edited its cron. Like every fetch
+here, it stays out of `pnpm dev`, the pre-push hook and `pr.yml`.
+
 ## Vendored skills
 
 `.claude/skills/` holds the skills below, and none of them is ours. They come from two

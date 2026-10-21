@@ -21,6 +21,7 @@
     "spec:list": "node scripts/check-spec.mjs --list",
     "spec:files": "node scripts/check-spec.mjs --file",
     "ignores:check": "node scripts/check-dependabot-ignores.mjs",
+    "versions:check": "node scripts/check-versions.mjs",
     "decode:check": "node scripts/check-deployed-decodes.mjs",
     "a11y:check": "node scripts/check-a11y-transcript.mjs",
     "a11y:update": "node scripts/check-a11y-transcript.mjs --update"
