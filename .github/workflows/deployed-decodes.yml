@@ -26,7 +26,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  check:
+  # Not `check`: main requires a check of that name, and GitHub counts this job's
+  # skipped preview runs as passing it.
+  deployed:
     # deployment_status fires on every state, and on preview deployments too. Only a
     # succeeded Production one has anything to say about the production alias.
     if: >-

@@ -1546,7 +1546,7 @@ instead: `/api/word/<word>?source=<code>` for what the artifacts hold,
 
 | Trap | Detail |
 | --- | --- |
-| Branch protection's required status is a **job name** | `check`, in `pr.yml`. Renaming the job reports nothing and blocks every PR |
+| Branch protection's required status is a **job name** | `check`, in `pr.yml`. Renaming the job reports nothing and blocks every PR. No other job may take the name: GitHub counts a skipped job as a pass, and the deployed workflows skip theirs on every preview |
 | No GitHub API credentials | The SSH remote signs git operations and grants no API access. Unauthenticated the API is 60 requests an hour per IP, and a polling loop exhausts it — poll sparingly |
 | Merging a PR | Locally over SSH. A real `git merge --no-ff` keeps the PR head an ancestor, which is what makes GitHub close it as merged |
 | A Dependabot rebase is a force-push | `git fetch` rejects it as non-fast-forward, so it needs `--force` on the refspec |
