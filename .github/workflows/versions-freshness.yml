@@ -1,9 +1,9 @@
 name: Pinned versions
 
 # Dependabot moves the npm packages and the actions, but not Node's version or pnpm's. This
-# reads upstream once a week and turns red when either pin trails a major, so a stall shows
-# up rather than sitting unnoticed. GitHub emails a scheduled run's failure to whoever last
-# edited its cron.
+# reads upstream once a week and turns red when either pin trails a major, or when an
+# advisory affects the pinned pnpm, so a stall shows up rather than sitting unnoticed.
+# GitHub emails a scheduled run's failure to whoever last edited its cron.
 on:
   schedule:
     - cron: "17 7 * * 1"
@@ -23,3 +23,7 @@ jobs:
           node-version-file: .node-version
 
       - run: node scripts/check-versions.mjs
+        env:
+          # The advisory lookup calls GitHub's API, where the job's token raises the 60
+          # calls an hour that an address gets without one.
+          GITHUB_TOKEN: ${{ github.token }}
