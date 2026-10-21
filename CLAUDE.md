@@ -1547,7 +1547,7 @@ instead: `/api/word/<word>?source=<code>` for what the artifacts hold,
 | Trap | Detail |
 | --- | --- |
 | Branch protection's required status is a **job name** | `check`, in `pr.yml`. Renaming the job reports nothing and blocks every PR. No other job may take the name: GitHub counts a skipped job as a pass, and the deployed workflows skip theirs on every preview |
-| Only `gh` holds API credentials | `gh` is logged in as `sanoodles` from the keyring, with the `repo` and `workflow` scopes, so `gh api` gets 5,000 requests an hour. The SSH remote signs git operations and grants no API access, and a bare `curl` to the API gets 60 an hour per IP. So call the API through `gh`, and poll it slowly all the same |
+| The API needs `gh` | Call it with `gh api`, which is authenticated wherever `gh` is logged in. A bare `curl` and the SSH remote are not, and unauthenticated the API allows 60 requests an hour per IP. Poll it slowly either way |
 | Merging a PR | Locally over SSH. A real `git merge --no-ff` keeps the PR head an ancestor, which is what makes GitHub close it as merged |
 | A Dependabot rebase is a force-push | `git fetch` rejects it as non-fast-forward, so it needs `--force` on the refspec |
 | A lockfile conflict | Never hand-merge `pnpm-lock.yaml`. Take the union of the manifests and run `pnpm install` to regenerate it |
