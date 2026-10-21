@@ -37,7 +37,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Reads the pnpm version from the root package.json `packageManager` field, so this
       # cannot drift from what the repo actually builds with.

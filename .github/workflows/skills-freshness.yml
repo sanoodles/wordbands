@@ -42,7 +42,7 @@ jobs:
       report: ${{ steps.sync.outputs.report }}
       changed: ${{ steps.drift.outputs.changed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
@@ -120,7 +120,7 @@ jobs:
       # Only to dispatch pr.yml on the branch this opens — see the last step.
       actions: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v4
         with:
