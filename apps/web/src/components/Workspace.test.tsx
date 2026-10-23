@@ -297,6 +297,26 @@ describe("Workspace", () => {
     );
   });
 
+  // @spec LANG-1
+  it("lists each picker's languages in alphabetical order of their codes", async () => {
+    const user = userEvent.setup();
+    render(<Workspace />);
+    await screen.findByRole("region", { name: /meaning of water/i });
+    const codes = async (name: RegExp) => {
+      await user.click(screen.getByRole("combobox", { name }));
+      const options = await screen.findAllByRole("option");
+      const shown = options.map((o) => o.querySelector(".lang-code")?.textContent);
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("option")).not.toBeInTheDocument());
+      return shown;
+    };
+    expect(await codes(/source language/i)).toEqual(["DE", "EN", "ES", "FR", "IT", "PT"]);
+    const target = await codes(/target language/i);
+    // Sorted by name, Arabic's script would put AR last.
+    expect(target[0]).toBe("AR");
+    expect(target).toEqual([...target].sort());
+  });
+
   // A swap turns the languages over too, but it lands on the word the learner was reading
   // in the card rather than on a default one — so the field is left as it is, and on a
   // phone no keyboard comes up over the translation.

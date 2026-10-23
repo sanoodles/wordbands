@@ -188,9 +188,10 @@ function TargetSelect({
   value: TargetLang;
   onChange: (l: TargetLang) => void;
 }) {
-  const options = [...new Set([...COMMON_LANGS, browserLang(), value])]
-    .map((code) => ({ code, name: endonym(code) }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const options = [...new Set([...COMMON_LANGS, browserLang(), value])].map((code) => ({
+    code,
+    name: endonym(code),
+  }));
   return (
     <LangSelect label="Target language" value={value} options={options} onChange={onChange} />
   );

@@ -50,6 +50,7 @@ verifies the claim exists, not that it bites.
 | `WIKT` | Wiktionary's translations, beside Google's on the word card | PR |
 | `FIG` | The defining figure: full screen, zoom and pan | PR |
 | `CALL` | What the browser asks our server for | PR |
+| `LANG` | The two language pickers | PR |
 
 Not covered yet, and deliberately: visual design, copy, component layout, the
 accessibility contract (its proof is the transcript, which detects change rather than
@@ -260,3 +261,13 @@ Google as well.
 | CALL-1 | A switch of view or language asks only for bands the new view lists |
 | CALL-2 | The card asks to translate only a word found in the language being studied. A swap or a switch of language asks for no translation of the word it leaves |
 | CALL-3 | Moving through the word cloud with the keys looks a word up only once the focus has rested on it for 700 ms |
+
+## LANG — the language pickers
+
+The source picker offers the six indexed languages. The target picker offers a list of
+common languages, plus the browser's language and the current pick. Each option shows the
+language's code, and its name in that language.
+
+| ID | Rule |
+| --- | --- |
+| LANG-1 | Each language picker lists its languages in alphabetical order of their codes |

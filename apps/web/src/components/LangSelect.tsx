@@ -36,7 +36,8 @@ export default function LangSelect<T extends string>({
       // what lets the code show alone with the endonym still along for the ride.
       showStringValue={false}
     >
-      {options.map(({ code, name }) => (
+      {/* By code, since the code is what each row leads with. @spec LANG-1 */}
+      {[...options].sort((a, b) => a.code.localeCompare(b.code)).map(({ code, name }) => (
         // `label` still drives the type-to-find, so typing "esp" reaches Español.
         <Select.Item key={code} value={code} label={name}>
           <span className="lang-option">
