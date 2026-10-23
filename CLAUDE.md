@@ -1542,6 +1542,18 @@ instead: `/api/word/<word>?source=<code>` for what the artifacts hold,
 `/api/bands/cefr?source=<code>` for the band counts, `pnpm a11y:check` for the markup and
 `pnpm decode:check` for the edge.
 
+`pnpm probe <url | path> [step …]` reads anything else on the page in one command, in a
+few seconds. It opens the page in a headless browser and runs its steps in the order given:
+`--click`, `--key`, `--type`, `--wait`, `--eval` and `--shot`. The header of
+`scripts/probe.mjs` lists them, with an example.
+
+| Detail | Why |
+| --- | --- |
+| Every `/api/translate` call fails in the browser | A probe then never reaches Google through our server. The card shows what it shows when Google cannot be reached |
+| `--click` waits for its selector | The load event fires before the client-only `Workspace` mounts |
+| `--size` emulates the viewport rather than sizing the window | Headless Chrome makes no window narrower than 500px |
+| It shares `scripts/lib/browser.mjs` with `pnpm a11y:check` | The launch, the cleanup and the translate stub are written once |
+
 ## Git and GitHub from here
 
 | Trap | Detail |

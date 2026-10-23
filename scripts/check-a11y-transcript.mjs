@@ -15,13 +15,12 @@
 //
 //   node scripts/check-a11y-transcript.mjs [url] [--update]
 //
-// Needs a Chromium-family browser on PATH; set CHROME to name one.
+// Needs a Chromium-family browser on PATH; set CHROME to name one. lib/browser.mjs drives it.
 
-import { readFileSync, writeFileSync, writeSync, mkdtempSync, rmSync, accessSync, constants } from "node:fs";
+import { readFileSync, writeFileSync, writeSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { tmpdir } from "node:os";
-import { spawn } from "node:child_process";
+import { evaluator, interceptTranslate, killOnExit, launch, openPage, press, stop } from "./lib/browser.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BASELINE = join(HERE, "a11y-transcript.txt");
@@ -67,176 +66,10 @@ const GLOSSES = {
   },
 };
 
-const BROWSERS = ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "brave-browser"];
-
-// Resolved before spawning, because spawn reports a missing binary through an async error
-// event — by then a pid exists and the process looks launched.
-function onPath(bin) {
-  const paths = bin.includes("/") ? [bin] : (process.env.PATH ?? "").split(":").map((d) => join(d, bin));
-  for (const p of paths) {
-    try {
-      accessSync(p, constants.X_OK);
-      return p;
-    } catch {
-      /* next candidate */
-    }
-  }
-  return null;
-}
-
-function launch() {
-  const profile = mkdtempSync(join(tmpdir(), "a11y-transcript-"));
-  const flags = [
-    "--headless=new",
-    "--remote-debugging-port=0",
-    `--user-data-dir=${profile}`,
-    "--no-first-run",
-    "--disable-gpu",
-    "--window-size=1440,1200",
-    // The page formats ranks and counts with toLocaleString(), which follows the browser's
-    // locale. Unpinned, the same page reads "rank 18,422" on one machine and "18 422" on
-    // another, and the transcript would be of the runner rather than of the app.
-    "--lang=en-US",
-    // CI runners have no display and no reason to keep the sandbox for a throwaway
-    // browser that opens one page of ours. Left on everywhere else.
-    ...(process.env.CI ? ["--no-sandbox", "--disable-dev-shm-usage"] : []),
-    "about:blank",
-  ];
-  const candidates = process.env.CHROME ? [process.env.CHROME] : BROWSERS;
-  const bin = candidates.map(onPath).find(Boolean);
-  if (!bin) {
-    rmSync(profile, { recursive: true, force: true });
-    throw new Error(`no browser on PATH; tried ${candidates.join(", ")}. Set CHROME to name one.`);
-  }
-  const child = spawn(bin, flags, {
-    stdio: ["ignore", "ignore", "pipe"],
-    env: { ...process.env, LANG: "en_US.UTF-8", LC_ALL: "en_US.UTF-8", TZ: "UTC" },
-    // Its own process group, so `stop` reaches a browser started behind a wrapper script.
-    detached: true,
-  });
-  child.on("error", () => {}); // surfaced by the exit handler below instead
-  const log = [];
-  child.stderr.on("data", (d) => log.push(String(d)));
-  return { child, profile, log };
-}
-
-// True while any process of the browser's group is left to receive the signal.
-function signal(child, sig) {
-  try {
-    process.kill(-child.pid, sig);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function dropProfile(profile) {
-  try {
-    rmSync(profile, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
-  } catch {
-    /* a directory left in tmp is the OS's to reap, and no reason to fail a check */
-  }
-}
-
-// Waits for the group to empty before deleting: a browser still writing makes the delete fail.
-async function stop({ child, profile }) {
-  signal(child, "SIGTERM");
-  for (let i = 0; i < 50 && signal(child, 0); i++) await sleep(100);
-  signal(child, "SIGKILL");
-  dropProfile(profile);
-}
-
-// Chrome prints the endpoint it chose to stderr, which is the only way to learn it with
-// --remote-debugging-port=0. A fixed port would collide with whatever else is debugging on
-// this machine — and this runs locally as often as it runs in CI.
-//
-// The endpoint is the browser itself, which carries no Page domain. The tab is reached
-// through Target, over this same socket, rather than through the HTTP list on the port:
-// that list is guarded against DNS rebinding and its rules have moved between versions,
-// and a check that cannot open a tab on someone else's runner is not a check.
-function browserEndpoint({ child, log }) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`browser reported no debugging endpoint in 20s\n${log.join("").slice(0, 600)}`)), 20_000);
-    child.stderr.on("data", () => {
-      const m = /ws:\/\/[^\s]+/.exec(log.join(""));
-      if (m) { clearTimeout(timer); resolve(m[0]); }
-    });
-    child.on("exit", (code) => { clearTimeout(timer); reject(new Error(`browser exited (${code})\n${log.join("").slice(0, 600)}`)); });
-  });
-}
-
-function connect(url) {
-  const ws = new WebSocket(url);
-  let id = 0;
-  const pending = new Map();
-  const listeners = [];
-  ws.onmessage = (m) => {
-    const msg = JSON.parse(m.data);
-    if (msg.id && pending.has(msg.id)) {
-      const { resolve, reject } = pending.get(msg.id);
-      pending.delete(msg.id);
-      msg.error ? reject(new Error(JSON.stringify(msg.error))) : resolve(msg.result);
-    } else if (msg.method) for (const l of listeners) l(msg);
-  };
-  const raw = (method, params = {}, sessionId) =>
-    new Promise((resolve, reject) => {
-      const n = ++id;
-      pending.set(n, { resolve, reject });
-      ws.send(JSON.stringify(sessionId ? { id: n, method, params, sessionId } : { id: n, method, params }));
-    });
-  return { ws, raw, on: (l) => listeners.push(l), open: new Promise((r) => (ws.onopen = r)) };
-}
-
-// A flattened session, so the page's commands and its events ride the one socket the
-// browser already gave us.
-async function attachToPage(cdp) {
-  const { targetId } = await cdp.raw("Target.createTarget", { url: "about:blank" });
-  const { sessionId } = await cdp.raw("Target.attachToTarget", { targetId, flatten: true });
-  return {
-    send: (method, params) => cdp.raw(method, params, sessionId),
-    on: (l) => cdp.on((msg) => msg.sessionId === sessionId && l(msg)),
-  };
-}
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 async function transcribe(send, on) {
-  const js = async (expression, opts = {}) => {
-    const r = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true, ...opts });
-    if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? "evaluate failed");
-    return r.result;
-  };
-  const val = async (e) => (await js(e)).value;
-  const key = async (k, code, vk, modifiers = 0) => {
-    for (const type of ["rawKeyDown", "keyUp"])
-      await send("Input.dispatchKeyEvent", { type, key: k, code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, modifiers });
-    await sleep(250);
-  };
-  const SHIFT = 8;
-  // Settle waits key on the page, never on a number of seconds, so a slow cold start reads
-  // the same as a warm one instead of transcribing a half-built page — or, worse, a control
-  // one keystroke ahead of the panel it just changed.
-  const until = async (expr, what, saw = "null") => {
-    for (let i = 0; i < 75; i++) {
-      if (await val(expr)) return;
-      await sleep(400);
-    }
-    // What it was looking at matters more than the fact that it gave up: a timeout here is
-    // either the page being slow or the page having changed, and those want opposite fixes.
-    throw new Error(`timed out waiting for ${what}; saw ${JSON.stringify(await val(saw))}`);
-  };
+  const { val, until } = evaluator(send);
 
-  await send("Fetch.enable", { patterns: [{ urlPattern: "*/api/translate/*" }] });
-  on(async (msg) => {
-    if (msg.method !== "Fetch.requestPaused") return;
-    const word = decodeURIComponent(new URL(msg.params.request.url).pathname.split("/api/translate/")[1] ?? "");
-    await send("Fetch.fulfillRequest", {
-      requestId: msg.params.requestId,
-      responseCode: 200,
-      responseHeaders: [{ name: "content-type", value: "application/json" }],
-      body: Buffer.from(JSON.stringify(GLOSSES[word] ?? GLOSS)).toString("base64"),
-    });
-  });
+  await interceptTranslate(send, on, (word) => GLOSSES[word] ?? GLOSS);
   await send("Page.enable");
   await send("Accessibility.enable");
 
@@ -364,10 +197,10 @@ async function transcribe(send, on) {
   // page, and the skip link is the one focusable the body holds before it — so stepping back
   // once from `#main` reaches the top of the page whatever else moves.
   await val(`(document.getElementById("main").focus(), window.scrollTo(0, 0), true)`);
-  await key("Tab", "Tab", 9, SHIFT);
+  await press(send, "Shift+Tab");
   for (let i = 0, stop = 0; i < 40; i++) {
     // The step back above already landed on the first stop, so a stop is read and then left.
-    if (i) await key("Tab", "Tab", 9);
+    if (i) await press(send, "Tab");
     // `next dev` serves its own dev-tools overlay as a focusable custom element that
     // production never has, so without this a local run differs from the deployed page by
     // one stop and the check is useless as a pre-push read. Skipped rather than stopped
@@ -384,8 +217,8 @@ async function transcribe(send, on) {
   await reset();
   await val(`(document.querySelector("[role=option][tabindex='0']").focus(), true)`);
   say(`  on entry     ${await speak()}`);
-  for (const [k, c, v] of [["ArrowRight", "ArrowRight", 39], ["ArrowDown", "ArrowDown", 40]]) {
-    await key(k, c, v);
+  for (const k of ["ArrowRight", "ArrowDown"]) {
+    await press(send, k);
     say(`  ${k.padEnd(12)} ${await speak()}`);
   }
 
@@ -429,8 +262,8 @@ async function transcribe(send, on) {
   await reset();
   await val(`(document.querySelector("[role=tab][aria-selected=true]").focus(), true)`);
   say(`  on entry     ${await speak()}`);
-  for (const [k, c, v] of [["ArrowRight", "ArrowRight", 39], ["End", "End", 35], ["Home", "Home", 36]]) {
-    await key(k, c, v);
+  for (const k of ["ArrowRight", "End", "Home"]) {
+    await press(send, k);
     // The tab takes focus in the key handler and its state a render later, so reading it
     // straight away catches it selected sometimes and not others.
     await until(
@@ -503,26 +336,18 @@ function annotate(title, body) {
 
 let browser;
 try {
-  browser = launch();
+  browser = launch({ name: "a11y-transcript" });
 } catch (err) {
   console.error(err.message);
   process.exit(1);
 }
-
-// process.exit() skips finally, and a detached group never hears the terminal's Ctrl-C.
-process.on("exit", () => {
-  signal(browser.child, "SIGKILL");
-  dropProfile(browser.profile);
-});
-for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) process.once(sig, () => process.exit(1));
+killOnExit(browser);
 
 let actual;
 try {
-  const cdp = connect(await browserEndpoint(browser));
-  await cdp.open;
-  const page = await attachToPage(cdp);
+  const page = await openPage(browser);
   actual = await transcribe(page.send, page.on);
-  cdp.ws.close();
+  page.close();
 } catch (err) {
   // A check that could not check is not a pass.
   console.error(`could not transcribe ${TARGET}${SCENARIO}`);
