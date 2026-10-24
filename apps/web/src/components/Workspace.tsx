@@ -385,7 +385,15 @@ export default function Workspace({ country }: { country?: string | null }) {
   };
 
   // The searched word drives the whole view, so its lookup lives here, above it.
-  const [query, setQuery] = useState(() => initial.word ?? SOURCE_LANG_META[source].defaultWord);
+  const [query, setQueryState] = useState(
+    () => initial.word ?? SOURCE_LANG_META[source].defaultWord,
+  );
+  // Whether the field holds what the user typed, which a switch of language keeps.
+  const typed = useRef(false);
+  const setQuery = (word: string) => {
+    typed.current = false;
+    setQueryState(word);
+  };
   // With the language it was found in: the URL never pairs a word with another.
   const [info, setInfo] = useState<(WordBands & { source: SourceLang }) | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -402,6 +410,8 @@ export default function Workspace({ country }: { country?: string | null }) {
   // Bumped whenever a language switch drops a word into the field that nobody asked for.
   // That tells the field to focus itself and select the word — see WordSearchBox.
   const [reseeded, setReseeded] = useState(0);
+  // Bumped when a language switch keeps the typed word: focus returns with the caret at its end.
+  const [refocused, setRefocused] = useState(0);
 
   // Bumped by every lookup, so one that answers late cannot land over a newer one.
   // @spec URL-11
@@ -410,8 +420,14 @@ export default function Workspace({ country }: { country?: string | null }) {
   // The source is passed explicitly so a language switch looks up the right dictionary
   // without waiting for the state update to settle — hence the shadowing. `bandOverride`
   // restores a pinned band from a shared link; a normal lookup follows the word's own (null).
+  // `onMiss` takes over from the error where the language lacks the word.
   const lookup = useCallback(
-    async (raw: string, source: SourceLang, bandOverride: string | null = null) => {
+    async (
+      raw: string,
+      source: SourceLang,
+      bandOverride: string | null = null,
+      onMiss?: () => void,
+    ) => {
       const id = ++lookups.current;
       const term = raw.trim().toLowerCase();
       // Nothing to look up is not a wait: `?word=%20` would otherwise leave the
@@ -424,6 +440,10 @@ export default function Workspace({ country }: { country?: string | null }) {
       try {
         const res = await fetch(`/api/word/${encodeURIComponent(term)}?source=${source}`);
         if (id !== lookups.current) return;
+        if (res.status === 404 && onMiss) {
+          onMiss();
+          return;
+        }
         if (!res.ok) {
           setError(`"${term}" is not in this dictionary`);
           const near = await nearestWord(term, source);
@@ -438,7 +458,7 @@ export default function Workspace({ country }: { country?: string | null }) {
         // Echo the corpus's display casing ("Plädoyer"), not the lowercased lookup key
         // — but only onto the word that was asked for. Typing carries on while a
         // lookup is in flight, and the field is the one thing the user is holding.
-        setQuery((q) => (q.trim().toLowerCase() === term ? found.word : q));
+        setQueryState((q) => (q.trim().toLowerCase() === term ? found.word : q));
         setBand(bandOverride);
       } finally {
         if (id === lookups.current) setLoading(false);
@@ -522,13 +542,22 @@ export default function Workspace({ country }: { country?: string | null }) {
     // rather than translating the new source language into itself.
     if (l === target) setTarget(source);
     setSource(l);
-    const word = SOURCE_LANG_META[l].defaultWord;
-    setQuery(word);
     // The switch is a prelude to looking a word up in the new language, and the word it
     // lands on is only a place to land: focus the field and select it, so the next
     // keystroke replaces it.
-    setReseeded((n) => n + 1);
-    void lookup(word, l);
+    const land = () => {
+      const word = SOURCE_LANG_META[l].defaultWord;
+      setQuery(word);
+      setReseeded((n) => n + 1);
+      void lookup(word, l);
+    };
+    // @spec LANG-2, LANG-3
+    const word = typed.current ? query.trim() : "";
+    if (!word) return land();
+    // A word the language just left found is kept only where the new one has it too.
+    const found = info?.source === source && info.word.toLowerCase() === word.toLowerCase();
+    setRefocused((n) => n + 1);
+    void lookup(word, l, null, found ? land : undefined);
   };
 
   // The translation's leading term, reported by the card — what a swap lands on.
@@ -614,8 +643,9 @@ export default function Workspace({ country }: { country?: string | null }) {
               {/* aria-hidden, like the search help below: read once as the select's
                   description, rather than again as loose text in the section. */}
               <p id="lang-help" className="visually-hidden" aria-hidden="true">
-                Choosing a language looks up an example word in it. The search box takes
-                focus with that word selected, so typing replaces it.
+                Choosing a language looks up the word you typed in it, or else an example
+                word. The search box takes focus. An example word is selected, so typing
+                replaces it.
               </p>
             </section>
 
@@ -626,7 +656,10 @@ export default function Workspace({ country }: { country?: string | null }) {
               </h2>
               <WordSearchBox
                 value={query}
-                onValueChange={setQuery}
+                onValueChange={(v) => {
+                  typed.current = true;
+                  setQueryState(v);
+                }}
                 onSubmit={(w) => void lookup(w, source)}
                 source={source}
                 // Named by the heading above it rather than by a second copy of the same
@@ -642,6 +675,7 @@ export default function Workspace({ country }: { country?: string | null }) {
                 // eslint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
                 reseeded={reseeded}
+                refocused={refocused}
                 // Only while the field still holds the word this level belongs to.
                 // Sitting against the text, it would otherwise read as a claim about
                 // whatever is being typed over it.

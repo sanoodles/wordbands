@@ -64,6 +64,7 @@ export default function WordSearchBox({
   busy = false,
   autoFocus = false,
   reseeded = 0,
+  refocused = 0,
   badge,
   onBadgeFit,
   invalid = false,
@@ -87,6 +88,11 @@ export default function WordSearchBox({
    * selects that word, as it does on mount. Only where `autoFocus` is on.
    */
   reseeded?: number;
+  /**
+   * Bumped by the caller when it has kept the value the user typed across a language
+   * switch. The field then takes focus with the caret at the end, so typing carries on.
+   */
+  refocused?: number;
   /**
    * Trailed just after the field's text, inside the box. Only pass it for something that
    * describes *this* text — it is laid out against the current value, so a caller must
@@ -201,6 +207,14 @@ export default function WordSearchBox({
     input.focus();
     input.select();
   }, [autoFocus, value, reseeded]);
+
+  // A half-typed word is kept as well, and a selection would let the next keystroke erase it.
+  const refocuses = useRef(refocused);
+  useEffect(() => {
+    if (refocused === refocuses.current) return;
+    refocuses.current = refocused;
+    caretToEnd();
+  }, [refocused]);
 
   // Clicking into the field means a new word far more often than an edit inside the one
   // it holds, so the click that focuses it takes the whole value. Armed on mousedown and

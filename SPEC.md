@@ -50,7 +50,7 @@ verifies the claim exists, not that it bites.
 | `WIKT` | Wiktionary's translations, beside Google's on the word card | PR |
 | `FIG` | The defining figure: full screen, zoom and pan | PR |
 | `CALL` | What the browser asks our server for | PR |
-| `LANG` | The two language pickers | PR |
+| `LANG` | The two language pickers, and the word a switch of source language leaves in the search box | PR |
 
 Not covered yet, and deliberately: visual design, copy, component layout, the
 accessibility contract (its proof is the transcript, which detects change rather than
@@ -275,3 +275,5 @@ language's code, and its name in that language.
 | ID | Rule |
 | --- | --- |
 | LANG-1 | Each language picker lists its languages in alphabetical order of their codes |
+| LANG-2 | A switch of source language keeps the word the user typed in the search box, and looks it up in the new language. Where the new language lacks it, the box still holds it and the lookup's error says so |
+| LANG-3 | The box takes the new language's example word instead in two cases: the user did not type the word, or the language just left found the word and the new language lacks it |

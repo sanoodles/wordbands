@@ -30,7 +30,7 @@ TAB THROUGH THE PAGE
    2. Light, button
    3. Dark, button
    4. System, button, pressed
-   5. Source language, combobox, collapsed, — Choosing a language looks up an example word in it. The search box takes focus with that word selected, so typing replaces it.
+   5. Source language, combobox, collapsed, — Choosing a language looks up the word you typed in it, or else an example word. The search box takes focus. An example word is selected, so typing replaces it.
    6. Look up a word, combobox, collapsed, — Type a German word to see its frequency and CEFR level. It is looked up as soon as you stop typing; press Enter or choose a suggestion to look one up at once.
    7. A1 · Beginner · rank 393, img, — Wasser
    8. Etymology of Wasser, link, — Opens in a new tab.

@@ -44,7 +44,15 @@ vi.mock("./BandBrowser", () => ({
 
 // Words the corpus stores capitalized — the API answers with that casing, not the
 // lowercased lookup key.
-const DISPLAY: Record<string, string> = { plädoyer: "Plädoyer", wasser: "Wasser" };
+const DISPLAY: Record<string, string> = {
+  plädoyer: "Plädoyer",
+  wasser: "Wasser",
+  brot: "Brot",
+  kind: "Kind",
+};
+
+// Words one language lacks, for what a switch of language keeps (LANG-2, LANG-3).
+const LACKS: Record<string, string[]> = { en: ["brot"], es: ["water"], de: ["schmett"] };
 
 type Level = { key: string; label: string; rank: number };
 
@@ -52,10 +60,13 @@ function mockFetch(levels?: Record<string, Level>) {
   return vi.fn(async (url: string | URL) => {
     const u = String(url);
     if (u.includes("/api/word/")) {
-      const path = new URL(u, "http://localhost").pathname;
-      const word = decodeURIComponent(path.split("/api/word/")[1]!);
+      const { pathname, searchParams } = new URL(u, "http://localhost");
+      const word = decodeURIComponent(pathname.split("/api/word/")[1]!);
       // "cordon" is the accentless spelling: the typeahead reaches "cordón", Enter does not.
       if (word === "missing" || word === "cordon") return new Response("no", { status: 404 });
+      if (LACKS[searchParams.get("source") ?? "en"]?.includes(word)) {
+        return new Response("no", { status: 404 });
+      }
       // An inflected form answers with its base word, and says which form was asked for.
       const redirect = word === "branched";
       const display = redirect ? "branch" : DISPLAY[word] ?? word;
@@ -280,6 +291,98 @@ describe("Workspace", () => {
     // Typed without a tap, which is the point.
     await user.keyboard("hund");
     expect(box.value).toBe("hund");
+  });
+
+  describe("the word a switch of source language keeps", () => {
+    const field = () => screen.getByRole("combobox", { name: /look up a word/i }) as HTMLInputElement;
+    const pick = async (user: ReturnType<typeof userEvent.setup>, name: RegExp) => {
+      await user.click(screen.getByRole("combobox", { name: /source language/i }));
+      await user.click(await screen.findByRole("option", { name }));
+    };
+    const asked = (source: string) =>
+      vi
+        .mocked(fetch)
+        .mock.calls.map(([url]) => new URL(String(url), "http://localhost"))
+        .filter((u) => u.pathname.startsWith("/api/word/") && u.searchParams.get("source") === source)
+        .map((u) => decodeURIComponent(u.pathname.split("/").pop()!));
+
+    // @spec LANG-2
+    it("keeps a word typed for the language switched to, and finds it there", async () => {
+      const user = userEvent.setup();
+      render(<Workspace />);
+      await screen.findByRole("region", { name: /meaning of water/i });
+      await user.clear(field());
+      await user.type(field(), "brot{Enter}");
+      await screen.findByRole("alert"); // English lacks it
+
+      await pick(user, /Deutsch/);
+      expect(await screen.findByRole("region", { name: /meaning of Brot/i })).toBeInTheDocument();
+      expect(field().value).toBe("Brot");
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    // @spec LANG-2
+    it("keeps a typed word the language just left found, where the new one has it too", async () => {
+      const user = userEvent.setup();
+      render(<Workspace />);
+      await screen.findByRole("region", { name: /meaning of water/i });
+      await user.clear(field());
+      await user.type(field(), "kind{Enter}");
+      await waitFor(() => expect(asked("en")).toContain("kind"));
+
+      await pick(user, /Deutsch/);
+      await waitFor(() => expect(asked("de")).toEqual(["kind"]));
+      expect(field().value).toBe("Kind");
+    });
+
+    // @spec LANG-2
+    it("keeps a half-typed word the new language lacks, says so, and lets typing carry on", async () => {
+      const user = userEvent.setup();
+      render(<Workspace />);
+      await screen.findByRole("region", { name: /meaning of water/i });
+      await user.clear(field());
+      await user.type(field(), "schmett");
+
+      await pick(user, /Deutsch/);
+      expect(await screen.findByRole("alert")).toHaveTextContent('"schmett" is not in this dictionary');
+      expect(field().value).toBe("schmett");
+      await waitFor(() => expect(field()).toHaveFocus());
+      // The caret, not a selection: the next keystroke must not erase the word.
+      expect([field().selectionStart, field().selectionEnd]).toEqual([7, 7]);
+      await user.keyboard("erling");
+      expect(field().value).toBe("schmetterling");
+    });
+
+    // @spec LANG-3
+    it("lands on the example word where the language just left found the typed word and the new one lacks it", async () => {
+      const user = userEvent.setup();
+      render(<Workspace />);
+      await screen.findByRole("region", { name: /meaning of water/i });
+      await user.clear(field());
+      await user.type(field(), "water{Enter}");
+      await waitFor(() => expect(asked("en")).toEqual(["water", "water"]));
+
+      await pick(user, /Español/);
+      expect(await screen.findByRole("region", { name: /meaning of agua/i })).toBeInTheDocument();
+      expect(asked("es")).toEqual(["water", "agua"]);
+      expect(field().value).toBe("agua");
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      await waitFor(() => expect(field()).toHaveFocus());
+      expect([field().selectionStart, field().selectionEnd]).toEqual([0, "agua".length]);
+    });
+
+    // @spec LANG-3
+    it("lands on the example word where the user did not type the word, though the new language has it", async () => {
+      const user = userEvent.setup();
+      render(<Workspace />);
+      await screen.findByRole("region", { name: /meaning of water/i });
+      await user.click(screen.getByRole("button", { name: "pick word" }));
+      await screen.findByRole("region", { name: /meaning of Plädoyer/i });
+
+      await pick(user, /Deutsch/);
+      await waitFor(() => expect(field().value).toBe("Wasser"));
+      expect(asked("de")).toEqual(["wasser"]);
+    });
   });
 
   // The other half of the rule above: a focus move on a setting change is a change of

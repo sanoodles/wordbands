@@ -173,6 +173,23 @@ the theme and the route is dynamic anyway. An `/api/geo` round trip would answer
 first lookup had already gone out under the wrong language. Off Vercel the header is
 absent and English is the fallback.
 
+## What a switch of source language keeps
+
+`LANG-2` and `LANG-3` are the rules. A learner often types a word and only then sees that
+the source language is wrong.
+
+| Detail | Why |
+| --- | --- |
+| Only a word the user typed is kept | The opening word, a chip and a swap put words in the field that nobody typed for the new language. Kept, they land on whatever the new list holds under that spelling: the opening `water` is Italian for a toilet, at rank 5,393, and `agua` redirects to the Portuguese verb `aguar` |
+| A typed word the old language found is kept only where the new one has it | Then the switch was about the language, not the word. `water` typed under English lands on `agua` in Spanish, not on a miss |
+| A typed word the old language did not find is kept even where the new one lacks it | It was probably typed for the new language, and is misspelt or half-typed. The miss then offers the folded spelling: `madchen` under German offers `Mädchen` |
+| The spelling is kept, not translated | The typeahead looks a word up once it matches one exactly, so a German `die` typed under English is on the card as the English verb. Translated, it would arrive in German as `sterben` |
+| `typed` is set by the field's own input alone | Every other writer of the field goes through `setQuery`, which clears it. A new way to put a word in the field has to use it too |
+
+| Known cost | Detail |
+| --- | --- |
+| A typed word both lists hold keeps its spelling and changes its meaning | `gift` typed under English becomes German `Gift`, which is poison. The card translates it, so the change shows |
+
 ## Build inputs
 
 All inputs are gitignored and live in `apps/web/data/`. The build reads them and writes
@@ -1330,12 +1347,12 @@ Two ways of reaching 44 that do not:
 | --- | --- |
 | The page opens with the field focused and its word selected | It lands holding a word nobody asked for, so the first keystroke means a new one |
 | A click into it selects the whole value, on the click that focuses it and on no other | Clicking in asks for a different word far more often than it edits this one, and a second click has to leave the caret where it was put |
-| Switching the source language refocuses the field and selects the default word it lands on | That word is no more asked for than the one the page opens on. On a phone this is the difference between typing and first tapping the field to raise the keyboard |
+| Switching the source language refocuses the field. The default word it lands on is selected, and a typed word it keeps gets the caret at its end | The default word is no more asked for than the one the page opens on. A kept word may be half-typed, and a selection would let the next keystroke erase it. On a phone this is the difference between typing and first tapping the field to raise the keyboard |
 | The source select says so first, in a description | A focus move on a setting change is a change of context, which WCAG 3.2.2 allows only where it was advised beforehand. A description is read on focus, before the menu opens; the field is read after the move has already happened. It sits on the source select alone — picking a target moves nothing |
 | A swap, a clicked alternative and a chip never take the field | Each lands on a word the learner picked, and on a phone a keyboard would come up over the card that just answered |
 | A clicked alternative lands on the card instead, and only where it dropped focus | Its own button is removed by the re-render the pick causes, so focus falls to `<body>`. The card is `tabIndex={-1}` for that one purpose, and it waits for the new word: the name says "Meaning of" whichever word is there, so moving early would announce the one just left |
 | The selection is re-applied after the lookup recases the word | "wasser" comes back "Wasser", which collapses the selection. Without this, half the languages open only half-ready |
-| `Workspace` bumps `reseeded`, rather than the box watching `source` for a change | A swap turns the languages over too, and that one must not take the field |
+| `Workspace` bumps `reseeded` or `refocused`, rather than the box watching `source` for a change | A swap turns the languages over too, and that one must not take the field |
 | Fondue's `Select` anchors Radix's popover instead of triggering it | Closing the menu therefore restores focus nowhere — Radix's `triggerRef` is empty — so the field can take focus as the switch commits, with nothing to race. Settled in a browser: jsdom shows no fight either way |
 
 ### The band tabs and the word cloud
