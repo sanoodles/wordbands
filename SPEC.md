@@ -46,7 +46,7 @@ verifies the claim exists, not that it bites.
 | `HEAD` | Response headers and the CSP | PR |
 | `URL` | Deeplink state, history entries and the page title | PR |
 | `CREDIT` | Which sources and works the page credits | PR |
-| `ETYM` | The word card's link to the word's etymology | PR |
+| `ETYM` | The link to the looked-up word's etymology | PR |
 | `WIKT` | Wiktionary's translations, beside Google's on the word card | PR |
 | `FIG` | The defining figure: full screen, zoom and pan | PR |
 | `CALL` | What the browser asks our server for | PR |
@@ -205,14 +205,15 @@ Wiktionary's translations follow the pair.
 
 ## ETYM — the etymology link
 
-The word card links the word to where it comes from. Each language links to a dictionary
-written in that language.
+The page links the looked-up word to where it comes from. Each language links to a
+dictionary written in that language.
 
 | ID | Rule |
 | --- | --- |
-| ETYM-1 | In every source language, the word card links the looked-up word to its etymology in a dictionary of that language |
+| ETYM-1 | In every source language, the page links the looked-up word to its etymology in a dictionary of that language |
 | ETYM-2 | English links to Etymonline, German to the DWDS entry at its etymology, French to the CNRTL's etymology, Spanish to the RAE's dictionary, Italian to the Nuovo De Mauro and Portuguese to Priberam |
 | ETYM-3 | The word is spelt the way its dictionary looks it up: lowercase for the RAE's, and lowercase without diacritics for the Nuovo De Mauro |
+| ETYM-4 | The link is for the word the word card shows, in the dictionary of the language that word was found in. While a failed lookup's error shows, there is no link |
 
 ## WIKT — Wiktionary's translations
 

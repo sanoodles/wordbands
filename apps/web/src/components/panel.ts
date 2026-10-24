@@ -21,3 +21,10 @@ export const PANEL_LANG =
  * does not compete with the words themselves.
  */
 export const SECTION_HEADING = "tw-mb-1.5 tw-body-small tw-font-medium text-muted-aaa";
+
+/** A link out of a panel as a pill, a 44px target (WCAG 2.5.5). */
+export const PILL =
+  "tw-inline-flex tw-min-h-[44px] tw-shrink-0 tw-items-center tw-justify-center tw-gap-1 tw-rounded-full tw-border tw-px-3 tw-py-1.5 tw-body-medium tw-no-underline";
+
+/** The quiet pill, for a link a panel offers rather than leads with. */
+export const OUT_LINK = `${PILL} tw-border-line-subtle tw-text-secondary hover:tw-border-line hover:tw-text-primary`;

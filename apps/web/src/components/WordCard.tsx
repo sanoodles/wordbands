@@ -4,10 +4,11 @@ import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from "re
 import CefrBadge from "@/components/CefrBadge";
 import LangSelect from "@/components/LangSelect";
 import Loading from "@/components/Loading";
-import { PANEL, PANEL_LANG, SECTION_HEADING } from "@/components/panel";
+// The workspace renders the sentence, since the etymology link outside the card shares it.
+import { NEW_TAB_HELP } from "@/components/NewTabHelp";
+import { PANEL, PANEL_LANG, PILL, SECTION_HEADING } from "@/components/panel";
 import {
   englishName,
-  etymologyHref,
   hasWiktionary,
   hasWiktionaryFallback,
   wiktionaryHref,
@@ -209,10 +210,6 @@ const GLOSS_TYPE = {
 // The translation's line box — else each translation resizes the card.
 const STATUS_TYPE = { display: GLOSS_TYPE.display, lineHeight: GLOSS_TYPE.lineHeight };
 
-// A link out of the card as a pill, a 44px target (WCAG 2.5.5).
-const PILL =
-  "tw-inline-flex tw-min-h-[44px] tw-shrink-0 tw-items-center tw-justify-center tw-gap-1 tw-rounded-full tw-border tw-px-3 tw-py-1.5 tw-body-medium tw-no-underline";
-const OUT_LINK = `${PILL} tw-border-line-subtle tw-text-secondary hover:tw-border-line hover:tw-text-primary`;
 // Google's link where its line has nothing. It is then the way to a translation, so the loudest.
 const FALLBACK_LINK = `${PILL} tw-border-line-strong tw-font-medium tw-text-primary hover:tw-bg-surface-hover`;
 
@@ -377,7 +374,6 @@ export default function WordCard({
   const multi = useForms(casings, source, target, translate && homograph && !pending);
   // One id for the sentence every term button points at.
   const pickHelp = useId();
-  const newTabHelp = useId();
   const headingId = useId();
   const wordId = `${headingId}-word`;
 
@@ -450,7 +446,7 @@ export default function WordCard({
   // The word and the language behind it are what the link is for (2.4.9).
   const googleName = `Google Translate: ${word} in ${englishName(target)}`;
   const googleLink = (
-    <SourceLink href={googleHref} name={googleName} describedBy={newTabHelp}>
+    <SourceLink href={googleHref} name={googleName} describedBy={NEW_TAB_HELP}>
       Google
     </SourceLink>
   );
@@ -463,7 +459,7 @@ export default function WordCard({
       href={wiktionaryHref(wikt.title, source)}
       hrefLang={source}
       name={`Wiktionary entry for ${word}`}
-      describedBy={newTabHelp}
+      describedBy={NEW_TAB_HELP}
     >
       Wiktionary
     </SourceLink>
@@ -501,105 +497,101 @@ export default function WordCard({
         <div className={PANEL_LANG}>
           <TargetSelect value={target} onChange={onTargetChange} />
         </div>
-        {/* Wraps on the card's own width, not the viewport's. The lines take the width they
-            need, so the etymology link drops below them only where the two do not fit. */}
-        <div className="tw-flex tw-min-w-0 tw-grow tw-flex-wrap tw-items-start tw-justify-between tw-gap-x-4 tw-gap-y-2">
-          {/* The card is only the meaning now — the word itself is in the search box
-              and spotlighted in the cloud, so printing it a third time said nothing. */}
-          {/* Padded so the first line sits level with the select's text, at any number of
-              lines, and a single line is the 44px of the field facing it. Google's pill
-              is 44px already, so it leads unpadded. */}
-          <div className={`tw-w-max tw-max-w-full ${pillShows ? "" : "tw-py-2.5"}`}>
-            {/* Announce translation state changes to assistive tech (WCAG 4.1.3). */}
-            <div aria-live="polite">
-              {/* Nothing to translate, but Google's page still has the word's pronunciation. */}
-              {!translate && <span style={STATUS_TYPE}>{googleLink}</span>}
-              {translate && !settled && (
-                // Reserves the translation's line box, so the card doesn't resize when it lands.
-                // The wrapper is already the live region, so don't nest another.
-                <Loading
-                  size="x-small"
-                  announce={false}
-                  label="Translating…"
-                  className="tw-min-h-[var(--typography-line-height-loose)]"
-                />
-              )}
-              {translate && settled && (
-                // @spec WIKT-2
-                <div className="tw-flex tw-flex-col tw-gap-1.5">
-                  {googleShows && showLines ? (
-                    <ul className="tw-flex tw-flex-col tw-gap-1.5">
-                      {lines.map((l, i) => (
-                        <li
-                          key={`${l.label}:${l.terms.join(",")}`}
-                          className="tw-flex tw-flex-wrap tw-items-baseline tw-gap-x-2"
-                        >
-                          {l.label && (
-                            // A casing is source-language; a POS label comes back in the reader's.
-                            <span
-                              lang={homograph ? source : target}
-                              className="tw-body-medium text-muted-aaa"
-                            >
-                              {l.label}
-                            </span>
-                          )}
-                          <Terms
-                            terms={l.terms}
-                            levels={levels}
-                            target={target}
-                            onPick={pickTerm}
-                            pickHelp={pickHelp}
-                            trailing={i === lines.length - 1 ? googleLink : null}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  ) : googleShows ? (
-                    <Terms
-                      terms={heroTerms}
-                      levels={levels}
-                      target={target}
-                      onPick={pickTerm}
-                      pickHelp={pickHelp}
-                      trailing={googleLink}
-                    />
-                  ) : pillShows ? (
-                    <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-x-3 tw-gap-y-2">
-                      {/* 44px, so it stays level with the select where the pill wraps below. */}
-                      <span className="tw-flex tw-min-h-[44px] tw-items-center tw-body-medium text-muted-aaa">
-                        {googleStatus}
-                      </span>
-                      <SourceLink
-                        href={googleHref}
-                        name={googleName}
-                        describedBy={newTabHelp}
-                        className={FALLBACK_LINK}
+        {/* The card is only the meaning now — the word itself is in the search box
+            and spotlighted in the cloud, so printing it a third time said nothing. */}
+        {/* Padded so the first line sits level with the select's text, at any number of
+            lines, and a single line is the 44px of the field facing it. Google's pill
+            is 44px already, so it leads unpadded. */}
+        <div className={`tw-min-w-0 tw-grow ${pillShows ? "" : "tw-py-2.5"}`}>
+          {/* Announce translation state changes to assistive tech (WCAG 4.1.3). */}
+          <div aria-live="polite">
+            {/* Nothing to translate, but Google's page still has the word's pronunciation. */}
+            {!translate && <span style={STATUS_TYPE}>{googleLink}</span>}
+            {translate && !settled && (
+              // Reserves the translation's line box, so the card doesn't resize when it lands.
+              // The wrapper is already the live region, so don't nest another.
+              <Loading
+                size="x-small"
+                announce={false}
+                label="Translating…"
+                className="tw-min-h-[var(--typography-line-height-loose)]"
+              />
+            )}
+            {translate && settled && (
+              // @spec WIKT-2
+              <div className="tw-flex tw-flex-col tw-gap-1.5">
+                {googleShows && showLines ? (
+                  <ul className="tw-flex tw-flex-col tw-gap-1.5">
+                    {lines.map((l, i) => (
+                      <li
+                        key={`${l.label}:${l.terms.join(",")}`}
+                        className="tw-flex tw-flex-wrap tw-items-baseline tw-gap-x-2"
                       >
-                        Google Translate
-                      </SourceLink>
-                    </div>
-                  ) : null}
-                  {wiktShows && (
-                    <Terms
-                      terms={wikt.terms}
-                      levels={wikt.levels}
-                      target={target}
-                      onPick={pickTerm}
-                      pickHelp={pickHelp}
-                      trailing={wiktLink}
-                    />
-                  )}
-                  {/* @spec WIKT-1
-                      After the line that translates, so the meaning comes first. */}
-                  {!googleShows && wiktShows && (
-                    <span className="tw-body-medium text-muted-aaa" style={STATUS_TYPE}>
+                        {l.label && (
+                          // A casing is source-language; a POS label comes back in the reader's.
+                          <span
+                            lang={homograph ? source : target}
+                            className="tw-body-medium text-muted-aaa"
+                          >
+                            {l.label}
+                          </span>
+                        )}
+                        <Terms
+                          terms={l.terms}
+                          levels={levels}
+                          target={target}
+                          onPick={pickTerm}
+                          pickHelp={pickHelp}
+                          trailing={i === lines.length - 1 ? googleLink : null}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                ) : googleShows ? (
+                  <Terms
+                    terms={heroTerms}
+                    levels={levels}
+                    target={target}
+                    onPick={pickTerm}
+                    pickHelp={pickHelp}
+                    trailing={googleLink}
+                  />
+                ) : pillShows ? (
+                  <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-x-3 tw-gap-y-2">
+                    {/* 44px, so it stays level with the select where the pill wraps below. */}
+                    <span className="tw-flex tw-min-h-[44px] tw-items-center tw-body-medium text-muted-aaa">
                       {googleStatus}
-                      {googleLink}
                     </span>
-                  )}
-                </div>
-              )}
-            </div>
+                    <SourceLink
+                      href={googleHref}
+                      name={googleName}
+                      describedBy={NEW_TAB_HELP}
+                      className={FALLBACK_LINK}
+                    >
+                      Google Translate
+                    </SourceLink>
+                  </div>
+                ) : null}
+                {wiktShows && (
+                  <Terms
+                    terms={wikt.terms}
+                    levels={wikt.levels}
+                    target={target}
+                    onPick={pickTerm}
+                    pickHelp={pickHelp}
+                    trailing={wiktLink}
+                  />
+                )}
+                {/* @spec WIKT-1
+                    After the line that translates, so the meaning comes first. */}
+                {!googleShows && wiktShows && (
+                  <span className="tw-body-medium text-muted-aaa" style={STATUS_TYPE}>
+                    {googleStatus}
+                    {googleLink}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           {/* One description shared by every term button — the string is said once, and a
               name holding it would replace the word and stop the line reading as the
@@ -610,26 +602,6 @@ export default function WordCard({
               Look this word up in {englishName(target)}, swapping the two languages.
             </p>
           )}
-          {/* The card's new-tab links share it. A description, not part of the name: what
-              activating one does, announced on focus, while the name stays what it is for.
-              aria-hidden for the reason the sentence above is. */}
-          <p id={newTabHelp} className="visually-hidden" aria-hidden="true">
-            Opens in a new tab.
-          </p>
-          {/* @spec ETYM-1
-              A new tab, like the source links. The dictionary is written in the source
-              language, which hreflang says. */}
-          <a
-            href={etymologyHref(word, source)}
-            hrefLang={source}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Etymology of ${word}`}
-            aria-describedby={newTabHelp}
-            className={OUT_LINK}
-          >
-            Etymology <span aria-hidden="true">↗</span>
-          </a>
         </div>
       </div>
     </section>

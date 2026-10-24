@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import {
   DEFINING_LEVEL_COUNT,
   englishName,
+  etymologyHref,
   SOURCE_LANGS,
   type SourceLang,
   WIKTIONARY_LANGS,
@@ -866,6 +867,89 @@ describe("Workspace", () => {
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(/base form of/i));
     // The same node, not a replacement — that is what makes it announce.
     expect(screen.getByRole("status")).toBe(live);
+  });
+});
+
+describe("the etymology link", () => {
+  // @spec ETYM-1
+  it("links the looked-up word to its etymology, in a new tab, named by the word", async () => {
+    window.history.replaceState(null, "", "/?source=de&word=wasser&target=en");
+    render(<Workspace />);
+    // As the corpus cases it, which is the DWDS entry's own casing.
+    const link = await screen.findByRole("link", { name: "Etymology of Wasser" });
+    expect(link).toHaveTextContent(/^Etymology/);
+    expect(link).toHaveAttribute("href", "https://www.dwds.de/wb/Wasser#etymwb-1");
+    expect(link).toHaveAttribute("hreflang", "de");
+    expect(link).toHaveAttribute("target", "_blank");
+    // The sentence the card's links point at, said once for all of them.
+    const google = await screen.findByRole("link", { name: "Google Translate: Wasser in English" });
+    expect(link.getAttribute("aria-describedby")).toBe(google.getAttribute("aria-describedby"));
+    expect(link).toHaveAccessibleDescription("Opens in a new tab.");
+    expect(screen.getAllByText("Opens in a new tab.")).toHaveLength(1);
+  });
+
+  // @spec ETYM-1
+  it("offers the etymology in every source language", async () => {
+    for (const source of SOURCE_LANGS) {
+      window.history.replaceState(null, "", `/?source=${source}&word=ola`);
+      render(<Workspace />);
+      expect(await screen.findByRole("link", { name: "Etymology of ola" })).toHaveAttribute(
+        "href",
+        etymologyHref("ola", source),
+      );
+      cleanup();
+    }
+  });
+
+  // @spec ETYM-4
+  it("goes while a failed lookup's error shows, and comes back with the next word", async () => {
+    const user = userEvent.setup();
+    render(<Workspace />);
+    await screen.findByRole("link", { name: "Etymology of water" });
+
+    const input = screen.getByRole("combobox", { name: /look up a word/i });
+    await user.clear(input);
+    await user.type(input, "missing{Enter}");
+    await screen.findByRole("alert");
+    // The card still shows water, and a link beside "missing" would read as that word's.
+    expect(screen.getByRole("region", { name: /meaning of water/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /etymology/i })).not.toBeInTheDocument();
+
+    await user.clear(input);
+    await user.type(input, "care{Enter}");
+    expect(await screen.findByRole("link", { name: "Etymology of care" })).toBeInTheDocument();
+  });
+
+  // @spec ETYM-4
+  it("stays on the card's word, in its own dictionary, while a switch of language is in flight", async () => {
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const answer = mockFetch();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL) => {
+        if (String(url).includes("/api/word/agua")) await gate;
+        return answer(url);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<Workspace />);
+    await waitFor(() => expect(document.title).toBe("wordbands: water"));
+
+    await user.click(screen.getByRole("combobox", { name: /source language/i }));
+    await user.click(await screen.findByRole("option", { name: /Español/ }));
+    expect(screen.getByRole("region", { name: /meaning of water/i })).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "Etymology of water" });
+    expect(link).toHaveAttribute("href", etymologyHref("water", "en"));
+    expect(link).toHaveAttribute("hreflang", "en");
+
+    await act(async () => {
+      release();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const landed = await screen.findByRole("link", { name: "Etymology of agua" });
+    expect(landed).toHaveAttribute("href", etymologyHref("agua", "es"));
+    expect(landed).toHaveAttribute("hreflang", "es");
   });
 });
 

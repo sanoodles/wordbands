@@ -6,6 +6,7 @@ import BandBrowser from "@/components/BandBrowser";
 import CefrBadge from "@/components/CefrBadge";
 import DefiningScatter from "@/components/DefiningScatter";
 import LangSelect from "@/components/LangSelect";
+import NewTabHelp, { NEW_TAB_HELP } from "@/components/NewTabHelp";
 import WordCard from "@/components/WordCard";
 import WordSearchBox from "@/components/WordSearchBox";
 import type { BandView, WordBands } from "@/lib/types";
@@ -13,6 +14,7 @@ import {
   DEFAULT_SOURCE,
   DEFINING_LEVEL_COUNT,
   englishName,
+  etymologyHref,
   hasWiktionary,
   hasWiktionaryFallback,
   isSourceLang,
@@ -24,7 +26,7 @@ import {
 import { sourceLang, targetLang } from "@/lib/geo";
 import { baseLang } from "@/lib/translate";
 import { pageTitle, readScenario, writeScenario } from "@/lib/scenario";
-import { PANEL, PANEL_LANG, SECTION_HEADING } from "@/components/panel";
+import { OUT_LINK, PANEL, PANEL_LANG, SECTION_HEADING } from "@/components/panel";
 
 // Expanded forms for the abbreviations we show (WCAG 3.1.4). Each reads inside the
 // sentence right after its abbreviation, so none of them repeats it or its version.
@@ -584,6 +586,9 @@ export default function Workspace({ country }: { country?: string | null }) {
   };
 
   const sourceName = englishName(source);
+  // The card's word, in the language it was found in, which a switch still in flight is not.
+  const etymWord = info?.word ?? query;
+  const etymSource = info?.source ?? source;
 
   return (
     <div className="Workspace">
@@ -663,6 +668,29 @@ export default function Workspace({ country }: { country?: string | null }) {
                 up as soon as you stop typing; press Enter or choose a suggestion to look
                 one up at once.
               </p>
+              {/* The card's source links point at it too, so it stays when the link below goes. */}
+              <NewTabHelp />
+              {/* @spec ETYM-1, ETYM-4
+                  The word's history rather than its meaning, so it sits with the word and not
+                  on the card: no target changes it. It follows the card's word and goes while
+                  an error says the field's word is not one. A new tab, like the card's source
+                  links. The dictionary is written in the source language, which hreflang says. */}
+              {(info || loading) && !error && (
+                // Flex, so the row is the pill's 44px with no line box under it.
+                <div className="tw-mt-3 tw-flex">
+                  <a
+                    href={etymologyHref(etymWord, etymSource)}
+                    hrefLang={etymSource}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Etymology of ${etymWord}`}
+                    aria-describedby={NEW_TAB_HELP}
+                    className={OUT_LINK}
+                  >
+                    Etymology <span aria-hidden="true">↗</span>
+                  </a>
+                </div>
+              )}
             </section>
           </div>
 

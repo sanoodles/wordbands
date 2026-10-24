@@ -3,8 +3,9 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import NewTabHelp from "./NewTabHelp";
 import WordCard from "./WordCard";
-import { etymologyHref, SOURCE_LANGS, type SourceLang } from "@/lib/languages";
+import type { SourceLang } from "@/lib/languages";
 
 // The workspace owns the target language now; a tiny stateful host stands in for it so
 // picking a language in the card re-renders with the new value, as it does in the app.
@@ -71,14 +72,18 @@ describe("WordCard language selector", () => {
   // A word of its own: glossCache is module-level and keyed source:target:word, so a
   // render here would otherwise answer a later test's stub from this one's response.
   it("names the translate link by what it opens, and describes the new tab", async () => {
+    // The workspace holds the sentence, since a link outside the card shares it.
     render(
-      <WordCard
-        word="Regenschirm"
-        forms={["Regenschirm"]}
-        source="de"
-        target="en"
-        onTargetChange={() => {}}
-      />,
+      <>
+        <WordCard
+          word="Regenschirm"
+          forms={["Regenschirm"]}
+          source="de"
+          target="en"
+          onTargetChange={() => {}}
+        />
+        <NewTabHelp />
+      </>,
     );
     // The word is what the link is for (2.4.9); the visible text leads it, so speech
     // input still reaches the link by what it says (2.5.3).
@@ -88,31 +93,6 @@ describe("WordCard language selector", () => {
     // the purpose.
     const help = document.getElementById(link.getAttribute("aria-describedby") ?? "");
     expect(help).toHaveTextContent("Opens in a new tab.");
-  });
-
-  // @spec ETYM-1
-  it("links the word to its etymology, in a new tab, named by the word", async () => {
-    render(<WordCard word="Gletscher" forms={["Gletscher"]} source="de" target="en" onTargetChange={() => {}} />);
-    const link = screen.getByRole("link", { name: "Etymology of Gletscher" });
-    expect(link).toHaveTextContent(/^Etymology/);
-    expect(link).toHaveAttribute("href", "https://www.dwds.de/wb/Gletscher#etymwb-1");
-    expect(link).toHaveAttribute("hreflang", "de");
-    expect(link).toHaveAttribute("target", "_blank");
-    // The same sentence the translate link points at, said once for both.
-    const translate = await screen.findByRole("link", { name: /google translate/i });
-    expect(link.getAttribute("aria-describedby")).toBe(translate.getAttribute("aria-describedby"));
-  });
-
-  // @spec ETYM-1
-  it("offers the etymology in every source language", () => {
-    for (const source of SOURCE_LANGS) {
-      render(<WordCard word="ola" forms={["ola"]} source={source} target={source} onTargetChange={() => {}} />);
-      expect(screen.getByRole("link", { name: "Etymology of ola" })).toHaveAttribute(
-        "href",
-        etymologyHref("ola", source),
-      );
-      cleanup();
-    }
   });
 
   it("translates the word into the target language", async () => {
@@ -172,7 +152,6 @@ describe("WordCard pending", () => {
     );
     expect(screen.getByRole("region", { name: /meaning of water/i })).toBeInTheDocument();
     expect(selector()).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /etymology/i })).toBeInTheDocument();
     expect(screen.getByText("Translating…")).toBeInTheDocument();
     // Nothing is known to be translatable yet — the word may not even be a word.
     expect(fetch).not.toHaveBeenCalled();

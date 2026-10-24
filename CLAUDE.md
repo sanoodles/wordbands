@@ -937,7 +937,7 @@ How `build-wiktionary.ts` builds one direction:
 | The source's name is `select-none` | A copied line stays the translation, as with the badges |
 | A link only where the edition has a page | In es→de 752 Spanish words have none under any casing, and in de→es 60 German. The name stays, as plain text |
 | Where Google has nothing, its line says why | `couldn’t translate` where the lookup failed, `no translation` where Google answered empty. A failure is usually Google refusing our server for a while, so it must not read as a word with no translation. It names no source, because Google's own page still works for the reader |
-| Its link becomes a pill where nothing on the card translates | **Google Translate**, in full. Google's page is then the only way left to a meaning. So the pill outranks the etymology link, with full-contrast text and a `line-strong` border. Where Wiktionary's line translates, the link stays its source's quiet name |
+| Its link becomes a pill where nothing on the card translates | **Google Translate**, in full. Google's page is then the only way left to a meaning. So it is louder than the etymology pill under the search field, with full-contrast text and a `line-strong` border. Where Wiktionary's line translates, the link stays its source's quiet name |
 | Where Google's line has nothing, Wiktionary's leads (`WIKT-1`) | The meaning comes first, level with the select, and Google's status follows it. Led by the status, the card would open on "couldn’t translate" above a translation |
 
 | Known cost | Detail |
@@ -1039,8 +1039,8 @@ Three ways of keeping the overlay under forced colours were measured and none is
 
 ## The etymology link
 
-`ETYM-1` to `ETYM-3` are the rules. The link sits on the word card beside Google Translate,
-and `ETYMOLOGY` in `languages.ts` holds one dictionary per language. Each is written in the
+`ETYM-1` to `ETYM-4` are the rules. The link sits under the search field, and `ETYMOLOGY`
+in `languages.ts` holds one dictionary per language. Each is written in the
 language it describes, so a German word's history is told in German.
 
 Measured on 2026-10-03, on 10 random words per CEFR band from A1 to C2, 60 per language.
@@ -1065,7 +1065,10 @@ The misses are mostly what no dictionary headwords: clitic verb forms (`chantaje
 | German keeps its capital | `essen` and `Essen` are two DWDS entries |
 | The RAE's dictionary gets lowercase | It is case-sensitive: `Dios` has no entry and `dios` does |
 | The Nuovo De Mauro gets no diacritics either | Its URLs drop them: `/parola/caffè` is a 404 and `/parola/caffe` the entry |
-| A new tab, sharing the source links' description | One element says "Opens in a new tab." for every link out of the card |
+| Under the search field, not on the word card | It is the word's history, not its meaning, so no target changes it. On the card, a translation of two lines pushes it to a third row: es→de `siesta` at 1280px makes the hero row 190px there, against 164px under the field. Where nothing translates, it would also be a second pill beside Google's |
+| It follows the card's word, in the language that word was found in (`ETYM-4`) | The field may hold a word still being typed. During a switch of language the card still shows the old word, and the new language's dictionary may lack it |
+| It goes while a lookup's error shows (`ETYM-4`) | Beside a word the dictionary does not hold, it would read as that word's link |
+| A new tab, sharing the card's description | `NewTabHelp` says "Opens in a new tab." once, for every new-tab link on the page. `Workspace` renders it, since the etymology link sits outside the card |
 | Visible text "Etymology", not the dictionary's name | DWDS, CNRTL and RAE are abbreviations, and each would owe an expansion (3.1.4). The name is "Etymology of <word>" |
 
 | Measured and rejected | Why not |
@@ -1076,10 +1079,12 @@ The misses are mostly what no dictionary headwords: clitic verb forms (`chantaje
 | etimo.it for Italian | Pianigiani's 1907 dictionary, as scanned page images |
 | etimologias.dechile.net for Spanish | 40 of 60, against the RAE's 47 |
 
-The etymology link is a pill, about 105px wide. The lines of translation take the width
-they need (`w-max`, capped at the row), so the pill sits beside them where both fit and
-drops below them where they do not. Where it drops depends on the translation, not on a
-breakpoint.
+The link is a pill, about 105px wide, on a row of its own under the field at every width.
+
+| Known cost | Detail |
+| --- | --- |
+| A one-line translation on a desktop | The card has room beside the line, but the pill takes a row under the field. The hero row is then 56px taller than the card needs: the pill's 44px and its 12px margin |
+| A phone | The panels stack, so the pill's row adds to the page wherever it sits. Measured at 390px with `siesta`, the two panels are 4px taller with it under the field than on the card |
 
 ## Width on a phone
 
@@ -1106,8 +1111,8 @@ Chip padding buys nothing, because a row is bounded by whole chips and shaving 8
 each one rarely fits another. The 8px gutter was rejected on how it looks, not on the
 number: the view toggle and the section heading then sit against the screen edge.
 
-The hero panels are left inset on purpose. They hold one row each and gain nothing from
-the width, and the contrast — cards inset, the browser full width — is what marks the
+The hero panels are left inset on purpose. They hold a row or two each and gain nothing
+from the width, and the contrast — cards inset, the browser full width — is what marks the
 browser as the page's own surface rather than a third card.
 
 ## Credits
@@ -1145,7 +1150,7 @@ tooltip is open.
 | `CefrBadge` | The band and rank are the name; the word they belong to is the description. `aria-describedby` is always ours, never Radix's — the name already says what its tooltip says. In the search field the description points at the `invisible` mirror of the value, which Chrome reads because a directly-referenced node counts even when hidden |
 | `SwapButton` | Same trade: disabled, the reason why is in the name, not only in the tooltip |
 | A clickable alternative | Named by the word and nothing else, or the line stops reading as the translation. What clicking it does is a description — announced on focus, not while reading — and one element holds that sentence for every term on the card. The cost is two tab stops per badged term, the word and then its level, since the badge keeps its own focus for its rank |
-| The card's links | Named by the word they open, behind the visible text so speech input still reaches them (2.5.3): "Google Translate: Wasser in English", "Wiktionary entry for siesta" and "Etymology of Wasser". The first two end the line they name, so reading the line ends with its source. The page's only new-tab links, and that they open one is a **description**, one element for all: what activating one does, announced on focus, while the name stays what it is for |
+| The card's links, and the etymology link | Named by the word they open, behind the visible text so speech input still reaches them (2.5.3): "Google Translate: Wasser in English", "Wiktionary entry for siesta" and "Etymology of Wasser". The first two end the line they name, so reading the line ends with its source. The page's only new-tab links, and that they open one is a **description**, one element for all (`NewTabHelp`): what activating one does, announced on focus, while the name stays what it is for |
 | Abbreviations in the credits | Expanded in the sentence, never in a `title`. Chrome puts an `<abbr title>` in no name at all, and neither touch nor the keyboard can reach it — so it was a mechanism for nobody (3.1.4). The `<abbr>` markup went with it, and the lint rule below stays as a guard |
 | `WordSearchBox` | Named by its section heading (`labelledBy`), not by a second copy of the same string |
 | The figure | No heading, deliberately. It is a `<figure>` with a visible `<figcaption>`, which already names it, and its canvas carries a `role="img"` with a long description — a heading on top would be a second name for one thing |
