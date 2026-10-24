@@ -251,6 +251,9 @@ static picture. Full screen, it zooms and pans, so one word in the crowd can be 
 | FIG-10 | A pinch zooms the figure by the factor that the gap between the fingers grows or shrinks by, on a trackpad as on a touch screen |
 | FIG-11 | The figure's vertical lines divide its ranks into the bands of the CEFR view, and the row beneath names each band. Rare is among them wherever a list reaches past C2 |
 | FIG-12 | Each line between two bands falls between the last word of the one and the first word of the next, at every zoom |
+| FIG-13 | Full screen, wherever the view holds 300 points or fewer, a point's word shows beside it if the word covers no other point, no other word and no button. The looked-up word goes first, then the commonest |
+| FIG-14 | No frame of a zoom or a pan places words. While the view zooms the words are hidden, while it pans they move with their points, and once it stops they are placed again |
+| FIG-15 | A pick on a point's word picks that point |
 
 ## CALL — what the browser asks our server for
 

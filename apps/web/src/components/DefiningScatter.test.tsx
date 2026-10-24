@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import DefiningScatter, {
   MAX_ZOOM,
+  PLACE_CAP,
+  SETTLE,
   WHOLE,
   layoutOf,
+  moveBoxes,
   nearestWord,
   panView,
+  placeWords,
   rankTicks,
   stripesOf,
   tipStyle,
@@ -248,6 +252,7 @@ function paints() {
     });
     const pen = {
       fillText: (text: string, x: number) => drawn.push({ text, x }),
+      measureText: (text: string) => ({ width: text.length * 9 }),
     } as unknown as CanvasRenderingContext2D;
     window.HTMLCanvasElement.prototype.getContext = (() =>
       new Proxy(pen, {
@@ -514,6 +519,89 @@ describe("the view", () => {
 });
 
 /** The labels a figure carries, read back off the DOM it laid them out in. */
+// Placement is plain geometry, so it is proven on every language's own points without
+// laying anything out.
+describe("the words beside the points", () => {
+  const byLength = (words: string[]) => (i: number) => words[i]!.length * 9 + 1;
+  const LINE = 20;
+
+  // @spec FIG-13
+  it("covers no other point, no other word and no button, in every language, on a phone and a desktop", () => {
+    // Full screen at 390x844 and at 1440x900, less the toolbar, the hint and the padding.
+    const plots = [
+      { w: 374, h: 719 },
+      { w: 1408, h: 793 },
+    ];
+    let most = 0;
+    const wrong: string[] = [];
+    for (const source of SOURCE_LANGS) {
+      const points = getDefiningPoints(source);
+      const layout = layoutOf(points);
+      const n = layout.u.length;
+      for (const plot of plots)
+        for (const k of [32, 64])
+          for (let s = 0; s < 10; s++) {
+            const j = Math.floor(((s + 0.5) * n) / 10);
+            const view = zoomView(WHOLE, k, [layout.u[j]!, layout.v[j]!], [0.5, 0.5]);
+            const buttons = moveBoxes(plot);
+            const words = placeWords(layout, plot, view, byLength(points.words), LINE, -1, buttons);
+            const inView: { word: number; x: number; y: number }[] = [];
+            for (let i = 0; i < n; i++) {
+              const x = 38 + (layout.u[i]! - view.u) * k * (plot.w - 50);
+              const y = 10 + (layout.v[i]! - view.v) * k * (plot.h - 50);
+              if (x >= 38 && x <= plot.w - 12 && y >= 10 && y <= plot.h - 40)
+                inView.push({ word: layout.word[i]!, x, y });
+            }
+            const where = `${source} ${plot.w}px ${k}x #${s}`;
+            most = Math.max(most, words.length);
+            for (const [a, b] of words.entries()) {
+              const word = points.words[b.word];
+              if (b.x < 38 || b.y < 10 || b.x + b.w > plot.w - 12 || b.y + b.h > plot.h - 40)
+                wrong.push(`${where}: ${word} off the plot`);
+              for (const p of inView)
+                if (p.x > b.x && p.x < b.x + b.w && p.y > b.y && p.y < b.y + b.h)
+                  wrong.push(`${where}: ${word} over ${points.words[p.word]}`);
+              const meets = (o: typeof b | (typeof buttons)[number]) =>
+                o.x < b.x + b.w && o.x + o.w > b.x && o.y < b.y + b.h && o.y + o.h > b.y;
+              for (const o of words.slice(a + 1))
+                if (meets(o)) wrong.push(`${where}: ${word} on ${points.words[o.word]}`);
+              if (buttons.some(meets)) wrong.push(`${where}: ${word} under a button`);
+            }
+          }
+    }
+    expect(wrong).toEqual([]);
+    expect(most).toBeGreaterThan(10);
+  });
+
+  // @spec FIG-13
+  it("places nothing in a view holding more than 300 points", () => {
+    // One row, spaced far enough apart that every word fits beside its point.
+    const row = (n: number) => ({
+      word: Int32Array.from({ length: n }, (_, i) => i),
+      u: Float64Array.from({ length: n }, (_, i) => (i + 0.5) / n),
+      v: new Float64Array(n).fill(0.5),
+    });
+    const plot = { w: 50 + 30 * 301, h: 400 };
+    expect(placeWords(row(PLACE_CAP), plot, WHOLE, () => 9, LINE)).toHaveLength(PLACE_CAP);
+    expect(placeWords(row(PLACE_CAP + 1), plot, WHOLE, () => 9, LINE)).toEqual([]);
+  });
+
+  // @spec FIG-13
+  it("gives the room to the looked-up word first, then to the commoner one", () => {
+    // Two points where either word fits on its own and the two cannot both fit.
+    const layout = {
+      word: Int32Array.from([0, 1]),
+      u: Float64Array.from([0.02, 0.98]),
+      v: Float64Array.from([0.5, 0.5]),
+    };
+    const plot = { w: 150, h: 90 };
+    const placed = (anchor?: number) =>
+      placeWords(layout, plot, WHOLE, () => 50, LINE, anchor).map((b) => b.word);
+    expect(placed()).toEqual([0]);
+    expect(placed(1)).toEqual([1]);
+  });
+});
+
 const labelsIn = (root: Element) => {
   const spans = [...root.querySelectorAll<HTMLElement>("div[aria-hidden] > span")];
   const find = (text: string) => spans.find((el) => el.textContent === text)?.style;
@@ -782,6 +870,104 @@ describe("full screen", () => {
       fireEvent.pointerMove(canvas, { ...mouse, clientX: LAST.x, clientY: LAST.y });
       fireEvent.pointerUp(canvas, { ...mouse, clientX: LAST.x, clientY: LAST.y });
       expect(picked).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("the words beside the points", () => {
+    beforeEach(() => serve(points));
+    // jsdom lays nothing out, so the probe that sizes a word has to be told its height.
+    const realHeight = Object.getOwnPropertyDescriptor(window.HTMLElement.prototype, "offsetHeight");
+    beforeEach(() => {
+      Object.defineProperty(window.HTMLElement.prototype, "offsetHeight", {
+        get: () => 20,
+        configurable: true,
+      });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+      if (realHeight)
+        Object.defineProperty(window.HTMLElement.prototype, "offsetHeight", realHeight);
+      else Reflect.deleteProperty(window.HTMLElement.prototype, "offsetHeight");
+    });
+    const wordsIn = (root: Element) => [
+      ...root.querySelectorAll<HTMLElement>("div[aria-hidden] > div > span"),
+    ];
+    const wait = (ms: number) => act(() => vi.advanceTimersByTime(ms));
+    const mouse = { pointerId: 1, pointerType: "mouse" };
+    // The settle runs on a fake clock. Testing Library's own waits run on setTimeout too,
+    // so the clock is faked only once nothing is left to wait for.
+    const openNow = async (onSelect: (w: string) => void = () => {}) => {
+      render(<DefiningScatter source="pt" anchorWord={null} onSelect={onSelect} />);
+      const opener = await screen.findByRole("button", { name: "Full screen" });
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      fireEvent.click(opener);
+      const dialog = screen.getByRole("dialog", { name: "Frequency against defining level" });
+      return { dialog, canvas: dialog.querySelector("canvas")! };
+    };
+
+    // @spec FIG-14
+    it("places the words once the view stops, and hides them while it zooms", async () => {
+      const { dialog } = await openNow();
+      expect(wordsIn(dialog)).toEqual([]);
+      wait(SETTLE);
+      expect(wordsIn(dialog).length).toBeGreaterThan(0);
+      for (const key of ["+", "+", "-"]) {
+        fireEvent.keyDown(document, { key });
+        expect(wordsIn(dialog)).toEqual([]);
+        wait(SETTLE - 1);
+        expect(wordsIn(dialog)).toEqual([]);
+      }
+      wait(1);
+      // Twice the zoom from the middle holds one of the fixture's points.
+      expect(wordsIn(dialog).map((s) => s.textContent)).toEqual(["água"]);
+    });
+
+    // @spec FIG-14
+    it("moves the words with their points while the view pans, and places them again after", async () => {
+      const { dialog } = await openNow();
+      fireEvent.keyDown(document, { key: "+" });
+      wait(SETTLE);
+      const [word] = wordsIn(dialog);
+      const shift = () => {
+        const [, x, y] = /translate\((.+)px, (.+)px\)/.exec(word!.parentElement!.style.transform)!;
+        return [parseFloat(x!), parseFloat(y!)];
+      };
+      expect(shift()).toEqual([0, 0]);
+      fireEvent.keyDown(document, { key: "ArrowRight" });
+      // A fifth of the window, which is 750px wide at twice the zoom.
+      const [x, y] = shift();
+      expect(x).toBeCloseTo(-150);
+      expect(y).toBeCloseTo(0);
+      expect(wordsIn(dialog)).toEqual([word]);
+      wait(SETTLE);
+      expect(shift()).toEqual([0, 0]);
+    });
+
+    // @spec FIG-15
+    it("picks the word a press lands on, out of reach of its point", async () => {
+      const picked = vi.fn();
+      const { dialog, canvas } = await openNow(picked);
+      fireEvent.keyDown(document, { key: "+" });
+      wait(SETTLE);
+      const word = wordsIn(dialog).find((s) => s.textContent === "água")!;
+      // The middle of the word, which is 37px wide: further from its point than a cursor reaches.
+      const x = 38 + parseFloat(word.style.left) + 18;
+      const y = 10 + parseFloat(word.style.top) + 10;
+      expect(nearestWord(points, placed, { w: W, h: H }, x, y, 7, zoomView(WHOLE, 2))).toBeNull();
+      fireEvent.pointerDown(canvas, { ...mouse, clientX: x, clientY: y });
+      fireEvent.pointerUp(canvas, { ...mouse, clientX: x, clientY: y });
+      expect(picked).toHaveBeenCalledExactlyOnceWith("água");
+      // The word already says what was picked, so no label repeats it.
+      expect(screen.getAllByText("água")).toEqual([word]);
+    });
+
+    // @spec FIG-13
+    it("leaves the figure in the page unnamed", async () => {
+      render(<DefiningScatter source="pt" anchorWord={null} onSelect={() => {}} />);
+      const fig = (await screen.findByRole("img")).closest("figure")!;
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      wait(SETTLE);
+      expect(wordsIn(fig)).toEqual([]);
     });
   });
 });

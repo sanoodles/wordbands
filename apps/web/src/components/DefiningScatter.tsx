@@ -107,6 +107,19 @@ const TICK = { gap: 56, inset: 16 };
 const STEPS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
 /** How much of a clipped row or stripe has to show to carry its name. */
 const NAME_ROOM = { row: 16, band: 28 };
+// @spec FIG-13
+/** The most points a view may hold and still have their words placed beside them. */
+export const PLACE_CAP = 300;
+/** How far a word sits off its own point, and the least room it leaves around anything else. */
+const WORD = { gap: 4, clear: 2 };
+/** How long the view has to stay put before its words are placed, in ms. */
+export const SETTLE = 150;
+/** The grid cell that placement buckets points and words into, in CSS px. */
+const CELL = 40;
+// The hover label's size, since both are read one word after another. The line height is
+// inline because Fondue's type token sets its own.
+const WORD_TEXT = "tw-whitespace-nowrap tw-body-large tw-text-primary";
+const WORD_LINE = { lineHeight: 1.25 };
 
 function readCaptionPref(): boolean | null {
   try {
@@ -207,6 +220,9 @@ const sx = (u: number, view: View, w: number) =>
   PAD.left + (u - view.u) * view.k * (w - PAD.left - PAD.right);
 const sy = (v: number, view: View, h: number) =>
   PAD.top + (v - view.v) * view.k * (h - PAD.top - PAD.bottom);
+
+/** A point's size at zoom `k`: it grows with the zoom, so a word picked out is big enough to see. */
+const dotSize = (k: number) => Math.min(DOT * Math.sqrt(k), DOT * 3);
 
 /** A stream of offsets in [-0.5, 0.5), seeded by a word's hash: mulberry32. */
 function offsets(seed: number): () => number {
@@ -453,6 +469,152 @@ export function nearestWord(
   return best?.word ?? null;
 }
 
+/** A box in the plot, in CSS px from the wrapper's top-left corner. */
+interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** A word placed beside its point: its index into `words`, and its box. */
+export interface Placed extends Box {
+  word: number;
+}
+
+/** Whether two boxes come within `by` of each other. */
+const overlaps = (a: Box, b: Box, by: number) =>
+  a.x < b.x + b.w + by && a.x + a.w > b.x - by && a.y < b.y + b.h + by && a.y + a.h > b.y - by;
+
+type Grid = Map<number, number[]>;
+const cellOf = (x: number) => Math.floor(x / CELL);
+const cellKey = (cx: number, cy: number) => cx * 65536 + cy;
+function bucket(grid: Grid, cx: number, cy: number, j: number) {
+  const key = cellKey(cx, cy);
+  const cell = grid.get(key);
+  if (cell) cell.push(j);
+  else grid.set(key, [j]);
+}
+/** Every cell a box reaches into once grown by `by` on each side. */
+function* cellsOf(x0: number, y0: number, x1: number, y1: number, by: number) {
+  for (let cx = cellOf(x0 - by); cx <= cellOf(x1 + by); cx++)
+    for (let cy = cellOf(y0 - by); cy <= cellOf(y1 + by); cy++) yield [cx, cy] as const;
+}
+
+/**
+ * The words that fit beside their points in `view`: the anchor's first, then in rank order,
+ * each on the first side of its point where it covers no other point, no word placed before
+ * it and nothing in `avoid`. None when the view holds more than `PLACE_CAP` points.
+ */
+// @spec FIG-13
+export function placeWords(
+  layout: Layout,
+  plot: Plot,
+  view: View,
+  widthOf: (word: number) => number,
+  height: number,
+  anchor = -1,
+  avoid: Box[] = [],
+): Placed[] {
+  const { w, h } = plot;
+  const [left, top, right, bottom] = [PAD.left, PAD.top, w - PAD.right, h - PAD.bottom];
+  const xs: number[] = [];
+  const ys: number[] = [];
+  const ids: number[] = [];
+  for (let j = 0; j < layout.u.length; j++) {
+    const x = sx(layout.u[j]!, view, w);
+    if (x < left || x > right) continue;
+    const y = sy(layout.v[j]!, view, h);
+    if (y < top || y > bottom) continue;
+    if (ids.length === PLACE_CAP) return [];
+    xs.push(x);
+    ys.push(y);
+    ids.push(layout.word[j]!);
+  }
+  const dot = dotSize(view.k) / 2;
+  // The anchor's ring reaches further than any point.
+  const reachOf = (j: number) => (ids[j] === anchor ? REACH : dot);
+  const points: Grid = new Map();
+  ids.forEach((_, j) => bucket(points, cellOf(xs[j]!), cellOf(ys[j]!), j));
+  const words: Grid = new Map();
+  const placed: Placed[] = [];
+  const order = ids.map((_, j) => j);
+  const first = ids.indexOf(anchor);
+  if (first > 0) order.unshift(...order.splice(first, 1));
+
+  const fits = (j: number, b: Placed) => {
+    for (const [cx, cy] of cellsOf(b.x, b.y, b.x + b.w, b.y + b.h, REACH + WORD.clear)) {
+      for (const q of points.get(cellKey(cx, cy)) ?? []) {
+        if (q === j) continue;
+        const r = reachOf(q) + WORD.clear;
+        const [x, y] = [xs[q]!, ys[q]!];
+        if (x > b.x - r && x < b.x + b.w + r && y > b.y - r && y < b.y + b.h + r) return false;
+      }
+      for (const n of words.get(cellKey(cx, cy)) ?? [])
+        if (overlaps(placed[n]!, b, WORD.clear)) return false;
+    }
+    return avoid.every((o) => !overlaps(o, b, WORD.clear));
+  };
+
+  for (const j of order) {
+    const [x, y, word] = [xs[j]!, ys[j]!, ids[j]!];
+    const ww = widthOf(word);
+    const gap = reachOf(j) + WORD.gap;
+    // Right of the point first, then left, above and below.
+    const sides: [number, number][] = [
+      [x + gap, y - height / 2],
+      [x - gap - ww, y - height / 2],
+      [x - ww / 2, y - gap - height],
+      [x - ww / 2, y + gap],
+    ];
+    for (const [bx, by] of sides) {
+      const b = { word, x: bx, y: by, w: ww, h: height };
+      if (bx < left || by < top || bx + ww > right || by + height > bottom || !fits(j, b)) continue;
+      placed.push(b);
+      for (const [cx, cy] of cellsOf(bx, by, bx + ww, by + height, 0))
+        bucket(words, cx, cy, placed.length - 1);
+      break;
+    }
+  }
+  return placed;
+}
+
+/** The words placed for one view, and the plot they were placed in. */
+interface Placement {
+  view: View;
+  plot: Plot;
+  list: Placed[];
+}
+
+/**
+ * How far the view has panned since its words were placed, so they can move with their
+ * points. Null once it has zoomed or the plot has changed size, since then they no longer fit.
+ */
+// @spec FIG-14
+function driftOf(placement: Placement | null, view: View, plot: Plot | null): Point | null {
+  if (!placement || !plot || placement.view.k !== view.k) return null;
+  if (placement.plot.w !== plot.w || placement.plot.h !== plot.h) return null;
+  return {
+    x: (placement.view.u - view.u) * view.k * (plot.w - PAD.left - PAD.right),
+    y: (placement.view.v - view.v) * view.k * (plot.h - PAD.top - PAD.bottom),
+  };
+}
+
+/** The words' type, read off a hidden probe, so a text-spacing override reaches the layout. */
+interface WordType {
+  font: string;
+  letter: number;
+  height: number;
+}
+
+/** What the pointer is on, and whether that is a placed word, which needs no label. */
+interface Hover {
+  word: string;
+  x: number;
+  y: number;
+  placed: boolean;
+}
+
 /** How far the hover label keeps from the pointer, across and up. */
 const TIP_GAP = 8;
 
@@ -564,7 +726,7 @@ function Chart({
   const { resolvedTheme } = useThemeToggle();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const [hover, setHover] = useState<{ word: string; x: number; y: number } | null>(null);
+  const [hover, setHover] = useState<Hover | null>(null);
   const tipRef = useRef<HTMLSpanElement | null>(null);
   // Read before paint, since the side of the pointer the label fits on depends on its word.
   const [tipWidth, setTipWidth] = useState(0);
@@ -587,6 +749,66 @@ function Chart({
     const anchor = anchorWord?.toLowerCase();
     return anchor ? points.words.findIndex((w) => w.toLowerCase() === anchor) : -1;
   }, [points, anchorWord]);
+
+  const probeRef = useRef<HTMLSpanElement | null>(null);
+  const [type, setType] = useState<WordType | null>(null);
+  const [placement, setPlacement] = useState<Placement | null>(null);
+
+  useEffect(() => {
+    const probe = probeRef.current;
+    if (!probe) return;
+    const read = () => {
+      if (probe.offsetHeight === 0) return;
+      const cs = getComputedStyle(probe);
+      const next = {
+        font: `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`,
+        letter: cs.letterSpacing === "normal" ? 0 : parseFloat(cs.letterSpacing) || 0,
+        height: probe.offsetHeight,
+      };
+      setType((prev) =>
+        prev && prev.font === next.font && prev.letter === next.letter && prev.height === next.height
+          ? prev
+          : next,
+      );
+    };
+    read();
+    if (typeof ResizeObserver === "undefined") return;
+    // A late font or a text-spacing override resizes the probe.
+    const ro = new ResizeObserver(read);
+    ro.observe(probe);
+    return () => ro.disconnect();
+  }, [fine]);
+
+  // Measured on a canvas, once a word, so placing never lays out the DOM.
+  const widthOf = useMemo(() => {
+    if (!type) return null;
+    const ctx = document.createElement("canvas").getContext("2d");
+    if (!ctx) return null;
+    ctx.font = type.font;
+    const known = new Map<number, number>();
+    return (i: number) => {
+      let width = known.get(i);
+      if (width === undefined) {
+        const word = points.words[i]!;
+        width = Math.ceil(ctx.measureText(word).width + type.letter * word.length + 1);
+        known.set(i, width);
+      }
+      return width;
+    };
+  }, [points, type]);
+
+  // @spec FIG-14
+  // Placed once the view stops: moving the spans on every frame costs a frame's budget.
+  useEffect(() => {
+    if (!fine || !size || !widthOf || !type) return;
+    const t = setTimeout(() => {
+      const list = placeWords(layout, size, view, widthOf, type.height, anchorIndex, moveBoxes(size));
+      // No words before and none now: nothing to draw, so nothing to render again.
+      setPlacement((prev) => (!list.length && !prev?.list.length ? prev : { view, plot: size, list }));
+    }, SETTLE);
+    return () => clearTimeout(t);
+  }, [fine, size, view, layout, widthOf, type, anchorIndex]);
+  const drift = driftOf(placement, view, size);
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current;
@@ -657,7 +879,7 @@ function Chart({
     // The points. One ink colour, not a ramp per level: the y position already encodes the
     // level, and the pale end of a ramp disappears against the ground. They grow as the
     // view zooms, so a word picked out of the crowd is big enough to see.
-    const dot = Math.min(DOT * Math.sqrt(view.k), DOT * 3);
+    const dot = dotSize(view.k);
     // A square is a dot only while it is a pixel or two. By then few points are in view,
     // so drawing each one round costs little.
     const round = dot >= 3;
@@ -759,10 +981,25 @@ function Chart({
   const hitTest = (x: number, y: number, r: number) =>
     plot.current ? nearestWord(points, layout, plot.current, x, y, r, viewRef.current) : null;
 
-  const hoverAt = ({ x, y }: Point) => {
-    const word = hitTest(x, y, HIT.mouse);
-    setHover(word ? { word, x, y } : null);
+  // @spec FIG-15
+  /** The placed word under a point of the plot, while the words are in view. */
+  const wordAt = (x: number, y: number) => {
+    const d = driftOf(placement, viewRef.current, plot.current);
+    if (!placement || !d) return null;
+    const hit = placement.list.find(
+      (b) => x >= b.x + d.x && x <= b.x + b.w + d.x && y >= b.y + d.y && y <= b.y + b.h + d.y,
+    );
+    return hit ? points.words[hit.word]! : null;
   };
+
+  /** What a pointer at (x, y) lands on: a placed word first, since it covers no other point. */
+  const landsOn = (x: number, y: number, r: number): Hover | null => {
+    const placed = wordAt(x, y);
+    const word = placed ?? hitTest(x, y, r);
+    return word ? { word, x, y, placed: placed !== null } : null;
+  };
+
+  const hoverAt = ({ x, y }: Point) => setHover(landsOn(x, y, HIT.mouse));
 
   /**
    * Hit-tested from the pick's own coordinates, never from `hover`. A tap fires its
@@ -771,11 +1008,11 @@ function Chart({
    * whatever the *previous* tap had left in it.
    */
   const pick = ({ x, y }: Point) => {
-    const word = hitTest(x, y, reach.current);
+    const hit = landsOn(x, y, reach.current);
     // A finger leaves no cursor behind, so on touch the label is the only thing that says
     // what was picked; a mouse already put it there on the way in.
-    setHover(word ? { word, x, y } : null);
-    if (word) onSelect(word);
+    setHover(hit);
+    if (hit) onSelect(hit.word);
   };
 
   const pinch = (start: View): Gesture => {
@@ -938,7 +1175,41 @@ function Chart({
           fine={fine}
         />
       )}
-      {hover && (
+      {fine && (
+        <span
+          ref={probeRef}
+          aria-hidden="true"
+          className={`tw-invisible tw-pointer-events-none tw-absolute tw-left-0 tw-top-0 ${WORD_TEXT}`}
+          style={WORD_LINE}
+        >
+          x
+        </span>
+      )}
+      {placement && drift && placement.list.length > 0 && (
+        // Clipped to the plot, since a pan carries words off it.
+        <div
+          aria-hidden="true"
+          className="tw-pointer-events-none tw-absolute tw-overflow-hidden"
+          style={{ left: PAD.left, top: PAD.top, right: PAD.right, bottom: PAD.bottom }}
+        >
+          <div
+            className="tw-absolute tw-inset-0"
+            style={{ transform: `translate(${drift.x}px, ${drift.y}px)` }}
+          >
+            {placement.list.map(({ word, x, y }) => (
+              <span
+                key={word}
+                lang={source}
+                className={`tw-absolute ${WORD_TEXT}`}
+                style={{ ...WORD_LINE, left: x - PAD.left, top: y - PAD.top }}
+              >
+                {points.words[word]}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {hover && !hover.placed && (
         <span
           ref={tipRef}
           aria-hidden
@@ -971,12 +1242,27 @@ const KEYS = new Map<string, (v: View) => View>([
 ]);
 
 /** Where each move button sits, in the middle of its own edge of the plot. */
+// Inset by tw-*-1 and 44px across, as `moveBoxes` takes them.
 const EDGE = {
   left: "tw-left-1 tw-top-1/2 -tw-translate-y-1/2",
   right: "tw-right-1 tw-top-1/2 -tw-translate-y-1/2",
   up: "tw-top-1 tw-left-1/2 -tw-translate-x-1/2",
   down: "tw-bottom-1 tw-left-1/2 -tw-translate-x-1/2",
 };
+
+/** The move buttons' boxes in a plot, which no word may cover. */
+// @spec FIG-13
+export function moveBoxes({ w, h }: Plot): Box[] {
+  const [left, top, right, bottom] = [PAD.left, PAD.top, w - PAD.right, h - PAD.bottom];
+  const [inset, size] = [4, 44];
+  const [cx, cy] = [(left + right - size) / 2, (top + bottom - size) / 2];
+  return [
+    { x: left + inset, y: cy, w: size, h: size },
+    { x: right - inset - size, y: cy, w: size, h: size },
+    { x: cx, y: top + inset, w: size, h: size },
+    { x: cx, y: bottom - inset - size, w: size, h: size },
+  ];
+}
 
 /**
  * Buttons on the plot's edges that move the view, shown once it is zoomed. A drag does the

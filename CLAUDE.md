@@ -1414,6 +1414,34 @@ Full screen is where it zooms and pans.
 | Best-candidate blue noise for every word | About 0.6s a language to lay out as prototyped, and short landscape plots still needed 555× |
 | A zoom large enough for the hashed offsets | Over 11,800×, at which a view almost never holds a point |
 
+### Words beside the points
+
+`FIG-13` to `FIG-15` are the rules. Full screen, a point's word shows beside it wherever there
+is room, so a reader can read the crowd without hovering. On a phone there is no hover at
+all, and a tap looks the word up, which costs one to three calls to Google.
+
+| Detail | Why |
+| --- | --- |
+| A word covers no point, no other word and no move button | It hides nothing, so it needs no fill and its text sits on the bare ground. It is not hover content, so 1.4.13 does not apply. `moveBoxes` holds the buttons' boxes and has to move with `EDGE` |
+| `PLACE_CAP`: none in a view of more than 300 points | Past that, words hardly fit. English at 16× on a phone has 2,601 points in view and room for 13 words. The cap also keeps words off the figure at 1×, where the few that fit are outliers that would read as highlighted |
+| Placed `SETTLE` (150 ms) after the view stops, never during a gesture | Placing them on every frame cost 6–7 ms more a frame on a desktop and 8–15 ms on a CPU slowed 4×, which took the desktop past 16.7 ms in the densest views |
+| A pan moves them as one layer | One transform a frame. The frame costs what it costs without words |
+| A zoom hides them | Their places change with the zoom, and their text never scales |
+| The anchor first, then the commonest | A pan then keeps the same words in view |
+| HTML, like every other label | Words drawn into the canvas would be images of text (1.4.9) |
+| Widths from a canvas, sized by a hidden probe | Placement then lays out nothing. The probe carries the words' class, so a text-spacing override (1.4.12) or a late font re-measures, as it does for the chips |
+| A pick on a word picks its point, checked before the points | A word covers no other point, so the word is what is under the pointer. The layer stays `pointer-events-none`, so a drag that starts on a word still pans |
+| No hover label over a placed word | The word already says what the label would |
+
+Measured on 2026-10-24 in headless Brave with the GPU off, against the deployed site, in
+the densest and the middle views of English and German at 16× and 32×:
+
+| | Desktop | CPU slowed 4× |
+| --- | --- | --- |
+| A frame of a pan, with or without words | 8–13 ms | 20–51 ms |
+| The frame that places 15–95 words | 10–12 ms more | 23–31 ms more |
+| The same frame in a view past the cap | 0–2 ms more | 1–5 ms more |
+
 ### Crawlers and link previews
 
 `lib/site.ts` holds the three values, and `layout.tsx`, `page.tsx`, `robots.ts`,
