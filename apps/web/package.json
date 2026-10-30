@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "build:bands": "tsx scripts/build-bands.ts",
-    "build:wiktionary": "tsx scripts/build-wiktionary.ts"
+    "build:wiktionary": "tsx scripts/build-wiktionary.ts",
+    "build:fondue-css": "tsx scripts/build-fondue-css.ts"
   },
   "dependencies": {
     "@frontify/fondue": "^13.8.1",

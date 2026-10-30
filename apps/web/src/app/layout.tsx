@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 // Fondue base tokens first (the `:root` design-token variables), then the compiled
 // component styles, then our Tailwind layer so `tw-` utilities can win where needed.
 import "@frontify/fondue/tokens/base";
-import "@frontify/fondue/components/styles";
+import "./fondue.css";
 import "./globals.css";
 import Providers, {
   PREF_COOKIE,

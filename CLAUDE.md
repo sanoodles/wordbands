@@ -104,6 +104,7 @@ ours. `source`/`target` map onto them at that one call.
 | `src/lib/site.ts` | `SITE_URL`, `SITE_NAME`, `SITE_DESCRIPTION` — what names the site to a machine |
 | `src/lib/translate.ts` | Google Translate fetching and parsing, and the relay gate |
 | `next.config.mjs` | Response headers, the CSP, `distDir` |
+| `src/app/fondue.css` | Generated: Fondue's stylesheet cut to the components the app imports. `pnpm --filter @wordbands/web build:fondue-css` writes it |
 | `vercel.json` | The build commands |
 | `scripts/build-bands.ts` | Artifact build, the `LANGS` table |
 | `scripts/build-wiktionary.ts` | Wiktionary translation build, the `LANGS` list |
@@ -1273,6 +1274,7 @@ class is a build hash; the last has a literal class to name.
 | `Select` options | Closes the menu under the finger, so a second touch lands on what the menu covered (`SELECT-2`). At 390px the German row of the source select sits over the etymology link, and the word chips lie under other menus | `PICK_ON_CLICK` also drops clicks outside the menu for `QUIET_MS` after a finger lifts off a row. It is armed on `touchend` and not on the pick, so it holds wherever the menu closes before the click. It exempts the row's own `ul` rather than `[role="option"]`, because the word chips are options too. A drag arms it as well, so a tap on the trigger straight after a drag does nothing. In Chromium a single tap reached the link at no hold from 5 to 500 ms, and a second touch reached it 80 ms later |
 | `SegmentedControl.Root` | Ships its segments at 34px, under 2.5.5's 44 | `min-height: 46px` on the group, never on a segment. The group is a grid whose row the segments **and the selected-state indicator** share, so sizing a segment leaves the indicator behind at 34 and the control stops reading as one piece. 46 rather than 44 because the group's own 1px border sits outside the row |
 | `fondue-icons` | Declares no `sideEffects: false`, so Fondue's imports from its barrel keep all 407 icons in the page's JS, 362KB raw | `optimizePackageImports` in `next.config.mjs` |
+| Its stylesheet | Ships one file for every component, 361KB raw, and that file blocks the first paint | `src/app/fondue.css`, cut to 93KB by walking Fondue's own imports from each component the app imports. A selector goes only if it names a class none of those modules holds, so a state a component reaches later keeps its rule. `fondue-css.test.ts` fails on a Fondue upgrade or a new import, and `build:fondue-css` is the fix. A Dependabot bump of Fondue needs that run too |
 | `ThemeProvider` | Sets `--color-focus-default` on its own element, so the same token set on `<html>` reaches nothing inside it | Set it on `.fondue-theme-provider` as well — a literal class in Fondue's markup beside the hashed theme one, so this is the one correction here matched by name |
 
 The Tailwind preset replaces the outline scales with a single `DEFAULT` — 4px wide, 2px
