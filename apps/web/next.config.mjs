@@ -45,6 +45,9 @@ const nextConfig = {
   poweredByHeader: false,
   // The agent instructions live in the root CLAUDE.md, not in files `next dev` writes here.
   agentRules: false,
+  // fondue-icons does not declare itself free of side effects, so Fondue's imports from its
+  // barrel would otherwise keep all 407 icons in the page's JS.
+  experimental: { optimizePackageImports: ["@frontify/fondue-icons"] },
   async headers() {
     return [
       { source: "/:path*", headers: SECURITY_HEADERS },
