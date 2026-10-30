@@ -1557,7 +1557,8 @@ any other path gains a `Cache-Control`.
 
 ### The page at the CDN
 
-`HEAD-8` and `HEAD-9` are the rules.
+`HEAD-8` and `HEAD-9` are the rules. `docs/page-load.md` holds the budget, the order the page
+loads in and what was measured, and `pnpm load:check [url]` proves `LOAD-1` and `LOAD-2`.
 
 `/` has no page of its own. Vercel's router rewrites it to `/home/<theme>/<country>` before
 any function runs, and that path is `app/home/[theme]/[country]/page.tsx`.

@@ -87,6 +87,9 @@ A push to `main` deploys, so `.githooks/pre-push` type-checks and runs the suite
 about forty seconds. Git only looks in `.githooks` once `core.hooksPath` points there, hence
 the one-time setup above. `git push --no-verify` skips it.
 
+[docs/page-load.md](docs/page-load.md) explains how the page loads on a phone, and how to
+measure it with `pnpm load:check`.
+
 ## Rebuild the data
 
 The `wordbands.<code>.json` artifacts are committed, so the app runs without a build
