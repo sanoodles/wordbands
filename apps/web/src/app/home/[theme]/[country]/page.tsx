@@ -1,9 +1,10 @@
-import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import FeedbackLink from "@/components/FeedbackLink";
 import ThemeToggle from "@/components/ThemeToggle";
 import Workspace from "@/components/WorkspaceClient";
 import { pageTitle } from "@/lib/scenario";
 import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
+import { themeOf } from "@/lib/theme";
 
 // A shared deeplink names its word in the tab and in link previews, before any client
 // JS runs. `Workspace` recases it to the corpus's spelling once the lookup lands.
@@ -43,11 +44,16 @@ export async function generateMetadata({
 // things that want width, the chip cloud and the defining figure.
 const GUTTER = "tw-mx-auto tw-max-w-[1760px] tw-px-3 min-[700px]:tw-px-6 min-[900px]:tw-px-10";
 
-export default async function Home() {
-  // Vercel resolves the client IP to a country, which seeds the source language for a
-  // first-time visitor. Absent everywhere else, which falls back to English. The root
-  // layout already reads cookies, so this route is dynamic either way.
-  const country = (await headers()).get("x-vercel-ip-country");
+export default async function Home({
+  params,
+}: {
+  params: Promise<{ theme: string; country: string }>;
+}) {
+  // `next.config.mjs` rewrites `/` to this path. Vercel resolves the client IP to a country,
+  // which seeds the source language for a first-time visitor. Off Vercel the path says
+  // `none`, which falls back to English.
+  const { theme, country } = await params;
+  if (!themeOf(theme) || !/^([A-Z0-9]{2}|none)$/.test(country)) notFound();
   // On a phone the gutter is room taken off the content, so it stays narrow until there
   // is some to spare — vertically as well, where the top padding is blank screen above
   // the title. The cap itself is reasoned about above.
@@ -69,7 +75,7 @@ export default async function Home() {
             Which words to learn first.
           </p>
         </header>
-        <Workspace country={country} />
+        <Workspace country={country === "none" ? null : country} />
       </main>
       {/* The address is the link text, not hidden behind a word: a browser with no mail
           handler leaves a mailto doing nothing, and then it is still readable. A link

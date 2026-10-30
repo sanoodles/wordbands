@@ -7,7 +7,7 @@ import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 // Statically, not with `await import` inside the test: pulling this in drags the whole
 // page tree and the six band artifacts with it, which took 2.8s of a 5s test budget and
 // tipped over whenever the suite ran it under load. At module scope the cost is collection's.
-import { generateMetadata } from "./page";
+import { generateMetadata } from "./home/[theme]/[country]/page";
 
 describe("what names the site to a machine", () => {
   it("keeps crawlers off the API and points them at the sitemap", () => {

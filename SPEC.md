@@ -52,6 +52,7 @@ verifies the claim exists, not that it bites.
 | `CALL` | What the browser asks our server for | PR |
 | `LANG` | The two language pickers, and the word a switch of source language leaves in the search box | PR |
 | `SELECT` | The menus of the language pickers and of the band dropdown | PR |
+| `LOAD` | How the page reaches a phone | PR |
 
 Not covered yet, and deliberately: visual design, copy, component layout, the
 accessibility contract (its proof is the transcript, which detects change rather than
@@ -173,6 +174,8 @@ The build merges every inflection onto its lemma, so a form is not an entry of i
 | HEAD-5 | The framework is not named in a response header |
 | HEAD-6 | Every answer an API route reads from committed data, found or not, may be kept at Vercel's CDN until the next deploy, and so may a translation Google gave. A failed translation may not be kept |
 | HEAD-7 | A browser may keep the manifest and the icon for a day |
+| HEAD-8 | The page may be kept at Vercel's CDN until the next deploy. The browser may not keep it |
+| HEAD-9 | Two visitors share a kept page only where their theme, their country and their query agree |
 
 ## URL — deeplink state and history
 
@@ -285,3 +288,9 @@ language's code, and its name in that language.
 | --- | --- |
 | SELECT-1 | On a touch screen, a tap on a row picks it. A finger that lands on a row and drags scrolls the menu, and picks nothing |
 | SELECT-2 | For half a second after a finger lifts off a row, a click outside that menu does nothing, so a second touch cannot activate what the menu covered. A pick with a mouse holds nothing back |
+
+## LOAD — how soon a phone shows the page
+
+| ID | Rule |
+| --- | --- |
+| LOAD-3 | The HTML is in the theme the visitor picked, so a pick holds across a reload and paints with no flash |

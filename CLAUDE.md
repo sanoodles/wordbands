@@ -103,7 +103,8 @@ ours. `source`/`target` map onto them at that one call.
 | `src/lib/scenario.ts` | URL encode / decode, `pageTitle` |
 | `src/lib/site.ts` | `SITE_URL`, `SITE_NAME`, `SITE_DESCRIPTION` — what names the site to a machine |
 | `src/lib/translate.ts` | Google Translate fetching and parsing, and the relay gate |
-| `next.config.mjs` | Response headers, the CSP, `distDir` |
+| `next.config.mjs` | Response headers, the CSP, `distDir`, the rewrite of `/` |
+| `src/lib/theme.ts` | The theme cookies, and the path segments the rewrite of `/` names |
 | `src/app/fondue.css` | Generated: Fondue's stylesheet cut to the components the app imports. `pnpm --filter @wordbands/web build:fondue-css` writes it |
 | `vercel.json` | The build commands |
 | `scripts/build-bands.ts` | Artifact build, the `LANGS` table |
@@ -160,7 +161,7 @@ The client's country seeds the source. The browser seeds the target.
 
 | Step | Rule | Example |
 | --- | --- | --- |
-| Read the country | Vercel sets `x-vercel-ip-country`. `page.tsx` reads it and passes it to `Workspace` as a prop | |
+| Read the country | Vercel sets `x-vercel-ip-country`. The rewrite of `/` writes it into the path, and `page.tsx` passes it to `Workspace` as a prop | |
 | Pick the source | `sourceLang` maps the country to one of the six, en/es/fr/de/pt/it | DE → study German |
 | Multilingual country | `CH`, `BE`, `CA` and `LU` list several. The browser locale picks; the first listed is the fallback | CH + fr browser → French |
 | Unlisted country | English. `Exclude<SourceLang, "en">` on the table enforces that English has no entries | JP + ja browser → en → ja |
@@ -169,10 +170,9 @@ The client's country seeds the source. The browser seeds the target.
 | Explicit pick | Never overridden. The clash rule applies only to the derived value | A deeplink or stored pick is used as given |
 | Live switch | `chooseSource` moves the target to the language just left when you pick the one it was translating into | en → es, pick Spanish → es → en |
 
-Reading the header server-side is free, because the root layout already reads cookies for
-the theme and the route is dynamic anyway. An `/api/geo` round trip would answer after the
-first lookup had already gone out under the wrong language. Off Vercel the header is
-absent and English is the fallback.
+The country rides in the HTML because an `/api/geo` round trip would answer after the first
+lookup had already gone out under the wrong language. Off Vercel the header is absent, the
+path says `none`, and English is the fallback.
 
 ## What a switch of source language keeps
 
@@ -1537,7 +1537,7 @@ stops persisting between loads.
 
 `HEAD-6` is the rule, and `keptAtCdn` in `lib/cdn.ts` writes the header. A repeat of a URL
 that Vercel's CDN has kept is answered at the edge, with no function run and no trip to
-iad1. The page itself is not kept, since it reads the country header and the theme cookie.
+iad1. The page is kept too: see the next section.
 
 | Detail | Why |
 | --- | --- |
@@ -1554,6 +1554,28 @@ chunks. The browser asks for the manifest and the icon on every visit, and each 
 request. A day bounds how long a changed icon takes to show. `next-config.test.ts` fails if
 any other path gains a `Cache-Control`.
 
+
+### The page at the CDN
+
+`HEAD-8` and `HEAD-9` are the rules.
+
+`/` has no page of its own. Vercel's router rewrites it to `/home/<theme>/<country>` before
+any function runs, and that path is `app/home/[theme]/[country]/page.tsx`.
+
+| Detail | Why |
+| --- | --- |
+| The theme and the country are in the path, not in `Vary` | Vercel keeps nothing with `Vary: Cookie`. For the country, Next sends a `Vary` of its own, and a function's header beats a config's. Had it beaten ours, one country's page would reach every country with no error |
+| The key is the path after the rewrite | Vercel's docs say only "the request URL". Checked on a preview on 2026-10-31: a `light` visitor took a MISS of their own straight after a `dark` visitor's HIT |
+| `Vercel-CDN-Cache-Control` beats the `private` Next sends | Vercel's docs list `private` as blocking the cache, and also give this header top priority. Checked on the same preview: MISS, then HIT. The browser still receives `private, no-store` |
+| The query is part of the key | `generateMetadata` reads `?word=`, so a link names its word. Each URL is a miss once per deploy |
+| The root layout sits under `[theme]`, so there is no `app/layout.tsx` | The layout needs the theme for `<html>`. So `/foo` gets Next's built-in 404, outside our layout |
+| The two cookie names are written again in `next.config.mjs` | A config cannot import TypeScript. `next-config.test.ts` runs the rules against the names in `lib/theme.ts`, so a rename fails it |
+| They live in `lib/theme.ts`, not beside the provider | A server component that imports from a `"use client"` file receives a reference, not the string |
+| `x-vercel-cache` tells a hit from a miss | A hit took 119–140 ms on a new connection, and a miss about 357 ms on a preview |
+
+| Known cost | Detail |
+| --- | --- |
+| A push empties it | Every entry starts again after a deploy, and the CDN drops a rarely read entry early, so a quiet site misses often. A miss renders in iad1 |
 ## Verifying a build while the web dev server is running
 
 `next dev` and `next build` both default to `apps/web/.next`. Building into it while a dev

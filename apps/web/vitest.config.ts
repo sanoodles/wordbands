@@ -25,8 +25,8 @@ export default defineConfig({
       exclude: [
         ...coverageConfigDefaults.exclude,
         "src/lib/types.ts", // shared type declarations, no runtime
-        "src/app/layout.tsx", // Next app shell — integration surface, not a unit
-        "src/app/page.tsx",
+        "src/app/home/[[]theme]/layout.tsx", // Next app shell — integration surface, not a unit
+        "src/app/home/[[]theme]/[[]country]/page.tsx",
       ],
     },
   },

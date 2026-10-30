@@ -2,19 +2,14 @@
 import "@/ssr-dom-globals";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { cookies } from "next/headers";
 // Fondue base tokens first (the `:root` design-token variables), then the compiled
 // component styles, then our Tailwind layer so `tw-` utilities can win where needed.
 import "@frontify/fondue/tokens/base";
-import "./fondue.css";
-import "./globals.css";
-import Providers, {
-  PREF_COOKIE,
-  RESOLVED_COOKIE,
-  type Theme,
-  type ThemePreference,
-} from "./providers";
+import "@/app/fondue.css";
+import "@/app/globals.css";
+import Providers from "@/app/providers";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+import { DEFAULT_THEME, themeOf } from "@/lib/theme";
 
 // `metadataBase` is what lets the relative urls below resolve; without it Next drops
 // og:url and warns. A deeplink's word rides in from `page.tsx`, which restates the
@@ -36,21 +31,18 @@ export const metadata: Metadata = {
   twitter: { card: "summary", title: SITE_NAME, description: SITE_DESCRIPTION },
 };
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  // Server-render the stored theme so the class is on <html> before first paint —
-  // no flash, and SSR/client agree (they read the same cookies). A "system" preference
-  // can't be resolved on the server (prefers-color-scheme is client-only), so we paint
-  // the last resolved colour we cached; a mount effect corrects it if the OS changed.
-  const cookieStore = await cookies();
-  const stored = cookieStore.get(PREF_COOKIE)?.value;
-  const preference: ThemePreference =
-    stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
-  const resolved: Theme =
-    preference === "system"
-      ? cookieStore.get(RESOLVED_COOKIE)?.value === "light"
-        ? "light"
-        : "dark"
-      : preference;
+export default async function RootLayout({
+  children,
+  params,
+}: {
+  children: ReactNode;
+  params: Promise<{ theme: string }>;
+}) {
+  // The theme is in the path, so the class is on <html> before first paint: no flash, and
+  // SSR and the client agree. A "system" preference can't be resolved on the server
+  // (prefers-color-scheme is client-only), so we paint the last resolved colour we cached;
+  // a mount effect corrects it if the OS changed.
+  const { preference, resolved } = themeOf((await params).theme) ?? DEFAULT_THEME;
   return (
     <html lang="en" className={`RootLayout ${resolved}`} data-theme={resolved}>
       <body>

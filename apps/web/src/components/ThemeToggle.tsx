@@ -1,6 +1,7 @@
 "use client";
 
-import { useThemeToggle, type ThemePreference } from "@/app/providers";
+import { useThemeToggle } from "@/app/providers";
+import type { ThemePreference } from "@/lib/theme";
 
 // Plain buttons (not Fondue) so the masthead stays free of the Fondue runtime the
 // Workspace lazy-loads; styled with Fondue tokens to match. 44px targets (WCAG 2.5.5).
