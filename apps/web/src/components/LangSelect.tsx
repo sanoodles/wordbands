@@ -1,6 +1,7 @@
 "use client";
 
 import { Select } from "@frontify/fondue/components";
+import { PICK_ON_CLICK } from "@/components/select";
 
 /**
  * A language picker showing the ISO 639-1 code, so it costs a couple of characters of
@@ -39,7 +40,7 @@ export default function LangSelect<T extends string>({
       {/* By code, since the code is what each row leads with. @spec LANG-1 */}
       {[...options].sort((a, b) => a.code.localeCompare(b.code)).map(({ code, name }) => (
         // `label` still drives the type-to-find, so typing "esp" reaches Español.
-        <Select.Item key={code} value={code} label={name}>
+        <Select.Item key={code} value={code} label={name} {...PICK_ON_CLICK}>
           <span className="lang-option">
             <span aria-hidden="true" className="lang-code text-muted-aaa">
               {code.toUpperCase()}

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import LangSelect from "./LangSelect";
 
@@ -35,6 +35,23 @@ describe("LangSelect", () => {
     await userEvent.click(screen.getByRole("combobox", { name: "Source language" }));
     await userEvent.click(await screen.findByRole("option", { name: "Português" }));
 
+    expect(onChange).toHaveBeenCalledWith("pt");
+  });
+
+  // @spec SELECT-1
+  it("keeps a finger landing on a row from picking it, and picks on the tap's click", async () => {
+    const onChange = vi.fn();
+    render(<LangSelect label="Source language" value="en" options={OPTIONS} onChange={onChange} />);
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Source language" }));
+    const row = await screen.findByRole("option", { name: "Português" });
+
+    fireEvent.touchStart(row);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(row).toBeInTheDocument();
+
+    fireEvent.click(row);
+    expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith("pt");
   });
 });

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import BandBrowser from "./BandBrowser";
 
@@ -129,6 +129,21 @@ describe("BandBrowser", () => {
     await screen.findByRole("option", { name: "water" });
     await userEvent.click(screen.getByRole("combobox", { name: /frequency bands/i }));
     await userEvent.click(await screen.findByRole("option", { name: /1,001/ }));
+    expect(await screen.findByRole("option", { name: "engine" })).toBeInTheDocument();
+  });
+
+  // @spec SELECT-1
+  it("keeps a finger landing on a row of the band dropdown from picking it", async () => {
+    render(<BandBrowser view="freq" source="en" anchorWord={null} anchorBandKey={null} onSelect={() => {}} />);
+    await screen.findByRole("option", { name: "water" });
+    await userEvent.click(screen.getByRole("combobox", { name: /frequency bands/i }));
+    const row = await screen.findByRole("option", { name: /1,001/ });
+
+    fireEvent.touchStart(row);
+    expect(screen.getByRole("option", { name: "water" })).toBeInTheDocument();
+    expect(row).toBeInTheDocument();
+
+    fireEvent.click(row);
     expect(await screen.findByRole("option", { name: "engine" })).toBeInTheDocument();
   });
 

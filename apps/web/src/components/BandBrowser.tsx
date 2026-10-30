@@ -11,6 +11,7 @@ import {
 } from "react";
 import { Select } from "@frontify/fondue/components";
 import Loading from "@/components/Loading";
+import { PICK_ON_CLICK } from "@/components/select";
 import WordChips from "@/components/WordChips";
 import type { Band, BandSummary, BandView } from "@/lib/types";
 
@@ -242,7 +243,7 @@ export default function BandBrowser({
                 showStringValue
               >
                 {summary.map((b) => (
-                  <Select.Item key={b.key} value={b.key} label={b.label}>
+                  <Select.Item key={b.key} value={b.key} label={b.label} {...PICK_ON_CLICK}>
                     <span className="tw-flex tw-items-baseline tw-gap-2">
                       <span>{b.label}</span>
                       <span className="tw-tabular-nums tw-body-x-small text-muted-aaa">
