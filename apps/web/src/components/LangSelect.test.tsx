@@ -9,7 +9,10 @@ const OPTIONS = [
   { code: "pt", name: "Português" },
 ];
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe("LangSelect", () => {
   it("shows the code, and keeps the endonym as the value assistive tech reads", () => {
@@ -53,5 +56,50 @@ describe("LangSelect", () => {
     fireEvent.click(row);
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith("pt");
+  });
+
+  // @spec SELECT-2
+  it("drops a click outside the menu for half a second after a finger lifts off a row", async () => {
+    const onChange = vi.fn();
+    const onBeneath = vi.fn();
+    render(
+      <>
+        <LangSelect label="Source language" value="en" options={OPTIONS} onChange={onChange} />
+        <button onClick={onBeneath}>Beneath</button>
+      </>,
+    );
+    await userEvent.click(screen.getByRole("combobox", { name: "Source language" }));
+    const row = await screen.findByRole("option", { name: "Português" });
+    const beneath = screen.getByRole("button", { name: "Beneath" });
+
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    fireEvent.touchEnd(row);
+    fireEvent.click(row);
+    expect(onChange).toHaveBeenCalledWith("pt");
+
+    // fireEvent answers false where the default was prevented, which is what stops a link.
+    expect(fireEvent.click(beneath)).toBe(false);
+    vi.advanceTimersByTime(499);
+    expect(fireEvent.click(beneath)).toBe(false);
+    expect(onBeneath).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1);
+    expect(fireEvent.click(beneath)).toBe(true);
+    expect(onBeneath).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a click on the page alone after a pick with a mouse", async () => {
+    const onBeneath = vi.fn();
+    render(
+      <>
+        <LangSelect label="Source language" value="en" options={OPTIONS} onChange={() => {}} />
+        <button onClick={onBeneath}>Beneath</button>
+      </>,
+    );
+    await userEvent.click(screen.getByRole("combobox", { name: "Source language" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Português" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Beneath" }));
+    expect(onBeneath).toHaveBeenCalledTimes(1);
   });
 });

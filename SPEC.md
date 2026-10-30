@@ -284,3 +284,4 @@ language's code, and its name in that language.
 | ID | Rule |
 | --- | --- |
 | SELECT-1 | On a touch screen, a tap on a row picks it. A finger that lands on a row and drags scrolls the menu, and picks nothing |
+| SELECT-2 | For half a second after a finger lifts off a row, a click outside that menu does nothing, so a second touch cannot activate what the menu covered. A pick with a mouse holds nothing back |

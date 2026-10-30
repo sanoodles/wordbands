@@ -42,6 +42,7 @@ beforeEach(() => vi.stubGlobal("fetch", mockFetch()));
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("BandBrowser", () => {
@@ -145,6 +146,24 @@ describe("BandBrowser", () => {
 
     fireEvent.click(row);
     expect(await screen.findByRole("option", { name: "engine" })).toBeInTheDocument();
+  });
+
+  // @spec SELECT-2
+  it("drops a click on a chip for half a second after a finger lifts off the dropdown", async () => {
+    const onSelect = vi.fn();
+    render(<BandBrowser view="freq" source="en" anchorWord={null} anchorBandKey={null} onSelect={onSelect} />);
+    const chip = await screen.findByRole("option", { name: "water" });
+    await userEvent.click(screen.getByRole("combobox", { name: /frequency bands/i }));
+    const row = await screen.findByRole("option", { name: /1,001/ });
+
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    fireEvent.touchEnd(row);
+    fireEvent.click(chip);
+    expect(onSelect).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(500);
+    fireEvent.click(chip);
+    expect(onSelect).toHaveBeenCalledTimes(1);
   });
 
   // Mobile-only prev/next. Like the dropdown, always in the DOM — CSS alone hides it.
