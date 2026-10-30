@@ -71,7 +71,7 @@ async function nearestWord(term: string, source: SourceLang): Promise<string | n
 const browserLang = () =>
   baseLang(typeof navigator !== "undefined" ? navigator.language : "en");
 
-// The workspace is client-only (see WorkspaceLazy), so localStorage is available at
+// The workspace is client-only (see WorkspaceClient), so localStorage is available at
 // first render — read it in the state initializers to avoid a default-value flash.
 function storedSource(): SourceLang | null {
   try {

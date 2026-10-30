@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import FeedbackLink from "@/components/FeedbackLink";
 import ThemeToggle from "@/components/ThemeToggle";
-import Workspace from "@/components/WorkspaceLazy";
+import Workspace from "@/components/WorkspaceClient";
 import { pageTitle } from "@/lib/scenario";
 import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
 

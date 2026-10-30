@@ -120,7 +120,7 @@ Paths are relative to `apps/web/`.
 `Workspace` mirrors the scenario into the query string so it can be shared as a link, and
 so Back and Forward step through it. It owns all five values: the target sits there rather
 than in `WordCard`, and `band` rather than in `BandBrowser`, so both ride in the URL.
-`Workspace` is client-only (`WorkspaceLazy`, `ssr:false`), so this is all client-side.
+`Workspace` is client-only (`WorkspaceClient`), so this is all client-side.
 
 `?source=<source>&word=<word>&target=<target>&view=freq|cefr&band=<key>`
 
