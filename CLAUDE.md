@@ -1526,7 +1526,7 @@ or the resource simply never arrives.
 | Concession | Why |
 | --- | --- |
 | `script-src 'unsafe-inline'` | Next streams the RSC payload through inline `<script>` tags. Nonces would need middleware, which is a larger surface than this buys on a page with no HTML sink |
-| `style-src 'unsafe-inline'` | Fondue and the `style={{…}}` props |
+| `style-src 'unsafe-inline'` | Fondue, the `style={{…}}` props and the stylesheets `inlineCss` puts in the HTML |
 | Dev only: `'unsafe-eval'`, `connect-src ws:` | HMR evals and opens a socket back. Keyed off `NODE_ENV`, so production runs the stricter policy — check a CSP change against a production build, not just `pnpm dev` |
 
 The theme cookie takes `; secure` only over https. Unconditional would break a dev server
@@ -1576,6 +1576,8 @@ any function runs, and that path is `app/home/[theme]/[country]/page.tsx`.
 | Known cost | Detail |
 | --- | --- |
 | A push empties it | Every entry starts again after a deploy, and the CDN drops a rarely read entry early, so a quiet site misses often. A miss renders in iad1 |
+| The stylesheets are in every HTML | `inlineCss` adds about 18KB to each answer, and React keeps a second copy in the RSC payload, which brotli absorbs. A repeat visit pays for that, and a first visit saves a round trip |
+| `inlineCss` is experimental | It is one line in `next.config.mjs`, and removing it costs nothing but the round trip |
 ## Verifying a build while the web dev server is running
 
 `next dev` and `next build` both default to `apps/web/.next`. Building into it while a dev

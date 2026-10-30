@@ -59,7 +59,8 @@ const nextConfig = {
   agentRules: false,
   // fondue-icons does not declare itself free of side effects, so Fondue's imports from its
   // barrel would otherwise keep all 407 icons in the page's JS.
-  experimental: { optimizePackageImports: ["@frontify/fondue-icons"] },
+  // inlineCss puts the stylesheets in the HTML, so a first visit paints without a round trip.
+  experimental: { optimizePackageImports: ["@frontify/fondue-icons"], inlineCss: true },
   async headers() {
     return [
       { source: "/:path*", headers: SECURITY_HEADERS },
