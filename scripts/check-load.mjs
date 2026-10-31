@@ -3,19 +3,26 @@
 //
 //   pnpm load:check [url]
 //
-// Each run opens a browser of its own for a first visit, then loads the page again for a repeat
-// visit. A deployed page counts only where the CDN answered, since the rules are about a page
-// the CDN holds. `/api/translate` is stubbed, so a run never reaches Google.
+// A run is a first visit in a new browser, then a repeat visit in a browser restarted on the same
+// profile. That keeps the disk cache and the cookies, and loses the open connection and the
+// memory cache, as a visit on another day does. A reload in one session keeps both, so it reads
+// sooner than any reader will see. A deployed page counts only where the CDN answered, since the
+// rules are about a page the CDN holds. `/api/translate` is stubbed, so a run never reaches Google.
 //
 // @spec LOAD-1, LOAD-2
 
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { evaluator, interceptTranslate, killOnExit, launch, openPage, sleep, stop } from "./lib/browser.mjs";
 
 const BASE = process.argv[2] ?? "https://wordbands.vercel.app";
 const RUNS = 5;
 const PACE_MS = 1000;
 const BUDGET_MS = 300;
-const FIELD = 'input';
+const FIELD = "input";
+// The Workspace has written the theme cookies by now, which a repeat visit depends on.
+const READY = 'a[aria-label^="Etymology"]';
 
 const PHONE = { width: 390, height: 844, deviceScaleFactor: 3, mobile: true };
 const NETWORK = { offline: false, latency: 40, downloadThroughput: 2_500_000, uploadThroughput: 625_000 };
@@ -35,8 +42,9 @@ const READ = `({
 
 const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 
-async function run() {
-  const browser = launch({ name: "load" });
+// A field in the HTML is in the DOM before it is on screen, so it shows at whichever is later.
+async function visit(profile) {
+  const browser = launch({ name: "load", profile });
   killOnExit(browser);
   try {
     const { send, on, close } = await openPage(browser);
@@ -55,20 +63,25 @@ async function run() {
       const headers = Object.entries(m.params.response.headers);
       cache = headers.find(([name]) => name.toLowerCase() === "x-vercel-cache")?.[1];
     });
-    const visit = async () => {
-      const loaded = new Promise((r) => on((m) => m.method === "Page.loadEventFired" && r()));
-      await send("Page.navigate", { url: `${BASE}/` });
-      await loaded;
-      await until(`!!document.querySelector(${JSON.stringify(FIELD)})`, "the search field");
-      await sleep(PACE_MS);
-      return { ...(await val(READ)), cache };
-    };
-    const first = await visit();
-    const repeat = await visit();
+    const loaded = new Promise((r) => on((m) => m.method === "Page.loadEventFired" && r()));
+    await send("Page.navigate", { url: `${BASE}/` });
+    await loaded;
+    await until(`!!document.querySelector(${JSON.stringify(READY)})`, "the Workspace");
+    await sleep(PACE_MS);
+    const { paint, field } = await val(READ);
     close();
-    return { first, repeat };
+    return { paint, field: Math.max(paint, field), cache };
   } finally {
     await stop(browser);
+  }
+}
+
+async function run() {
+  const profile = mkdtempSync(join(tmpdir(), "load-"));
+  try {
+    return { first: await visit(profile), repeat: await visit(profile) };
+  } finally {
+    rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 }
 
@@ -79,7 +92,7 @@ for (let i = 0; i < RUNS; i++) {
   await sleep(PACE_MS);
 }
 
-const held = (visit) => runs.map((r) => r[visit]).filter((v) => v.cache === undefined || v.cache === "HIT");
+const held = (kind) => runs.map((r) => r[kind]).filter((v) => v.cache === undefined || v.cache === "HIT");
 const checks = [
   ["LOAD-1 first paint, first visit", held("first"), "paint"],
   ["LOAD-1 first paint, repeat visit", held("repeat"), "paint"],

@@ -27,9 +27,12 @@ function onPath(bin) {
   return null;
 }
 
-/** Starts the browser on a profile of its own, named `<name>-…` in the system's tmp. */
-export function launch({ name }) {
-  const profile = mkdtempSync(join(tmpdir(), `${name}-`));
+/**
+ * Starts the browser on a profile of its own, named `<name>-…` in the system's tmp, or on
+ * `profile`, which `stop` then leaves in place for the next browser.
+ */
+export function launch({ name, profile: kept }) {
+  const profile = kept ?? mkdtempSync(join(tmpdir(), `${name}-`));
   const flags = [
     "--headless=new",
     "--remote-debugging-port=0",
@@ -61,7 +64,7 @@ export function launch({ name }) {
   child.on("error", () => {}); // surfaced by the exit handler in browserEndpoint instead
   const log = [];
   child.stderr.on("data", (d) => log.push(String(d)));
-  return { child, profile, log };
+  return { child, profile, kept: !!kept, log };
 }
 
 // True while any process of the browser's group is left to receive the signal.
@@ -83,18 +86,18 @@ function dropProfile(profile) {
 }
 
 // Waits for the group to empty before deleting: a browser still writing makes the delete fail.
-export async function stop({ child, profile }) {
+export async function stop({ child, profile, kept }) {
   signal(child, "SIGTERM");
   for (let i = 0; i < 50 && signal(child, 0); i++) await sleep(100);
   signal(child, "SIGKILL");
-  dropProfile(profile);
+  if (!kept) dropProfile(profile);
 }
 
 // process.exit() skips finally, and a detached group never hears the terminal's Ctrl-C.
-export function killOnExit({ child, profile }) {
+export function killOnExit({ child, profile, kept }) {
   process.on("exit", () => {
     signal(child, "SIGKILL");
-    dropProfile(profile);
+    if (!kept) dropProfile(profile);
   });
   for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) process.once(sig, () => process.exit(1));
 }
