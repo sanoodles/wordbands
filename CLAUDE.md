@@ -13,11 +13,8 @@ learner can see where a word sits and browse the vocabulary in order.
 | "must", "never", "always" — a fact about the running app | `SPEC.md`, under an ID |
 | "how", "why", "watch out" — a command, a rationale, a trap | Here |
 
-Every rule there carries an ID, and the test proving it names that ID in an `@spec`
-comment. That comment is the only link between the two, so neither file has to restate the
-other. The code a rule governs carries the same comment — a **mark**, not a proof, so that
-opening a file to change it tells you which rule binds it. Code cannot witness itself, so a
-mark never satisfies a rule.
+Every rule there carries an ID, and an `@spec` comment names it. `SPEC.md` says how a proof
+and a mark differ.
 
 | Command | Does |
 | --- | --- |
@@ -25,9 +22,8 @@ mark never satisfies a rule.
 | `pnpm spec:list` | Every rule by area, with its proofs and its marks |
 | `pnpm spec:files` | The reverse: a file at a time, the rules it carries |
 
-It runs in `pr.yml` and in the pre-push hook, parses text and needs no network. Where this
-file needs to talk about a rule it names the ID and says why the rule is what it is; the
-statement itself stays in `SPEC.md`.
+Where this file needs to talk about a rule it names the ID and says why the rule is what it
+is; the statement itself stays in `SPEC.md`.
 
 ## Calling a third party
 
@@ -128,15 +124,11 @@ than in `WordCard`, and `band` rather than in `BandBrowser`, so both ride in the
 
 | Param | Holds | Notes |
 | --- | --- | --- |
-| `source` | Source language | One of the six |
-| `word` | The looked-up word | |
-| `target` | Target language | Any language, not just the six |
 | `view` | `freq` or `cefr` | `cefr` is the default, and sits first in the toggle |
 | `band` | Pinned band tab | Set only when it differs from the word's own band, which the word and view already imply |
 
 `URL-1` to `URL-12` are the rules: the older spellings, what is written and when, the
-precedence on mount — the URL wins over the stored pick, which wins over the seed below —
-and which writes add a history entry.
+precedence on mount, and which writes add a history entry.
 
 | History detail | Why |
 | --- | --- |
@@ -149,11 +141,9 @@ and which writes add a history entry.
 | The URL effect runs before the title effect | The browser titles whichever entry is current. Titled first, the entry left behind would take the new word's name |
 | Next keeps the page mounted | Its patched `pushState` copies its router tree into each entry, and its own `popstate` handler restores that same tree. Restoring the scenario is ours |
 
-The tab title carries the word too: `wordbands: <word>`, in the corpus's display casing
-(`wordbands: Wasser`). `generateMetadata` renders it from `?word=` server-side, so a shared
-link names its word in the tab and in link previews before any client JS runs; `Workspace`
-recases it to the corpus's spelling once the lookup lands. Both call `pageTitle`, which caps
-the word, since a deeplink's has not been looked up.
+`generateMetadata` renders the tab title from `?word=` server-side (`URL-6`, `URL-7`), and
+`Workspace` recases it to the corpus's spelling once the lookup lands. Both call `pageTitle`,
+which caps the word, since a deeplink's has not been looked up.
 
 ## Which languages a first-time visitor lands on
 
@@ -266,12 +256,12 @@ it to `SOURCE_LANG_META` and to `ETYMOLOGY` beside it, and add the registry impo
 | --- | --- | --- | --- |
 | Frequency floor | `minCount` | Drop words under 10 raw occurrences | Below that the OpenSubtitles tail is mostly hapax noise. Stated in occurrences, not rank, so it means the same in every language. Omitted for English, whose column is per-million. **Relaxing it is measured and rejected** — see below |
 | Clitics | `clitics`, `mesoEndings`, `cliticExceptions` | Strip pronouns hyphenated onto verbs and merge the frequency back into the verb | 24% of the pt list and 12% of fr. pt `lembrar` 333 → 177, fr `excuser` 761 → 297 |
-| Own-entry | — | A surface word that heads its own lemma entry keeps it, instead of merging into whichever lemma claims it | The lists are lemma-sorted, so plain first-wins hands a shared form to the alphabetically-first claimant. That deletes common words (it `governo` into `governare`, fr `tu` into `il`; 100–160 of the top 1,000 per language) and floats the absorber into the beginner bands |
+| Own-entry | — | `FILTER-3` | The lists are lemma-sorted, so plain first-wins hands a shared form to the alphabetically-first claimant. That deletes common words (it `governo` into `governare`, fr `tu` into `il`; 100–160 of the top 1,000 per language) and floats the absorber into the beginner bands |
 | Dictionary gate | `dictGate` | Past rank 25,000, keep a word only if the lemma list vouches for it | Drops about 80 junk words per real one. Omitted for English, whose source is curated |
-| Spell gate | `spellDict`, `spellVariants` | *Below* rank 25,000, drop a word the language's own spell checker rejects in every spelling | 1,379 to 7,204 a language. The other half of the same list — see below |
-| Truncated stems | `spellDict`, `STEM_MIN_FORM` | Move an entry off a lemma headword that is not a word of the language | 14 in German, 2 to 6 elsewhere. `jed` → `jeder`, `mehrer` → `mehrere` |
-| Morphology | `morphology` | Past `dictGate`, keep a word the language's own compounding or derivation accounts for | +17,887 in German, taking it 35.6k → 53.5k. See below |
-| Personal names | `determiners`, `NAME_RANK_FLOOR` | Drop a word meeting all four tests below | See the per-language counts below |
+| Spell gate | `spellDict`, `spellVariants` | `FILTER-9` | 1,379 to 7,204 a language. The other half of the same list — see below |
+| Truncated stems | `spellDict`, `STEM_MIN_FORM` | `FILTER-8` | 14 in German, 2 to 6 elsewhere, because michmech headwords German determiners on a bare stem and does not do the same to the Romance five. `jed` → `jeder`, `mehrer` → `mehrere` |
+| Morphology | `morphology` | `FILTER-10` | +17,887 in German, taking it 35.6k → 53.5k. See below |
+| Personal names | `determiners`, `NAME_RANK_FLOOR` | Drop a word meeting all four tests below | 1,126 to 4,440 a language |
 | Display casing | `casingFile` | Measure each word's mid-sentence capitalization and store that casing | Sentence-initial position is ignored, since it capitalizes everything |
 | Case-homographs | — | Keep both casings of one entry under `variants` | `"essen" -> ["Essen","essen"]`, most frequent first. `getWord` returns them as `forms` |
 
@@ -298,8 +288,6 @@ already in the list**, so they can only stack below it:
 | C2 / `rare` | 14,370 / 26,871 |
 
 Doubling the index to fill two bands nobody browses, at 3:1, is the worst trade available.
-It also fails its own motivation: it gets `Strichpunkt` and `polyglott` but not `Vergabe`
-or `Semikolon`, which sit *above* the floor and were dictionary-gate casualties.
 
 ### Clitics
 
@@ -337,57 +325,6 @@ no entry for `ryûji` or `rrr`. The dictionary can, which is what `dictGate` use
 | Real words lost | 1–3% of what the gate drops, 900–2,700 per language |
 | Where they cluster | Productive morphology the lists do not headword: `-mente`/`-ment` adverbs, `-ità`/`-ité` nouns, superlatives — `logicamente`, `unanimità`, `rigoureusement`, `Geborgenheit` |
 | Spot-check | Italian's list has no `entropia`, so the build's spot-check for it reports `—` |
-| 12k–25k untouched | The gate starts at 25k, and 12k–25k is still about half names and English: `Nami`, `Calcutta`, `because`, `corn`, `truck` all sit near rank 13,000 |
-
-### Measuring what the gate misses
-
-The row above is qualitative. A second dictionary makes it countable: cross the lemma list
-with a Wiktionary extract and count what neither vouches for. Measured once for Portuguese,
-against the `defining-vocabulary` spike's `pt_levels.json`.
-
-| Portuguese, 35,827 words | Count |
-| --- | --- |
-| Not in the lemma list | 9,658 |
-| No Wiktionary entry | 11,719 |
-| **Neither** | **7,565** |
-
-Either source alone is useless as a filter. The lemma list flags `que de com se do por` —
-function words it never headwords. Wiktionary flags the feminines and possessives michmech
-treats as lemmas of their own: `boa`, `má`, `última`, `certa`, `meu`. Only the conjunction
-isolates junk.
-
-Where the 7,565 sit, and what runs there:
-
-| Rank | Count | The test in force |
-| --- | --- | --- |
-| 1–1,000 | 20 | None. `NAME_RANK_FLOOR` exempts the head |
-| 1,001–24,999 | 7,545 | The name gazetteer, and now the spell gate. `dictGate` starts at 25,000 and never reached here |
-| 25,000+ | 0 | `dictGate`. Nothing past it is unvouched |
-
-So the gate holds perfectly and the whole hole is below it. It is also not the 12k–25k of
-the row above — it starts at 1,001.
-
-| The 7,565 | Count | Head of the list |
-| --- | --- | --- |
-| Already in `names.txt` | 2,704 | `John Jack Sam Michael Charlie Frank Mike Joe Peter George Max James Alex Bob` |
-| Not in `names.txt` | 4,861 | `Mr The fbi näo Iorque Hey km Chicago voce New directamente of City srta and` |
-
-The first group is the name filter's own miss — the gazetteer holds the word and the casing
-or determiner test spared it. The second is what a surname list was never going to hold:
-untranslated English (`The`, `of`, `and`, `New`, `City`), accentless and pre-reform spellings
-(`näo`, `voce`, `directamente`), abbreviations (`km`, `srta`, `fbi`, `St`), exonyms
-(`Iorque`, `Chicago`).
-
-| Known cost | Detail |
-| --- | --- |
-| A candidate list, not a drop list | `bem-vindos`, `bem-vinda`, `directamente` and `Iorque` are ordinary Portuguese sitting in the second group |
-| Portuguese only | Repeating it needs that language's Wiktionary extract — 339MB per language, which is what the spike downloads |
-
-**The spell gate is what answers this.** Crossed against the current artifact, 6,504 of
-the 7,565 are not in it — 86%. What is left is 1,061 words, headed by `john jack sam michael frank mike peter george max
-james alex` — first names the Portuguese dictionaries hold, so the checker vouches for them
-as readily as the gazetteer refuses to. A spell checker cannot be the judge of a name, and
-neither can `names.txt`, which is where `NAME_RANK_FLOOR` already conceded the point.
 
 ### Morphology, the second way past the gate
 
@@ -396,7 +333,7 @@ spells compounding **inside one word**, and compounding is productive: `Bananenb
 is ordinary German that no list will ever hold, because the rule makes words faster than
 anyone can enumerate them. English writes the same thing as three words and needs three
 entries; German needs one per combination, forever. So the rule is re-derived rather than
-looked up, and `FILTER-10` is the result — **+17,887 words, 35.6k → 53.5k**.
+looked up, and `FILTER-10` is the result.
 
 | Signal | Catches |
 | --- | --- |
@@ -412,14 +349,11 @@ looked up, and `FILTER-10` is the result — **+17,887 words, 35.6k → 53.5k**.
 | Only German supplies `morphology` | The Romance five compound phrasally (`arc-en-ciel`), so there is nothing for them to re-derive |
 
 **This is the one thing in the build that is not language-agnostic**, against a file whose
-design is "per language this is pure data". It earns the exception by being worth 20k
-German words; it is still the first place to look when the build stops generalising.
+design is "per language this is pure data". It is the first place to look when the build
+stops generalising.
 
-It does not touch loanwords: `Semikolon` and `polyglott` have no German morphology to grab,
-and only a dictionary would admit them. That was the measured trade — the combined
-hunspell variant would have taken them at roughly a third of the precision. Hunspell
-*alone* past the gate is worse still, about 2:1, because it accepts inflections wholesale:
-it is a spell checker, and an inflected form is spelt correctly.
+Hunspell alone past the gate is about 2:1, because it accepts inflections wholesale: it is a
+spell checker, and an inflected form is spelt correctly.
 
 ### Words that are absent on purpose
 
@@ -428,7 +362,7 @@ is a defect to be fixed:
 
 | Word | Why it is out | What would bring it back |
 | --- | --- | --- |
-| `Semikolon` | Loanword past the gate, with no German morphology to grab — the paragraph above | The hunspell-plus-morphology vouch, at about a third of `morphology`'s precision |
+| `Semikolon` | Loanword past the gate, with no German morphology to grab | The hunspell-plus-morphology vouch, at about a third of `morphology`'s precision |
 | `polyglott` | Count 3, so below the floor, *and* no morphology | Nothing sensible |
 | `Strichpunkt` | Count 3, below the floor | Relaxing the floor, which is rejected above |
 | `Vergabestelle` | Count **1** in a 100M-word corpus | Nothing will ever justify it |
@@ -480,6 +414,10 @@ The cost in German is the ~11% it takes with them: real words the dictionary lac
 (`Viech`, `Klunker`, `rabauke`) and pre-1996 spellings (`daß`, `Haß`, `Imbiß`), which
 igerman98 is post-reform and does not carry.
 
+A spell checker cannot be the judge of a name, and neither can `names.txt`, which is where
+`NAME_RANK_FLOOR` already conceded the point. The Portuguese dictionaries hold `john`, `jack`
+and `michael`, so the checker vouches for them as readily as the gazetteer refuses to.
+
 #### What it does language by language
 
 German's ~89% is no guide to the rest, so each was measured the same way: dump the
@@ -489,39 +427,28 @@ sample lies — it reads near-perfect where a random one reads 85–90%.
 | | en | es | fr | de | pt | it |
 | --- | --- | --- | --- | --- | --- | --- |
 | Dropped below 25,000 | 1,379 | 7,139 | 6,056 | 4,561 | 7,204 | 6,064 |
-| Share of that head | 5.5% | 28.6% | 24.2% | 18.2% | 28.8% | 24.3% |
 | Junk, in a hand-audit | ~85% | 92% | 94% | ~89% | 85% | 97% |
-| List size after | 38,322 | 32,102 | 28,788 | 53,517 | 28,623 | 27,416 |
 
-Every one of them is dominated by the same two kinds — untranslated English and the names
-the gazetteer's four-way test spared — which is what the section above measures for
-Portuguese. What differs is the third kind and the cost:
+Every one of them is dominated by the same two kinds: untranslated English, and the names the
+gazetteer's four-way test spared. What differs is the third kind and the cost:
 
 | Language | The third kind of junk | What it takes with them |
 | --- | --- | --- |
-| en | Contraction debris the tokenizer left: `didn` at rank 87, `doesn`, `isn`, `wouldn`, `hasn`, ten more inside the top 800 | `tv`, `snuck`, `meds`, `arse` — abbreviations and the informal. Its 5.5% is the smallest because SUBTLEX is curated |
+| en | Contraction debris the tokenizer left: `didn` at rank 87, `doesn`, `isn`, `wouldn`, `hasn`, ten more inside the top 800 | `tv`, `snuck`, `meds`, `arse` — abbreviations and the informal. Its drop is the smallest because SUBTLEX is curated |
 | es | Accentless spellings: `aqui`, `asi`, `estan`, `habia` | Enclitic verb forms (`vámonos`, `llevémoslo`, `págame`), diminutives (`amiguito`, `bolsitas`), loanwords `picnic`, `surf`, `beicon` |
 | fr | Accentless spellings: `ca`, `plait`, `ecoutez`, `etais` | The 1990 rectifications, which the *classique* list refuses: `diner`, `entrainement`, `traitres` |
 | pt | The pre-AO90 orthography, which is most of the drop above rank 3,000: `exactamente`, `acção`, `directo`, `objecto` | 89 of those 166 have no reformed twin in the list, so they go outright — `correcto`, `acto`, `efectuar`. The other 77 keep theirs: `ação` 3,010, `exatamente` 1,306, `diretor` 3,129 |
 | it | Accent-stripped duplicates, and almost nothing else: `perche`, `piu`, `gia`, `citta`, `realta`, `verita` | Almost nothing, which is why it audits at 97%. `più` and `può` are the exception: neither has an accented entry, so the word leaves as an entry and stays only as a redirect, `più` → `molto` |
 
-The pt row is the same trade German already takes on `daß`: a reform makes the old spelling
-a misspelling, and the checker is post-reform. Italian's row is the opposite of a cost —
-`citta` and `perche` were entries beside `città` and `perché`, which is the duplicate the
-diacritic fold (`BAND-14`) exists to make unnecessary.
-
 | Measured and rejected | Why |
 | --- | --- |
 | Asking about the all-caps spelling too | It would keep `tv`, `gps`, `dvd` and the real acronyms `EEUU`, `OTAN`, `VIH`, `IVA` — and with them French's `ok`(133) and `ca`(158), and German's pre-1996 `ungewiß`, `bewußt`, `anschluß`, `rußland`, because uppercase `ß` is `SS`. It would change German's list for junk it does not have |
-| Adding `es_MX`, `es_AR`, `es_CO` to `es_ES` | 218 words back, ten of them Spanish. See the build-inputs table |
 
 ### Truncated lemma stems
 
 michmech headwords some German determiners and adjectives on a bare stem — `jed` for
 jede/jedem/jeden/jeder, `ander`, `beid`, `mehrer`. The own-entry rule (`FILTER-3`) then
-hands every inflection to it, so the stem lands high while the word itself goes missing:
-`jed` sat at rank 107 with no `jeder` in the list at all, and `mehrere` and `jegliche`
-were absent outright. `FILTER-8` is the rule; the entry moves to whichever form the
+hands every inflection to it. `FILTER-8` is the rule; the entry moves to whichever form the
 corpus writes.
 
 **The corpus cannot referee this on its own**, which is the trap. A German adjective is
@@ -535,7 +462,6 @@ a word. That is why this needs `spellDict` rather than the casing corpus alone.
 | --- | --- |
 | The repair picks the corpus-dominant form | The citation form for `jed` → `jeder`, but not for `ander` → `anderen`. Both are real words, so the wart is cosmetic |
 | A headword whose forms do not all extend it is left alone | A different defect: michmech maps *both* `Dach` and the past tense of `denken` onto `dachen`, and there is no splitting that from the list. The spell gate above drops `dachen` instead |
-| It runs wherever `spellDict` does, so in all six | German is where it is worth most — 14 repairs against 2 to 6 elsewhere, because michmech headwords German determiners on a bare stem and does not do the same to the Romance five |
 
 ### Personal names
 
@@ -551,11 +477,7 @@ vocabulary. A word is dropped only when all four tests agree.
 
 The top `NAME_RANK_FLOOR` (1,000) is exempt, because a hit there is likelier a loanword
 noun than a name. A language without a `casingFile` is skipped, since the gazetteer alone
-would eat "que", "por", "he" and "she". Words dropped per language:
-
-| en | es | fr | de | pt | it |
-| --- | --- | --- | --- | --- | --- |
-| −1,126 | −4,277 | −4,440 | −3,284 | −2,567 | −3,549 |
+would eat "que", "por", "he" and "she".
 
 Known wart: a few country names sit in the surname list and go with them — `england`,
 `france`, `africa`, `canada`, `india` (en), `francia` and `italia` (es), `italia` and
@@ -580,18 +502,15 @@ six have one.
 
 ### CEFR bands
 
-Bands are frequency-rank thresholds calibrated against CEFR-J. They are English-derived
-and reused for every language. No graph and no external dictionary is involved.
-
-The thresholds are `BAND-1`, and `BAND-2` is that every language uses them unchanged.
-Past C2 sits `rare` ("Rare · beyond C2"), open-ended at `max: null`.
+The thresholds are `BAND-1`, and `BAND-2` is that every language uses them unchanged. No graph
+and no external dictionary is involved. Past C2 sits `rare` ("Rare · beyond C2"), open-ended
+at `max: null`.
 
 | Detail | Why |
 | --- | --- |
 | Tops roughly double, so C2 ends at 50k | Rather than running open-ended to the end of the list |
 | `rare` past it is open-ended | It is what lets `getWord` assert a band exists at every rank — keep `max: null` on whichever band is last |
 | **German reaches it and the other five do not** | The morphology vouch buys back ~18k compounds, taking the list past 50k, while `dictGate` and the spell gate keep the other five inside C2 |
-| Both lists are filtered to bands that hold words | An unreached `rare` renders no empty tab, so German alone shows a seventh |
 
 **No language has a CEFR source of its own.** The whole calibration is one English
 measurement, and the rest is reuse:
@@ -600,8 +519,6 @@ measurement, and the rest is reuse:
 | --- | --- |
 | The A1 to B2 medians, A1≈635 A2≈2275 B1≈4692 B2≈8394 | The CEFR-J Wordlist, English. Which version was used at calibration time was not recorded; the medians reproduce within 8–17% against Wordlist 1.5 on the current artifact |
 | The C1 and C2 tops | Nothing external. CEFR-J stops at B2, so 25k and 50k extrapolate the doubling trend |
-| `rare` | Nothing. It is the open-ended band `getWord` needs |
-| es, fr, de, pt, it | Nothing of their own. The English thresholds apply unchanged, which is `BAND-2` |
 | CEFR itself | No vocabulary at all. The framework specifies ability, not words, so every CEFR word list is a third party's construction and there is no ground truth under the labels |
 
 **How far the reuse holds was measured once**, against the CEFR-J Wordlist 1.5 plus the
@@ -625,10 +542,8 @@ past 7,000, and calls `corpse`, `convict` and `trauma` C1 where subtitles put th
 3,000. A1 words carrying one of the profile's syllabus-topic tags have median rank 1,154
 against 449 for the untagged, which is that difference made countable.
 
-The profiles are not committed, so this run is not reproducible from the repo, and it was
-made against an English list 1,379 words longer — the spell gate has taken the contraction
-debris out of the head since. What it dropped is what no CEFR profile headwords, so the
-figures are expected to hold; nothing has re-measured them.
+The profiles are not committed, so this run is not reproducible from the repo. It predates
+the spell gate, and nothing has re-measured it.
 
 Comparing one language against another through the bands is the weaker reading. The six
 agree almost everywhere, and where they disagree it is usually a word within 20% of a
@@ -682,9 +597,9 @@ To add a language: emit its levels in the defining-vocabulary repo, add it to
 
 ## Looking a word up by an inflected form
 
-The merge folds every inflection onto its lemma, so a form is not an entry: `branched` and
-`jede` answered nothing, though the build knew all along that they are `branch` and
-`jeder`. `forms.<code>.json` is the way back, and `FORM-1` to `FORM-5` are the rules.
+The merge folds every inflection onto its lemma, so a form is not an entry.
+`forms.<code>.json` takes `branched` to `branch` and `jede` to `jeder`, and `FORM-1` to
+`FORM-6` are the rules.
 
 | Detail | Why |
 | --- | --- |
@@ -709,11 +624,9 @@ language depend on it, and it is what makes `jede` answer `jeder` rather than th
 `FILTER-8` removed. `FORM-2` asserts the whole map against the index, not a sample.
 
 **Known wart, inherited from the lemma lists.** Where michmech lumps distinct words under
-one lemma, the redirect reports that lumping, and it is more visible than it was: es `para`
-answers `parar`, de `sie` and `du` answer `ich`, fr `je` and `vous` answer `il`. These are
-not new — the merge has always summed those counts together, so the words were already
-absent as entries — but a miss became a confident wrong answer. `FORM-5`'s line is what
-keeps it legible as a redirect rather than as the answer.
+one lemma, the redirect reports that lumping as a confident answer: es `para` answers
+`parar`, de `sie` and `du` answer `ich`, fr `je` and `vous` answer `il`. `FORM-5`'s line is
+what keeps it legible as a redirect rather than as the answer.
 
 ## Translating a word
 
@@ -867,12 +780,10 @@ Only pairs touching English have a dictionary at all.
 That leaves those pairs on the plain translation, which is weak for a bare word: it gets
 the number wrong (es→de "mujer" → "Frauen"), the case wrong ("feliz" → "Glücklich") or the
 sense wrong ("noche" → "Abend", "casa" → "heim"). So when neither side is English
-(`needsPivot`) the route pivots through English. `pivotTerm` takes the best-scoring sense
-of the source→en dictionary, then en→target is looked up and `alignGroup` keeps the group
-matching the source word's part of speech. The two fetches run in series, so a pivot takes
-two round trips. The plain source→target translation is asked for only where the pivot
-finds nothing (`GATE-9`), since the card shows it only then. That makes two Google calls
-for most lookups, and three, in series, for a word the pivot misses.
+(`needsPivot`) the route pivots through English, in the steps `docs/translation.md` draws.
+The fetches run in series, and the plain translation is asked for only where the pivot finds
+nothing (`GATE-9`). That makes two Google calls for most lookups, and three for a word the
+pivot misses.
 
 | Load-bearing detail | Why |
 | --- | --- |
@@ -882,15 +793,12 @@ for most lookups, and three, in series, for a word the pivot misses.
 
 ## Wiktionary's translations
 
-`WIKT-1` to `WIKT-6` are the rules. Between Spanish, German, French, Italian and Portuguese,
-in all 20 directions, the card shows Wiktionary's translations on a line beneath Google's.
-Each line ends with its source's name, which links to that source's page for the word.
-Between English and those five, in ten more directions, the line stands in only where
-Google's has nothing; the last part of this section is about those.
+`WIKT-1` to `WIKT-6` are the rules. The last part of this section is about the ten directions
+with English.
 
-None of these pairs has a scored Google dictionary, so the pivot above takes every one of
-them through English. Google's own plain es→de answer goes through English as well, on both
-endpoints a server can call (`gtx`, and `dict-chrome-ex`):
+No pair among the other five languages has a scored Google dictionary, so the pivot above
+takes every one of them through English. Google's own plain es→de answer goes through English
+as well, on both endpoints a server can call (`gtx`, and `dict-chrome-ex`):
 
 | Spanish | Google es→en | Google es→de | Right German |
 | --- | --- | --- | --- |
@@ -915,24 +823,12 @@ Measured on 2026-10-09:
 | So | Show both, each named. The target is the reader's own language, so the reader can judge its words, and a second list beside the first makes a stray sense visible |
 | Do the other 18 directions hold up? | Spot-checked on eight everyday words each, the leading term was right in every one. The odd terms trail, where frequency puts them: `haus` → gars, type in de→fr, `notte` → Nyx in it→fr |
 
-How much of A1 and of B1 each direction covers:
+A direction covers 69% to 95% of A1. The French edition is the richest and the Italian and
+Portuguese ones the thinnest, so it↔pt and es↔it are the weakest directions. Where a direction
+has no entry for a word, the card shows Google's line.
 
-| From \ To | es | de | fr | it | pt | en |
-| --- | --- | --- | --- | --- | --- | --- |
-| es | — | 93 / 78 | 95 / 78 | 76 / 49 | 82 / 59 | 97 / 86 |
-| de | 85 / 70 | — | 89 / 78 | 79 / 66 | 81 / 60 | 91 / 85 |
-| fr | 92 / 79 | 95 / 88 | — | 93 / 79 | 91 / 73 | 97 / 93 |
-| it | 69 / 45 | 88 / 73 | 88 / 75 | — | 73 / 43 | 95 / 84 |
-| pt | 78 / 58 | 88 / 67 | 91 / 72 | 74 / 44 | — | 95 / 87 |
-| en | 98 / 92 | 99 / 95 | 99 / 96 | 97 / 91 | 97 / 91 | — |
-
-The French edition is the richest and the Italian and Portuguese ones the thinnest, so it↔pt
-and es↔it are the weakest directions. Where a direction has no entry for a word, the card
-shows Google's line as it always did.
-
-The 20 artifacts weigh 10.1MB, from 0.2MB for it→pt to 1.0MB for de→fr: about 37 bytes a
-word covered. The ten with English weigh 9.7MB more, from 0.7MB for pt→en to 1.4MB for de→en. One route reads them, one direction at a time, the first time that direction is
-asked for. The browser loads none of it.
+One route reads the artifacts, one direction at a time, the first time that direction is asked
+for. The browser loads none of them.
 
 How `build-wiktionary.ts` builds one direction:
 
@@ -971,15 +867,14 @@ last two disagree.
 
 ### English, where Google has nothing
 
-`WIKT-6` is the rule. A pair with English needs no pivot, since Google's dictionary for it
-is direct and scored, so Wiktionary's line does not stand beside Google's there. It stands
-in where Google's line comes back empty or not at all, which happens in spells: see "When
-Google refuses our server".
+`WIKT-6` is the rule. A pair with English needs no pivot, since Google's dictionary for it is
+direct and scored. Google's line comes back empty or not at all in spells: see "When Google
+refuses our server".
 
 | Detail | Why |
 | --- | --- |
 | Asked for only once Google's line is empty | Google's refusals answer fast, so the line costs one request to committed data after them, and nothing on a lookup that works |
-| Built like the other twenty | Measured on 2026-10-14: the `en` row and column of the table above. The leading term is one both editions give for 81% to 95% of covered A1 words |
+| Built like the other twenty | Measured on 2026-10-14: a direction covers 91% to 99% of A1. The leading term is one both editions give for 81% to 95% of covered A1 words |
 | Spot-checked on 120 random A1 and B1 words | The leading term was wrong once, `third` → trois, and weaker than the best choice about seven times, as in `gritar` → call |
 | `useWiktionary` keys its answer to the word | The hook keeps its last answer while switched off, and a pair with English switches it on within one word. Unkeyed, the previous word's line would show for a frame, inside the live region |
 | The credits say when they apply (`CREDIT-5`) | "and where it has none, from the translation tables of…". The sentence states the condition, so it needs nothing from the card |
@@ -997,7 +892,6 @@ quiet `CefrBadge` carrying the band name and rank in its tooltip.
 | The order stays Google's | The badge lets a learner filter; it does not re-rank |
 | Annotate server-side | It happens in the route that already fetches the translation, so it costs no extra round trip |
 | `levels` is keyed by the term as Google spelled it | `getLevel` keys case-insensitively underneath |
-| Only the six indexed languages have levels | For the rest the map is empty and nothing renders |
 | Some terms go unbadged | Phrases ("de agua") and inflected forms the lemma merge folded away ("eating"): about 4% of terms |
 | The looked-up word gets the same badge inside the search field | In Frequency view that is the only place its CEFR level shows at all |
 
@@ -1057,9 +951,8 @@ Three ways of keeping the overlay under forced colours were measured and none is
 
 ## The etymology link
 
-`ETYM-1` to `ETYM-4` are the rules. The link sits under the search field, and `ETYMOLOGY`
-in `languages.ts` holds one dictionary per language. Each is written in the
-language it describes, so a German word's history is told in German.
+`ETYM-1` to `ETYM-4` are the rules, and `ETYMOLOGY` in `languages.ts` holds one dictionary
+per language.
 
 Measured on 2026-10-03, on 10 random words per CEFR band from A1 to C2, 60 per language.
 The last column is the same sample against English Wiktionary, the one source that covers
@@ -1086,8 +979,7 @@ The misses are mostly what no dictionary headwords: clitic verb forms (`chantaje
 | Under the search field, not on the word card | It is the word's history, not its meaning, so no target changes it. On the card, a translation of two lines pushes it to a third row: es→de `siesta` at 1280px makes the hero row 190px there, against 164px under the field. Where nothing translates, it would also be a second pill beside Google's |
 | It follows the card's word, in the language that word was found in (`ETYM-4`) | The field may hold a word still being typed. During a switch of language the card still shows the old word, and the new language's dictionary may lack it |
 | It goes while a lookup's error shows (`ETYM-4`) | Beside a word the dictionary does not hold, it would read as that word's link |
-| A new tab, sharing the card's description | `NewTabHelp` says "Opens in a new tab." once, for every new-tab link on the page. `Workspace` renders it, since the etymology link sits outside the card |
-| Visible text "Etymology", not the dictionary's name | DWDS, CNRTL and RAE are abbreviations, and each would owe an expansion (3.1.4). The name is "Etymology of <word>" |
+| Visible text "Etymology", not the dictionary's name | DWDS, CNRTL and RAE are abbreviations, and each would owe an expansion (3.1.4). |
 
 | Measured and rejected | Why not |
 | --- | --- |
@@ -1096,13 +988,6 @@ The misses are mostly what no dictionary headwords: clitic verb forms (`chantaje
 | Treccani for Italian | Its URLs number homographs (`quanto1`) and drop accents, and a miss redirects to the home page. Its search is full text: `barocca` finds `maiuscolo` first |
 | etimo.it for Italian | Pianigiani's 1907 dictionary, as scanned page images |
 | etimologias.dechile.net for Spanish | 40 of 60, against the RAE's 47 |
-
-The link is a pill, about 105px wide, on a row of its own under the field at every width.
-
-| Known cost | Detail |
-| --- | --- |
-| A one-line translation on a desktop | The card has room beside the line, but the pill takes a row under the field. The hero row is then 56px taller than the card needs: the pill's 44px and its 12px margin |
-| A phone | The panels stack, so the pill's row adds to the page wherever it sits. Measured at 390px with `siesta`, the two panels are 4px taller with it under the field than on the card |
 
 ## Width on a phone
 
@@ -1116,17 +1001,8 @@ gutter. **The negative margin is the phone gutter**, in another file — change 
 change the other, or the panel hangs off the screen.
 
 It is the only block that gets this because it is the only one that can use the width.
-Measured at 320px, against the chip cloud:
-
-| Lever | Cloud | Words a row |
-| --- | --- | --- |
-| As it was | 270px | 2.46 |
-| Chip padding `tw-px-4` → `tw-px-3` | 270px | 2.46 |
-| Page gutter 12px → 8px | 278px | 2.62 |
-| **Browser full-bleed** | **296px** | **2.69** |
-
 Chip padding buys nothing, because a row is bounded by whole chips and shaving 8px off
-each one rarely fits another. The 8px gutter was rejected on how it looks, not on the
+each one rarely fits another. An 8px gutter was rejected on how it looks, not on the
 number: the view toggle and the section heading then sit against the screen edge.
 
 The hero panels are left inset on purpose. They hold a row or two each and gain nothing
@@ -1135,8 +1011,8 @@ browser as the page's own surface rather than a third card.
 
 ## Credits
 
-`CREDIT-1` to `CREDIT-3` are the rules. `CorpusCredit` in `Workspace.tsx` renders every
-credit, in the Sources line beneath the browser. The footer holds only the feedback link.
+`CREDIT-1` to `CREDIT-5` are the rules. `CorpusCredit` in `Workspace.tsx` renders every
+credit. The footer holds only the feedback link.
 
 | Detail | Why |
 | --- | --- |
@@ -1165,11 +1041,11 @@ tooltip is open.
 
 | Where | Rule |
 | --- | --- |
-| `CefrBadge` | The band and rank are the name; the word they belong to is the description. `aria-describedby` is always ours, never Radix's — the name already says what its tooltip says. In the search field the description points at the `invisible` mirror of the value, which Chrome reads because a directly-referenced node counts even when hidden |
+| `CefrBadge` | `aria-describedby` is always ours, never Radix's — the name already says what its tooltip says. In the search field the description points at the `invisible` mirror of the value, which Chrome reads because a directly-referenced node counts even when hidden |
 | `SwapButton` | Same trade: disabled, the reason why is in the name, not only in the tooltip |
 | A clickable alternative | Named by the word and nothing else, or the line stops reading as the translation. What clicking it does is a description — announced on focus, not while reading — and one element holds that sentence for every term on the card. The cost is two tab stops per badged term, the word and then its level, since the badge keeps its own focus for its rank |
-| The card's links, and the etymology link | Named by the word they open, behind the visible text so speech input still reaches them (2.5.3): "Google Translate: Wasser in English", "Wiktionary entry for siesta" and "Etymology of Wasser". The first two end the line they name, so reading the line ends with its source. The page's only new-tab links, and that they open one is a **description**, one element for all (`NewTabHelp`): what activating one does, announced on focus, while the name stays what it is for |
-| Abbreviations in the credits | Expanded in the sentence, never in a `title`. Chrome puts an `<abbr title>` in no name at all, and neither touch nor the keyboard can reach it — so it was a mechanism for nobody (3.1.4). The `<abbr>` markup went with it, and the lint rule below stays as a guard |
+| The card's links, and the etymology link | Named by the word they open, behind the visible text so speech input still reaches them (2.5.3): "Google Translate: Wasser in English", "Wiktionary entry for siesta" and "Etymology of Wasser". The first two end the line they name, so reading the line ends with its source. The page's only new-tab links, and that they open one is a **description**, one element for all (`NewTabHelp`, which `Workspace` renders, since the etymology link sits outside the card): what activating one does, announced on focus, while the name stays what it is for |
+| Abbreviations in the credits | Expanded in the sentence, never in a `title`. Chrome puts an `<abbr title>` in no name at all, and neither touch nor the keyboard can reach it (3.1.4) |
 | `WordSearchBox` | Named by its section heading (`labelledBy`), not by a second copy of the same string |
 | The figure | No heading, deliberately. It is a `<figure>` with a visible `<figcaption>`, which already names it, and its canvas carries a `role="img"` with a long description — a heading on top would be a second name for one thing |
 | The figure full screen | A modal `<dialog>` named by its visible heading and described by the hint under the plot, so the way to zoom is read as it opens. Each icon button is named by its own text, visually hidden under 900px |
@@ -1190,7 +1066,7 @@ and it runs in the pre-push hook and in `pr.yml` alongside the typecheck.
 | --- | --- |
 | `recommended`, not `strict` | `strict` withdraws the escape hatches this app uses on purpose — among them `<ul role="listbox">` with `<li role="option">`, which is the ARIA combobox pattern as the APG writes it |
 | Two rules added on top | `control-has-associated-label` and `anchor-ambiguous-text`, both off in `recommended` and both on the subject of every control saying something |
-| `<abbr>` needs a `title` | A `no-restricted-syntax` selector. There is no `jsx-a11y` rule for it, and the failure it guards already happened here: the expansion was passed to a wrapper and never reached the element. Nothing uses `<abbr>` any more, so it guards rather than checks |
+| `<abbr>` needs a `title` | A `no-restricted-syntax` selector. There is no `jsx-a11y` rule for it. Nothing uses `<abbr>`, so it guards rather than checks |
 | Unused disables are errors | An exemption that outlives its reason is a finding of its own |
 
 Six places disable a rule inline, each with the reason above it. Four are the same two
@@ -1199,11 +1075,6 @@ blind spots: a composite using **roving tabindex** looks unfocusable to
 combobox's options look inert to `click-events-have-key-events`, because the keys are on
 the input. The other two are the deliberate `autoFocus` and `CefrBadge`'s focusable
 `role="img"`.
-
-**Most of what this section documents is invisible to the linter.** It reads one element
-at a time, so it cannot see a name computed from two elements, a tablist with no panel, a
-string said twice in different components, or anything Fondue renders. The tests hold some
-of those; the transcript below holds the rest.
 
 ### The transcript
 
@@ -1235,11 +1106,6 @@ It **asserts nothing**, which is the point. The three layers divide like this:
 | `jsx-a11y` | One element, statically | A malformed element — a role missing its required props, an invalid `aria-*` |
 | The suite | One component, in jsdom | A named fact someone thought to assert |
 | The transcript | The whole deployed page | A change in what is heard, including in what nobody thought to assert |
-
-That third row is where both real findings came from. The doubled `CEFRCEFR` name, six tab
-stops for one tablist, a credit reachable twice under the same name, and six CEFR badges
-announcing a level with no word attached — none of those is a property of one element or
-one component, and none of them was on anyone's list.
 
 | Detail | Why |
 | --- | --- |
@@ -1293,7 +1159,7 @@ on — a panel, the page, a chip fill.
 | Dark keeps both | Its secondary is 8.5:1 on a chip and 13:1 on a panel already, so darkening it would flatten the page for nothing |
 | `--color-secondary-default` is redefined, not the classes | Every `tw-text-secondary` in the app and inside Fondue reads it, and 47 of its 48 uses in that stylesheet are `color`. Set on `.fondue-theme-provider` for the reason the focus ring is |
 | The error colour is a class of ours, not a token override | `--color-error-default` fills and outlines as well as colouring text, so overriding it would move the fills under other text. `.text-error-aaa` is 8.53:1 light and 10.73:1 dark |
-| Nothing is dimmed with opacity | The band count carried `tw-opacity-90`, which took it to 5.61:1 under a tab that was itself fine |
+| Nothing is dimmed with opacity | `tw-opacity-90` takes the band count to 5.61:1 under a tab that is itself fine |
 | A picked or highlighted select row takes the row's own colour, not the muted one | No single grey holds 7:1 on all six fills. Dark would need `neutral-25`, which is the text colour itself and stops the code reading as muted at all; light would need `neutral-80`. So the two state rows are coloured per row and the plain ones stay muted |
 | The skip link's two edges are drawn by different things | White text at 7:1 needs a fill too dark to also hold 3:1 against the dark page — **no fill does both jobs**. The fill draws the edge on the light page and the border draws it on the dark one, which is what `p6-skip.mjs`'s `borderVsPage` measures |
 
@@ -1308,9 +1174,9 @@ highlighted option are drawn in.
 | Detail | Why |
 | --- | --- |
 | Two lines, the surface inside and the focus colour outside | The shape Fondue already draws. It is what makes the ring visible over a filled control — the fill cannot swallow both lines at once |
-| The token, not the rules | Every ring in Fondue's stylesheet reads `--color-focus-default`, in 44 places, all of them an outline or a box-shadow. Overriding rules instead meant chasing one component at a time, and the segmented control was still blue after the first pass |
+| The token, not the rules | Every ring in Fondue's stylesheet reads `--color-focus-default`, in 44 places, all of them an outline or a box-shadow. Overriding rules instead means chasing one component at a time |
 | `#main` silences both | It takes programmatic focus from the skip link, and a ring around the whole page is not what that means |
-| Measured by `p2-focus.mjs` | Its `ringContrast` read the outline only, so a Fondue ring drawn as a box-shadow reported `null`. It reads both now, plus `ringSelfContrast`, the two lines against each other |
+| Measured by `p2-focus.mjs` | Its `ringContrast` reads the outline and the box-shadow, and `ringSelfContrast` reads the two lines against each other |
 
 ### Target size
 
@@ -1382,11 +1248,11 @@ Everything else over it is HTML.
 
 | Rule | Why |
 | --- | --- |
-| Every label is HTML over the canvas | Drawn into it they were images of text: 2.29:1 in light, blind to a text-spacing override (1.4.12), and unscalable (1.4.9). They lay out from the same geometry the points do, off the `size` state `paint` sets |
-| Both label rows take `text-muted-aaa` | 9.47:1 light and 7.54:1 dark, so 1.4.6 holds on both. The band name is the heavier of the two by weight rather than by a second colour, since a second colour is what cost the row above its contrast |
+| Every label is HTML over the canvas | Drawn into it they would be images of text, blind to a text-spacing override (1.4.12) and unscalable (1.4.9). They lay out from the same geometry the points do, off the `size` state `paint` sets |
+| Both label rows take `text-muted-aaa` | 9.47:1 light and 7.54:1 dark, so 1.4.6 holds on both. The band name is the heavier of the two by weight rather than by a second colour |
 | The ink alphas live in `ALPHA`, and `p3-states.mjs` holds a copy | A canvas has no computed style to read, so the probe recomputes the numbers from those alphas. The two must move together |
-| The points are 4.31:1 light and 4.03:1 dark | The darkest that leaves the cloud readable. The figure's whole claim is density, and at full ink the dense rows fill in solid — so this one is judged by eye as well as measured. The alphas were set against a lighter ink: the canvas takes its colour from the wrapper's `tw-text-secondary`, so darkening that tier lifted the points, the edges and the ring with it |
-| The bands are edges, not fills | The alternating fill was 1.10:1, a shade nobody could see; the boundary is what it was for. A half-pixel offset keeps the line 1px rather than a 2px smear |
+| The points are 4.31:1 light and 4.03:1 dark | The darkest that leaves the cloud readable. The figure's whole claim is density, and at full ink the dense rows fill in solid — so this one is judged by eye as well as measured. The canvas takes its colour from the wrapper's `tw-text-secondary`, so darkening that tier lifts the points, the edges and the ring with it |
+| The bands are edges, not fills | An alternating fill reads 1.10:1, a shade nobody can see. A half-pixel offset keeps the line 1px rather than a 2px smear |
 | The edges come from a copy of `BAND-1`'s thresholds in `CEFR_BANDS` | `bands.ts` is server-only. `FIG-11`'s test holds the copy to every artifact's `cefrBands`, so a change to the thresholds fails it until both move |
 | An edge sits half a rank past its band's last word (`FIG-12`) | At full zoom, ranks near 1,000 stand about 50px apart. An edge on the rank itself would run through that word |
 | The anchor is a gold dot inside a gold ring, and each has a dark edge | The ring, 27px across, is what the eye finds in a dense row, and the dot marks the word's exact place. `#f5c542` is 1.62:1 on the light ground, so there the edges are ink, at 5.84:1. In dark the ink is 1.12:1 against the gold, and stacked points reach that ink. So in dark the edges erase the points under them, and the gold meets the ground at 11.65:1. `ANCHOR` holds the sizes, and `REACH` follows the ring. `p3-states.mjs` copies the edge rule for its `accentRing`, and `p8-anchor.mjs` reads every part off the pixels |
@@ -1405,8 +1271,7 @@ WCAG 1.4.13 asks that it be dismissible and hoverable, and it is neither by defa
 
 ### The figure full screen
 
-`FIG-1` to `FIG-8` and `FIG-10` are the rules. In the page the figure is one static picture.
-Full screen is where it zooms and pans.
+`FIG-1` to `FIG-8` and `FIG-10` are the rules.
 
 | Detail | Why |
 | --- | --- |
@@ -1439,9 +1304,8 @@ Full screen is where it zooms and pans.
 
 ### Words beside the points
 
-`FIG-13` to `FIG-15` are the rules. Full screen, a point's word shows beside it wherever there
-is room, so a reader can read the crowd without hovering. On a phone there is no hover at
-all, and a tap looks the word up, which costs one to three calls to Google.
+`FIG-13` to `FIG-15` are the rules. On a phone there is no hover at all, and a tap looks the
+word up, which costs one to three calls to Google.
 
 | Detail | Why |
 | --- | --- |
@@ -1456,19 +1320,10 @@ all, and a tap looks the word up, which costs one to three calls to Google.
 | A pick on a word picks its point, checked before the points | A word covers no other point, so the word is what is under the pointer. The layer stays `pointer-events-none`, so a drag that starts on a word still pans |
 | No hover label over a placed word | The word already says what the label would |
 
-Measured on 2026-10-24 in headless Brave with the GPU off, against the deployed site, in
-the densest and the middle views of English and German at 16× and 32×:
-
-| | Desktop | CPU slowed 4× |
-| --- | --- | --- |
-| A frame of a pan, with or without words | 8–13 ms | 20–51 ms |
-| The frame that places 15–95 words | 10–12 ms more | 23–31 ms more |
-| The same frame in a view past the cap | 0–2 ms more | 1–5 ms more |
-
 ### Crawlers and link previews
 
-`lib/site.ts` holds the three values, and `layout.tsx`, `page.tsx`, `robots.ts`,
-`sitemap.ts` and `manifest.ts` read them. `app/icon.svg` is the favicon.
+`layout.tsx`, `page.tsx`, `robots.ts`, `sitemap.ts` and `manifest.ts` read `lib/site.ts`.
+`app/icon.svg` is the favicon.
 
 Next merges metadata **shallowly**: a child naming `openGraph` replaces the parent's whole
 object rather than adding to it. So `page.tsx` restates the Open Graph and Twitter fields
@@ -1480,16 +1335,12 @@ The sitemap lists one URL. Every word is query state on the same page.
 ## API route params
 
 Next percent-decodes a route param before the handler sees it, so a `decodeURIComponent` in
-a handler is a second pass. `ROUTE-7` is the rule: take the param as given, lowercase it
-where the lookup wants that, and nothing else.
+a handler is a second pass. `ROUTE-7` is the rule.
 
 | Where it runs | Decodes | So |
 | --- | --- | --- |
 | `next start` | Next's, once | |
 | Vercel | The edge's, then Next's | A word needs one more `%25` layer than it does locally |
-
-The count is a property of where the code runs, not of the code, which is why `ROUTE-1` to
-`ROUTE-6` state both columns.
 
 | Trap | Detail |
 | --- | --- |
@@ -1504,7 +1355,7 @@ that moved, naming it.
 
 | Detail | Why |
 | --- | --- |
-| It reads the rows out of `SPEC.md` | The table is the source and cannot drift from what is asserted. The cost is that reformatting it breaks the check, which it reports as `parsed 0 rows` rather than quietly passing |
+| It reads the rows out of `SPEC.md` | Reformatting the table breaks the check, which reports `parsed 0 rows` |
 | Post-deploy and weekly, in `deployed-decodes.yml` | The edge is Vercel's, so the column can move with no commit of ours to trigger on |
 | It takes a target | `pnpm decode:check http://localhost:3111` flags the `%` and `%2577ater` rows — the check discriminating between the two columns, not failing |
 
@@ -1579,8 +1430,7 @@ any function runs, and that path is `app/home/[theme]/[country]/page.tsx`.
 
 | Known cost | Detail |
 | --- | --- |
-| The field is two different inputs | The Workspace replaces the server's `<input>` with its own, so a finger that tapped it first can lose the keyboard on a phone. The text stays. The field also does nothing until the scripts have run, about 600 ms into a repeat visit on a simulated phone. Neither has been tried on an iPhone |
-| A push empties it | Every entry starts again after a deploy, and the CDN drops a rarely read entry early, so a quiet site misses often. A miss renders in iad1 |
+| The field is two different inputs | The Workspace replaces the server's `<input>` with its own, so a finger that tapped it first can lose the keyboard on a phone. The text stays. This has not been tried on an iPhone |
 | The stylesheets are in every HTML | `inlineCss` adds about 18KB to each answer, and React keeps a second copy in the RSC payload, which brotli absorbs. A repeat visit pays for that, and a first visit saves a round trip |
 | `inlineCss` is experimental | It is one line in `next.config.mjs`, and removing it costs nothing but the round trip |
 ## Verifying a build while the web dev server is running
@@ -1661,12 +1511,7 @@ load-bearing.
 | One directory, and it is the root | pnpm workspace: the lockfile is at the root, and an update from there rewrites `apps/web/package.json` and `pnpm-lock.yaml` together. Listing `/apps/web` as a second directory opens a duplicate PR per dependency that edits the manifest alone — there is no lockfile in that directory — and every one fails `pnpm install --frozen-lockfile`, in CI and on Vercel alike |
 | The limit is per directory | `open-pull-requests-limit: 8`, counted per directory rather than across the config |
 
-Two majors are ignored, because a peer range in a package we do not control forbids them:
-
-| Ignored | Blocked by |
-| --- | --- |
-| `tailwindcss` ≥ 4 | `@frontify/fondue-tokens` peers `^3.4.17` |
-| `typescript` ≥ 6 | `@typescript-eslint/parser` peers `>=4.8.4 <6.1.0` |
+Some majors are ignored, because a peer range in a package we do not control forbids them.
 
 An ignore is a decision to stop hearing about something, and nothing pulls on it — so each
 entry states its reason as a `# blocked-by:` line, and `pnpm ignores:check` reads that
@@ -1708,22 +1553,16 @@ exact pnpm pinned, since a patch can carry a security fix that a comparison of m
 sees. Node needs no such lookup, because setup-node and Vercel take the newest release of
 its major on every run. It changes nothing, since taking a major is a decision, and exits 1
 on a trailing major or on any advisory. `versions-freshness.yml` runs it weekly,
-and GitHub emails a failed scheduled run to whoever last edited its cron. Like every fetch
-here, it stays out of `pnpm dev`, the pre-push hook and `pr.yml`.
+and GitHub emails a failed scheduled run to whoever last edited its cron.
 
 ## Vendored skills
 
 `.claude/skills/` holds the skills below, and none of them is ours. They come from two
 upstreams, and nothing in the repo pulls on them, so nothing would notice them rotting.
 
-| Skill | Upstream | Refreshed by |
+| Skills | Upstream | Refreshed by |
 | --- | --- | --- |
-| `next-cache-components-adoption` | `vercel/next.js@canary`, `skills/` | `scripts/sync-next-skills.mjs` |
-| `next-cache-components-optimizer` | same | same |
-| `next-dev-loop` | same | same |
-| `next-partial-prefetching-adoption` | same | same |
-| `next-partial-prefetching-optimizer` | same | same |
-| `next-bundle-optimizer` | same | same |
+| The `next-*` directories | `vercel/next.js@canary`, `skills/` | `scripts/sync-next-skills.mjs` |
 | `fondue` | `Frontify/fondue@main`, `packages/sdk/skills/fondue/` | `npx skills update`, Vercel's skills CLI |
 
 | Command | Does |
@@ -1759,12 +1598,6 @@ The skill names the `@frontify/fondue` version it was written against, while the
 queries is whichever version `apps/web` has installed. The two drift apart on their own,
 and the skill says so itself: trust what the SDK returns over what the skill says.
 
-### What a fresh clone needs
-
-Nothing. The files, the lock and the symlink are all committed, and the weekly workflow
-runs on GitHub rather than on anyone's laptop, so the skills keep updating across a new
-machine or a reformatted disk. `pnpm skills:check` is the command that says so.
-
 `scripts/check-fondue-install.mjs` reads the lock, then reads `SKILL.md` through
 `.claude/skills/` rather than through `.agents/`. That path is the one an agent uses, so
 the single read covers every way a clone can be wrong: no lock, no `.agents/`, or a
@@ -1782,7 +1615,7 @@ on its own, but it clones a 2.42GB monorepo for a few markdown files and pins no
 | Watching the wrong directory | fondue's real files live in `.agents/`, so `.claude/skills` alone misses every fondue update. `WATCH` names all three paths and both the drift check and the commit read it, so they cannot disagree |
 | Symlinks are not directories | `readdir` reports a symlink as a symlink, so `sync-next-skills.mjs` would silently stop covering any Next.js skill that got symlinked. It only ever sees real directories |
 | A green fondue step means nothing on its own | `npx skills update` exits 0 whether it refreshed the skill or never found it. The workflow runs the check either side of it, so "saw nothing" cannot pass as success |
-| Rate limit | The sync script makes one GitHub API call. Unauthenticated that budget is 60/hour per IP, so a local run can fail on someone else's spending; `GITHUB_TOKEN` raises it |
+| Rate limit | The sync script makes one GitHub API call. Without a token a local run can fail on someone else's spending; `GITHUB_TOKEN` raises the budget |
 | Required check | A branch pushed with `github.token` fires no `pull_request` event, so `pr.yml` never runs on the PR. The workflow dispatches `pr.yml` on the branch, and the run shows in the Actions tab. GitHub counts a workflow job's check toward a required one only when a `push`, `pull_request`, `pull_request_review`, `pull_request_target`, `deployment` or `deployment_status` event started its run, so the dispatched `check` neither counts nor shows on the PR. Closing and reopening the PR by hand starts a run that counts |
 | Scheduled runs stop | GitHub disables a cron workflow after 60 days of repo inactivity. `workflow_dispatch` restarts it |
 | Unpinned CLI in CI | The fondue step runs `npx skills@latest`, third-party code from npm at whatever version is current. Upstream's own install instructions are unpinned and pinning would rot, so the exposure is accepted — but the workflow is split in two so it is accepted in a job that cannot write |
