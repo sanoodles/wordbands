@@ -29,6 +29,7 @@ learning order than any dictionary-structure metric, so the ranking rests on it 
   past rank 25,000 only about one word in seven is in the language's own dictionary. So
   past that rank the lemmatization list has to vouch for a word for it to be listed,
   which leaves each language with 33–40k words of genuine vocabulary.
+  [docs/build-filters.md](docs/build-filters.md) explains every filter the build applies.
 - **Display casing** is measured from the
   [Leipzig Corpora](https://wortschatz.uni-leipzig.de/en/download) sentence collection:
   how often each word is capitalized mid-sentence decides whether it's shown capitalized.

@@ -10,8 +10,8 @@
 // frequency-rank thresholds calibrated once against the CEFR-J Wordlist, English (median
 // rank per level: A1≈635, A2≈2275, B1≈4692, B2≈8394) and baked in below — an
 // English-derived heuristic reused for every language, with no CEFR list needed at build
-// time. The version used at calibration time was not recorded; CLAUDE.md holds the
-// re-verification and the measured agreement.
+// time. The version used at calibration time was not recorded; docs/build-filters.md holds
+// the re-verification and the measured agreement.
 //
 //   tsx scripts/build-bands.ts [lang]   # one language, or all when omitted
 //
