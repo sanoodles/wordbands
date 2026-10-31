@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import FeedbackLink from "@/components/FeedbackLink";
 import ThemeToggle from "@/components/ThemeToggle";
 import Workspace from "@/components/WorkspaceClient";
-import { pageTitle } from "@/lib/scenario";
+import { cappedWord, pageTitle } from "@/lib/scenario";
 import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
 import { themeOf } from "@/lib/theme";
 
@@ -46,14 +46,17 @@ const GUTTER = "tw-mx-auto tw-max-w-[1760px] tw-px-3 min-[700px]:tw-px-6 min-[90
 
 export default async function Home({
   params,
+  searchParams,
 }: {
   params: Promise<{ theme: string; country: string }>;
+  searchParams: Promise<{ word?: string | string[] }>;
 }) {
   // `next.config.mjs` rewrites `/` to this path. Vercel resolves the client IP to a country,
   // which seeds the source language for a first-time visitor. Off Vercel the path says
   // `none`, which falls back to English.
   const { theme, country } = await params;
   if (!themeOf(theme) || !/^([A-Z0-9]{2}|none)$/.test(country)) notFound();
+  const { word } = await searchParams;
   // On a phone the gutter is room taken off the content, so it stays narrow until there
   // is some to spare — vertically as well, where the top padding is blank screen above
   // the title. The cap itself is reasoned about above.
@@ -75,7 +78,10 @@ export default async function Home({
             Which words to learn first.
           </p>
         </header>
-        <Workspace country={country === "none" ? null : country} />
+        <Workspace
+          country={country === "none" ? null : country}
+          word={cappedWord(Array.isArray(word) ? word[0] : word)}
+        />
       </main>
       {/* The address is the link text, not hidden behind a word: a browser with no mail
           handler leaves a mailto doing nothing, and then it is still readable. A link

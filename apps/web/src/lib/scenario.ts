@@ -38,6 +38,9 @@ export interface Scenario {
   band: string | null;
 }
 
+/** A word from the URL, which nothing has looked up yet, cut to a length a page can hold. */
+export const cappedWord = (word: string | null | undefined) => word?.trim().slice(0, 40) ?? "";
+
 /**
  * The document title for a scenario's word — the other place the scenario surfaces.
  * Shared so the server-rendered title and the client's agree word for word.
@@ -45,7 +48,7 @@ export interface Scenario {
  */
 export function pageTitle(word: string | null | undefined): string {
   // Sliced because the word can come straight off the query string, unlooked-up.
-  const w = word?.trim().slice(0, 40);
+  const w = cappedWord(word);
   return w ? `${SITE_NAME}: ${w}` : SITE_NAME;
 }
 

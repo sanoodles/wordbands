@@ -141,6 +141,39 @@ describe("Workspace", () => {
 
   // The lookup echoes the corpus's casing back into the field, which collapses the
   // selection; without re-selecting, half the languages would open only half-ready.
+  describe("text typed into the server's field before the page was ready", () => {
+    const asked = (path: string) =>
+      vi.mocked(fetch).mock.calls.map(([url]) => String(url)).filter((url) => url.includes(path));
+
+    // @spec LOAD-4
+    it("stays in the field, with the caret at its end, while the opening word loads", async () => {
+      render(<Workspace typedBefore="ca" />);
+      const field = screen.getByRole<HTMLInputElement>("combobox", { name: /look up a word/i });
+      expect(field).toHaveValue("ca");
+      await screen.findByRole("heading", { name: /meaning of/i });
+      await waitFor(() => expect(asked("/api/word/water")).toHaveLength(1));
+      expect(field).toHaveValue("ca");
+      expect(field).toHaveFocus();
+      expect([field.selectionStart, field.selectionEnd]).toEqual([2, 2]);
+    });
+
+    // @spec LOAD-4
+    it("goes on as typing, so suggestions come", async () => {
+      render(<Workspace typedBefore="ca" />);
+      expect(await screen.findByRole("option", { name: "cat" }, { timeout: 1500 })).toBeInTheDocument();
+    });
+
+    // @spec LOAD-4
+    it("counts as typed, so a switch of language keeps it", async () => {
+      render(<Workspace typedBefore="ca" />);
+      await waitFor(() => expect(asked("/api/word/water")).toHaveLength(1));
+      await userEvent.click(screen.getByRole("combobox", { name: "Source language" }));
+      await userEvent.click(await screen.findByRole("option", { name: "Deutsch" }));
+      await waitFor(() => expect(asked("/api/word/ca?source=de")).toHaveLength(1));
+      expect(screen.getByRole("combobox", { name: /look up a word/i })).toHaveValue("ca");
+    });
+  });
+
   it("keeps the word selected across the lookup that recases it", async () => {
     window.history.replaceState(null, "", "/?source=de&word=plädoyer");
     render(<Workspace />);

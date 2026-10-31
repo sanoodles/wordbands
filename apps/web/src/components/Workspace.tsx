@@ -26,7 +26,16 @@ import {
 import { sourceLang, targetLang } from "@/lib/geo";
 import { baseLang } from "@/lib/translate";
 import { pageTitle, readScenario, writeScenario } from "@/lib/scenario";
-import { OUT_LINK, PANEL, PANEL_LANG, SECTION_HEADING } from "@/components/panel";
+import {
+  HERO,
+  HERO_ROW,
+  OUT_LINK,
+  PANEL,
+  PANEL_LANG,
+  SEARCH_PLACEHOLDER,
+  SEARCH_SECTION,
+  SECTION_HEADING,
+} from "@/components/panel";
 
 // Expanded forms for the abbreviations we show (WCAG 3.1.4). Each reads inside the
 // sentence right after its abbreviation, so none of them repeats it or its version.
@@ -350,7 +359,14 @@ function CorpusCredit({ source, target }: { source: SourceLang; target: TargetLa
   );
 }
 
-export default function Workspace({ country }: { country?: string | null }) {
+export default function Workspace({
+  country,
+  typedBefore = null,
+}: {
+  country?: string | null;
+  /** What the reader typed into the server's field before this mounted, if anything. */
+  typedBefore?: string | null;
+}) {
   // A scenario carried in the URL wins over stored/default picks, so a shared deeplink
   // restores exactly what the sender saw. Read once, on mount.
   // @spec URL-5
@@ -385,11 +401,10 @@ export default function Workspace({ country }: { country?: string | null }) {
   };
 
   // The searched word drives the whole view, so its lookup lives here, above it.
-  const [query, setQueryState] = useState(
-    () => initial.word ?? SOURCE_LANG_META[source].defaultWord,
-  );
+  const openingWord = useRef(initial.word ?? SOURCE_LANG_META[source].defaultWord).current;
+  const [query, setQueryState] = useState(typedBefore ?? openingWord);
   // Whether the field holds what the user typed, which a switch of language keeps.
-  const typed = useRef(false);
+  const typed = useRef(typedBefore !== null);
   const setQuery = (word: string) => {
     typed.current = false;
     setQueryState(word);
@@ -472,8 +487,8 @@ export default function Workspace({ country }: { country?: string | null }) {
   useEffect(() => {
     if (bootstrapped.current) return;
     bootstrapped.current = true;
-    void lookup(query, source, initial.band ?? null);
-  }, [lookup, source, query, initial.band]);
+    void lookup(openingWord, source, initial.band ?? null);
+  }, [lookup, source, openingWord, initial.band]);
 
   // The first write replaces the entry the page opened on, rather than adding one.
   // @spec URL-10
@@ -625,11 +640,9 @@ export default function Workspace({ country }: { country?: string | null }) {
           matching panels, each opening with its language. Stretched, not start-aligned,
           so the pair squares off. */}
       {/* Tighter above and below the card on a phone, where it is stacked, not beside. */}
-      <div className="tw-mb-6 tw-grid tw-grid-cols-1 tw-gap-x-4 tw-gap-y-3 min-[700px]:tw-mb-12 min-[700px]:tw-gap-y-4 min-[860px]:tw-grid-cols-[minmax(0,1fr)_auto_minmax(0,1.1fr)]">
+      <div className={HERO}>
         <div className={PANEL}>
-          {/* Language and word share one row at every width — the select is only wide
-              enough for a code, and a phone has no line to spare for it alone. */}
-          <div className="tw-flex tw-items-start tw-gap-2 min-[700px]:tw-gap-3">
+          <div className={HERO_ROW}>
             {/* Section headings (WCAG 2.4.10, 3.3.2). One heading over each control, so
                 the heading is also the control's visible label — the selects show a
                 code, which is their value, not their name. */}
@@ -649,8 +662,7 @@ export default function Workspace({ country }: { country?: string | null }) {
               </p>
             </section>
 
-            {/* Whatever the select leaves, which the field then shrinks into. */}
-            <section aria-labelledby="search-heading" className="tw-min-w-0 tw-grow tw-basis-0">
+            <section aria-labelledby="search-heading" className={SEARCH_SECTION}>
               <h2 id="search-heading" className={SECTION_HEADING}>
                 Look up a word
               </h2>
@@ -669,13 +681,14 @@ export default function Workspace({ country }: { country?: string | null }) {
                 // what it is for (3.3.1).
                 describedBy={error ? "lookup-error search-help" : "search-help"}
                 invalid={!!error}
-                placeholder="look up a word…"
+                placeholder={SEARCH_PLACEHOLDER}
                 busy={loading}
                 // The one thing the page is for: it opens ready to be typed into.
                 // eslint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
                 reseeded={reseeded}
                 refocused={refocused}
+                carriesOn={typedBefore !== null}
                 // Only while the field still holds the word this level belongs to.
                 // Sitting against the text, it would otherwise read as a claim about
                 // whatever is being typed over it.

@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { LoadingCircle, TextInput } from "@frontify/fondue/components";
+import { SEARCH_FIELD } from "@/components/panel";
 
 // A typeahead <li role="option">, painted with Fondue tokens (per the ARIA combobox
 // pattern the options carry the click handlers directly, not a nested control).
@@ -65,6 +66,7 @@ export default function WordSearchBox({
   autoFocus = false,
   reseeded = 0,
   refocused = 0,
+  carriesOn = false,
   badge,
   onBadgeFit,
   invalid = false,
@@ -93,6 +95,8 @@ export default function WordSearchBox({
    * switch. The field then takes focus with the caret at the end, so typing carries on.
    */
   refocused?: number;
+  /** The value was typed before the page was ready, so the field carries on from it. */
+  carriesOn?: boolean;
   /**
    * Trailed just after the field's text, inside the box. Only pass it for something that
    * describes *this* text — it is laid out against the current value, so a caller must
@@ -177,7 +181,7 @@ export default function WordSearchBox({
   // "Wasser") and that collapses the selection. Once focus has been given away, or the
   // text is no longer that word, the field is the user's — hands off.
   const seeded = useRef(value);
-  const grab = useRef<"pending" | "held" | "released">("pending");
+  const grab = useRef<"pending" | "held" | "released">(carriesOn ? "released" : "pending");
   const reseeds = useRef(reseeded);
   useEffect(() => {
     // A language switch leaves the field on that language's default word, which nobody
@@ -328,6 +332,17 @@ export default function WordSearchBox({
     closeSuggestions();
   }, [source, closeSuggestions]);
 
+  // Typing that began before the page was ready goes on as if the page had been there.
+  // After the effect above, which would otherwise cancel the debounce this starts.
+  // @spec LOAD-4
+  const carried = useRef(!carriesOn);
+  useEffect(() => {
+    if (carried.current) return;
+    carried.current = true;
+    caretToEnd();
+    onQueryChange(value);
+  }, [onQueryChange, value]);
+
   return (
     // No submit button: typing that settles on a word looks it up, and Enter still
     // submits implicitly for the rest. `flex` so the field shrinks below its
@@ -340,10 +355,7 @@ export default function WordSearchBox({
         commit(value);
       }}
     >
-      {/* Stay clear of the ≥16px that keeps iOS from zooming on focus — Fondue's
-          body-small (~13px) would trigger it. The placeholder is a separate element,
-          sized in globals.css. */}
-      <div ref={wrapRef} className="tw-relative tw-w-fit [&_input]:tw-text-x-large">
+      <div ref={wrapRef} className={SEARCH_FIELD}>
         <TextInput.Root
           // Fondue's own error state, because it hard-codes aria-invalid from it — and
           // it stands down whenever the spinner is up, as the badge does, since the two

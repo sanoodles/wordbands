@@ -52,7 +52,7 @@ verifies the claim exists, not that it bites.
 | `CALL` | What the browser asks our server for | PR |
 | `LANG` | The two language pickers, and the word a switch of source language leaves in the search box | PR |
 | `SELECT` | The menus of the language pickers and of the band dropdown | PR |
-| `LOAD` | How soon a phone shows the page | By hand, with `pnpm load:check`, and in PR for `LOAD-3` |
+| `LOAD` | How soon a phone shows the page | By hand, with `pnpm load:check`, and in PR for `LOAD-3` and `LOAD-4` |
 
 Not covered yet, and deliberately: visual design, copy, component layout, the
 accessibility contract (its proof is the transcript, which detects change rather than
@@ -292,10 +292,12 @@ language's code, and its name in that language.
 ## LOAD — how soon a phone shows the page
 
 "A phone" here is 390×844 with a CPU 2× slower than this measure's machine, over good 4G: 40 ms
-added to each request, 20 Mbps down and 5 Mbps up. Each rule holds for a page the CDN holds.
+added to each request, 20 Mbps down and 5 Mbps up. Each rule holds for a page the CDN holds. A
+repeat visit opens a new connection, with the files in the disk cache.
 
 | ID | Rule |
 | --- | --- |
 | LOAD-1 | The first paint lands within 0.3 s, on a first visit and on a repeat visit |
 | LOAD-2 | On a repeat visit the search field shows within 0.3 s |
 | LOAD-3 | The HTML is in the theme the visitor picked, so a pick holds across a reload and paints with no flash |
+| LOAD-4 | The search field is in the HTML. Text typed into it before the page is ready stays in the field and goes on as typing, and Enter looks it up |

@@ -1354,6 +1354,7 @@ Two ways of reaching 44 that do not:
 | A click into it selects the whole value, on the click that focuses it and on no other | Clicking in asks for a different word far more often than it edits this one, and a second click has to leave the caret where it was put |
 | Switching the source language refocuses the field. The default word it lands on is selected, and a typed word it keeps gets the caret at its end | The default word is no more asked for than the one the page opens on. A kept word may be half-typed, and a selection would let the next keystroke erase it. On a phone this is the difference between typing and first tapping the field to raise the keyboard |
 | The source select says so first, in a description | A focus move on a setting change is a change of context, which WCAG 3.2.2 allows only where it was advised beforehand. A description is read on focus, before the menu opens; the field is read after the move has already happened. It sits on the source select alone — picking a target moves nothing |
+| Text typed before the Workspace mounts stays, with the caret at its end (`LOAD-4`) | `WorkspaceClient` hands it over as `typedBefore`, and the field carries on as if it had been there: suggestions come, and a switch of language keeps it. The word the page opens on is still looked up, so the card fills in behind the text. The effect that does this has to run after the one that cancels suggestions, or that one cancels it |
 | A swap, a clicked alternative and a chip never take the field | Each lands on a word the learner picked, and on a phone a keyboard would come up over the card that just answered |
 | A clicked alternative lands on the card instead, and only where it dropped focus | Its own button is removed by the re-render the pick causes, so focus falls to `<body>`. The card is `tabIndex={-1}` for that one purpose, and it waits for the new word: the name says "Meaning of" whichever word is there, so moving early would announce the one just left |
 | The selection is re-applied after the lookup recases the word | "wasser" comes back "Wasser", which collapses the selection. Without this, half the languages open only half-ready |
@@ -1573,9 +1574,12 @@ any function runs, and that path is `app/home/[theme]/[country]/page.tsx`.
 | The two cookie names are written again in `next.config.mjs` | A config cannot import TypeScript. `next-config.test.ts` runs the rules against the names in `lib/theme.ts`, so a rename fails it |
 | They live in `lib/theme.ts`, not beside the provider | A server component that imports from a `"use client"` file receives a reference, not the string |
 | `x-vercel-cache` tells a hit from a miss | A hit took 119–140 ms on a new connection, and a miss about 357 ms on a preview |
+| The search field is in the HTML (`LOAD-4`) | `WorkspaceClient` sends the Workspace's hero with a real `<input>`. It shares its layout with `Workspace` through `panel.ts` and the same heights, so a change to the hero changes both |
+| That field's `<form>` has `action="/"`, and its input is named `word` | Enter before any script has run loads the word through the URL. `searchParams` gives the page the same word, which a link therefore shows in its first paint |
 
 | Known cost | Detail |
 | --- | --- |
+| The field is two different inputs | The Workspace replaces the server's `<input>` with its own, so a finger that tapped it first can lose the keyboard on a phone. The text stays. The field also does nothing until the scripts have run, about 600 ms into a repeat visit on a simulated phone. Neither has been tried on an iPhone |
 | A push empties it | Every entry starts again after a deploy, and the CDN drops a rarely read entry early, so a quiet site misses often. A miss renders in iad1 |
 | The stylesheets are in every HTML | `inlineCss` adds about 18KB to each answer, and React keeps a second copy in the RSC payload, which brotli absorbs. A repeat visit pays for that, and a first visit saves a round trip |
 | `inlineCss` is experimental | It is one line in `next.config.mjs`, and removing it costs nothing but the round trip |
