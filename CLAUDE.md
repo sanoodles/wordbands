@@ -1269,7 +1269,7 @@ upstreams, and nothing in the repo pulls on them, so nothing would notice them r
 | Skills | Upstream | Refreshed by |
 | --- | --- | --- |
 | The `next-*` directories | `vercel/next.js@canary`, `skills/` | `scripts/sync-next-skills.mjs` |
-| `fondue` | `Frontify/fondue@main`, `packages/sdk/skills/fondue/` | `npx skills update`, Vercel's skills CLI |
+| `fondue` | `Frontify/fondue@main`, `packages/sdk/skills/fondue/` | `skills update`, Vercel's skills CLI, which the root `package.json` pins |
 
 | Command | Does |
 | --- | --- |
@@ -1287,7 +1287,7 @@ another is a `mkdir` plus `pnpm skills:sync`, with no edit to the script.
 
 ### How fondue is laid out
 
-`skills-lock.json` at the repo root is what makes `npx skills update` able to find the
+`skills-lock.json` at the repo root is what makes `skills update` able to find the
 skill at all. Without it nothing knows fondue is installed.
 
 | Path | Holds |
@@ -1320,11 +1320,11 @@ on its own, but it clones a 2.42GB monorepo for a few markdown files and pins no
 | --- | --- |
 | Watching the wrong directory | fondue's real files live in `.agents/`, so `.claude/skills` alone misses every fondue update. `WATCH` names all three paths and both the drift check and the commit read it, so they cannot disagree |
 | Symlinks are not directories | `readdir` reports a symlink as a symlink, so `sync-next-skills.mjs` would silently stop covering any Next.js skill that got symlinked. It only ever sees real directories |
-| A green fondue step means nothing on its own | `npx skills update` exits 0 whether it refreshed the skill or never found it. The workflow runs the check either side of it, so "saw nothing" cannot pass as success |
+| A green fondue step means nothing on its own | `skills update` exits 0 whether it refreshed the skill or never found it. The workflow runs the check either side of it, so "saw nothing" cannot pass as success |
 | Rate limit | The sync script makes one GitHub API call. Without a token a local run can fail on someone else's spending; `GITHUB_TOKEN` raises the budget |
 | Required check | A branch pushed with `github.token` fires no `pull_request` event, so `pr.yml` never runs on the PR. The workflow dispatches `pr.yml` on the branch, and the run shows in the Actions tab. GitHub counts a workflow job's check toward a required one only when a `push`, `pull_request`, `pull_request_review`, `pull_request_target`, `deployment` or `deployment_status` event started its run, so the dispatched `check` neither counts nor shows on the PR. Closing and reopening the PR by hand starts a run that counts |
 | Scheduled runs stop | GitHub disables a cron workflow after 60 days of repo inactivity. `workflow_dispatch` restarts it |
-| Unpinned CLI in CI | The fondue step runs `npx skills@latest`, third-party code from npm at whatever version is current. Upstream's own install instructions are unpinned and pinning would rot, so the exposure is accepted — but the workflow is split in two so it is accepted in a job that cannot write |
+| Pinned CLI | The fondue step runs the skills CLI that the root `package.json` pins and `pnpm-lock.yaml` locks, its dependencies included, so neither `pnpm skills:sync` nor CI runs whatever release is newest. Dependabot moves the pin with the other development dependencies, so it does not rot. The CLI is still third-party code, so the workflow is split in two, and it runs in a job that cannot write |
 | Two jobs, not one | `sync` runs the CLI under `contents: read` and hands `propose` a tarball; `propose` writes and runs no third-party code. A compromised CLI can still put files in front of a reviewer, which is what the PR is for. What it cannot do is push, open a PR, or dispatch a workflow |
 | tar, not the artifact walk | `.claude/skills/fondue` is a symlink. An uploader that follows it hands `propose` a directory where the repo keeps a link — the exact layout `check-fondue-install.mjs` exists to catch. tar stores the link itself |
 | Deletions | A tar of the synced tree carries what upstream added and changed, and nothing records what it removed. `propose` deletes the watched paths before extracting, so the tree matches the sync exactly |

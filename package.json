@@ -15,7 +15,7 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "dev": "turbo run dev",
-    "skills:sync": "node scripts/sync-next-skills.mjs && npx -y skills@latest update -y",
+    "skills:sync": "node scripts/sync-next-skills.mjs && DO_NOT_TRACK=1 skills update -y",
     "skills:check": "node scripts/check-fondue-install.mjs && node scripts/sync-next-skills.mjs --check",
     "spec:check": "node scripts/check-spec.mjs",
     "spec:list": "node scripts/check-spec.mjs --list",
@@ -29,7 +29,8 @@
     "probe": "node scripts/probe.mjs"
   },
   "devDependencies": {
-    "turbo": "^2.11.9",
+    "skills": "^1.7.5",
+    "turbo": "^2.11.10",
     "typescript": "^5.9.2"
   }
 }
