@@ -1,5 +1,5 @@
-// A headless Chromium-family browser, driven over CDP with no dependencies. Shared by
-// check-a11y-transcript.mjs and probe.mjs.
+// A headless Chromium-family browser, driven over CDP on a pipe, with no dependencies.
+// Shared by check-a11y-transcript.mjs, check-load.mjs and probe.mjs.
 //
 // Needs a Chromium-family browser on PATH; set CHROME to name one.
 
@@ -35,7 +35,7 @@ export function launch({ name, profile: kept }) {
   const profile = kept ?? mkdtempSync(join(tmpdir(), `${name}-`));
   const flags = [
     "--headless=new",
-    "--remote-debugging-port=0",
+    "--remote-debugging-pipe",
     `--user-data-dir=${profile}`,
     "--no-first-run",
     "--disable-gpu",
@@ -56,12 +56,13 @@ export function launch({ name, profile: kept }) {
     throw new Error(`no browser on PATH; tried ${candidates.join(", ")}. Set CHROME to name one.`);
   }
   const child = spawn(bin, flags, {
-    stdio: ["ignore", "ignore", "pipe"],
+    // fd 3 carries commands to the browser, and fd 4 carries its replies and events.
+    stdio: ["ignore", "ignore", "pipe", "pipe", "pipe"],
     env: { ...process.env, LANG: "en_US.UTF-8", LC_ALL: "en_US.UTF-8", TZ: "UTC" },
     // Its own process group, so `stop` reaches a browser started behind a wrapper script.
     detached: true,
   });
-  child.on("error", () => {}); // surfaced by the exit handler in browserEndpoint instead
+  child.on("error", () => {}); // surfaced by the exit handler in connect instead
   const log = [];
   child.stderr.on("data", (d) => log.push(String(d)));
   return { child, profile, kept: !!kept, log };
@@ -102,60 +103,74 @@ export function killOnExit({ child, profile, kept }) {
   for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) process.once(sig, () => process.exit(1));
 }
 
-// Chrome prints the endpoint it chose to stderr, which is the only way to learn it with
-// --remote-debugging-port=0. A fixed port would collide with whatever else is debugging on
-// this machine — and the checks run locally as often as they run in CI.
+// A pipe, not a TCP port: any process on the machine can connect to a debugging port on
+// 127.0.0.1 and drive the browser. Only the process that started the browser holds the
+// pipe, and a pipe cannot collide with whatever else is debugging on this machine. Each
+// message is JSON ended by a NUL byte.
 //
-// The endpoint is the browser itself, which carries no Page domain. The tab is reached
-// through Target, over this same socket, rather than through the HTTP list on the port:
-// that list is guarded against DNS rebinding and its rules have moved between versions,
-// and a check that cannot open a tab on someone else's runner is not a check.
-function browserEndpoint({ child, log }) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`browser reported no debugging endpoint in 20s\n${log.join("").slice(0, 600)}`)), 20_000);
-    child.stderr.on("data", () => {
-      const m = /ws:\/\/[^\s]+/.exec(log.join(""));
-      if (m) { clearTimeout(timer); resolve(m[0]); }
-    });
-    child.on("exit", (code) => { clearTimeout(timer); reject(new Error(`browser exited (${code})\n${log.join("").slice(0, 600)}`)); });
-  });
-}
-
-function connect(url) {
-  const ws = new WebSocket(url);
+// The pipe leads to the browser itself, which carries no Page domain. The tab is reached
+// through Target, over this same pipe.
+function connect({ child, log }) {
+  const [, , , toBrowser, fromBrowser] = child.stdio;
   let id = 0;
   const pending = new Map();
   const listeners = [];
-  ws.onmessage = (m) => {
-    const msg = JSON.parse(m.data);
-    if (msg.id && pending.has(msg.id)) {
-      const { resolve, reject } = pending.get(msg.id);
-      pending.delete(msg.id);
-      msg.error ? reject(new Error(JSON.stringify(msg.error))) : resolve(msg.result);
-    } else if (msg.method) for (const l of listeners) l(msg);
+  const exited = new Promise((_, reject) =>
+    child.on("exit", (code) => reject(new Error(`browser exited (${code})\n${log.join("").slice(0, 600)}`))),
+  );
+  exited.catch(() => {}); // a browser that `stop` ended rejects with no command waiting
+  // Writes after the exit fail with EPIPE, which `exited` already reports.
+  toBrowser.on("error", () => {});
+  fromBrowser.on("error", () => {});
+  fromBrowser.setEncoding("utf8");
+  let partial = "";
+  fromBrowser.on("data", (chunk) => {
+    const parts = (partial + chunk).split("\0");
+    partial = parts.pop();
+    for (const part of parts) {
+      const msg = JSON.parse(part);
+      if (msg.id && pending.has(msg.id)) {
+        const { resolve, reject } = pending.get(msg.id);
+        pending.delete(msg.id);
+        msg.error ? reject(new Error(JSON.stringify(msg.error))) : resolve(msg.result);
+      } else if (msg.method) for (const l of listeners) l(msg);
+    }
+  });
+  const raw = (method, params = {}, sessionId) => {
+    const n = ++id;
+    const reply = new Promise((resolve, reject) => pending.set(n, { resolve, reject }));
+    toBrowser.write(JSON.stringify(sessionId ? { id: n, method, params, sessionId } : { id: n, method, params }) + "\0");
+    return Promise.race([reply, exited]);
   };
-  const raw = (method, params = {}, sessionId) =>
-    new Promise((resolve, reject) => {
-      const n = ++id;
-      pending.set(n, { resolve, reject });
-      ws.send(JSON.stringify(sessionId ? { id: n, method, params, sessionId } : { id: n, method, params }));
-    });
-  return { ws, raw, on: (l) => listeners.push(l), open: new Promise((r) => (ws.onopen = r)) };
+  const off = (l) => {
+    const i = listeners.indexOf(l);
+    if (i >= 0) listeners.splice(i, 1);
+  };
+  return { raw, on: (l) => listeners.push(l), off };
 }
 
 /**
  * One tab of the browser. A flattened session, so the page's commands and its events ride
- * the one socket the browser already gave us. `close` ends the socket, not the browser.
+ * the one pipe the browser has. `close` stops the page's listeners; `stop` ends the browser.
  */
 export async function openPage(browser) {
-  const cdp = connect(await browserEndpoint(browser));
-  await cdp.open;
-  const { targetId } = await cdp.raw("Target.createTarget", { url: "about:blank" });
+  browser.cdp ??= connect(browser);
+  const cdp = browser.cdp;
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`browser answered nothing on the pipe in 20s\n${browser.log.join("").slice(0, 600)}`)), 20_000);
+  });
+  const { targetId } = await Promise.race([cdp.raw("Target.createTarget", { url: "about:blank" }), timeout]).finally(() => clearTimeout(timer));
   const { sessionId } = await cdp.raw("Target.attachToTarget", { targetId, flatten: true });
+  const mine = [];
   return {
     send: (method, params) => cdp.raw(method, params, sessionId),
-    on: (l) => cdp.on((msg) => msg.sessionId === sessionId && l(msg)),
-    close: () => cdp.ws.close(),
+    on: (l) => {
+      const scoped = (msg) => msg.sessionId === sessionId && l(msg);
+      mine.push(scoped);
+      cdp.on(scoped);
+    },
+    close: () => mine.forEach(cdp.off),
   };
 }
 
