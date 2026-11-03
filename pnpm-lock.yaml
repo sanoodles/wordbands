@@ -201,11 +201,11 @@ importers:
   apps/web:
     dependencies:
       '@frontify/fondue':
-        specifier: ^13.8.1
-        version: 13.10.0(@babel/core@7.29.7(supports-color@7.2.0))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@7.2.0))(supports-color@7.2.0))(@babel/template@7.29.7)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@udecode/plate-common@42.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(scheduler@0.28.0)(slate-history@0.113.1(slate@0.102.0))(slate-hyperscript@0.125.0(slate@0.102.0))(supports-color@7.2.0)(tailwindcss@3.4.19(tsx@4.23.15))(zustand@4.5.7(@types/react@19.3.0)(immer@10.1.1)(react@19.3.1))
+        specifier: ^13.11.1
+        version: 13.11.1(@babel/core@7.29.7(supports-color@7.2.0))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@7.2.0))(supports-color@7.2.0))(@babel/template@7.29.7)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@udecode/plate-common@42.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(scheduler@0.28.0)(slate-history@0.113.1(slate@0.102.0))(slate-hyperscript@0.125.0(slate@0.102.0))(supports-color@7.2.0)(tailwindcss@3.4.19(tsx@4.23.15))(zustand@4.5.7(@types/react@19.3.0)(immer@10.1.1)(react@19.3.1))
       next:
-        specifier: ^16.4.2
-        version: 16.4.2(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: ^16.4.3
+        version: 16.4.3(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react:
         specifier: ^19.3.1
         version: 19.3.1
@@ -1177,47 +1177,47 @@ packages:
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
-  '@frontify/fondue-charts@8.0.2':
-    resolution: {integrity: sha512-Q26gOUMZS2Rhqcd/gCqpxA7BXdK2y9OZ8lDs7IpttMm6qkEezi8gz6J1Nndw3Xi6iqnywspCgMuk+27yb0VUmg==}
+  '@frontify/fondue-charts@9.0.0':
+    resolution: {integrity: sha512-oEld+zSYc6m5butZGSHGPuUrvFkHHMvsd5BfU1bD0KeTLgcg8JoAmJ4cqp+AwIZHOJfkozzhcERIqiORyma/7w==}
     engines: {node: '>=18'}
     peerDependencies:
-      '@frontify/fondue-tokens': ^5.1.2
+      '@frontify/fondue-tokens': ^5.2.0
       react: ^18
       react-dom: ^18
 
-  '@frontify/fondue-components@34.0.0':
-    resolution: {integrity: sha512-CjeMpt+d1B+Kai4gusLuzo8WggBxgbHxAwOXLJuEGT5HUW4Voxnbw/embsFQfoKVD9HG593iAr0h9ESRXTbV1g==}
+  '@frontify/fondue-components@36.0.0':
+    resolution: {integrity: sha512-k6Nns86jEJvJfwJN8EtpdqfEvQYG6TWVCL6bRLBBLbh6tIJ4JO1MBJm0A8I9w4s3dE+XI+xs5fkuzINWFTJhMw==}
     engines: {node: '>=18'}
     peerDependencies:
-      '@frontify/fondue-icons': ^0.30.0
-      '@frontify/fondue-tokens': ^5.1.2
+      '@frontify/fondue-icons': ^0.32.0
+      '@frontify/fondue-tokens': ^5.2.0
       react: ^18
       react-dom: ^18
 
-  '@frontify/fondue-icons@0.30.0':
-    resolution: {integrity: sha512-JTVu+bVW0q2axokZBHKUEzhspW8TtVk3/xw2gQhOXQ9ew3BO0DmZGy/c9/paAMaRtRHbBldKCWb5GabZJYma/A==}
+  '@frontify/fondue-icons@0.32.0':
+    resolution: {integrity: sha512-1ZbMLWe4HRGTclBgFkI/0OFvP2nn8Si4JBEQrqo0ytiqBKpS3RKhJEhEXo4SaWu0dT7zveKJCkt2zKn68tzUAg==}
     engines: {node: '>=18'}
     peerDependencies:
       react: ^18
 
-  '@frontify/fondue-rte@0.1.12':
-    resolution: {integrity: sha512-tuosDCjP71HoWCGw5r84UyQKT+NiykZkexs8bw6RZSJsnWT0X9kvakEV6H+yB8XpdkhxxHLUyiN3HI6F2CD3iw==}
+  '@frontify/fondue-rte@0.1.14':
+    resolution: {integrity: sha512-w+AxBTgL986rpgIkl7ohrF3q/h/2bSLR7/elKC+UbIVaDdRq6hAlSpcRdFdFUlnWP0QnI/iPasaCTfcBqdgSow==}
     engines: {node: '>=18'}
     peerDependencies:
       react: ^18
       react-dom: ^18
 
-  '@frontify/fondue-sdk@0.2.4':
-    resolution: {integrity: sha512-uwNAimZdZBx0Dgjt/Abfm1xQAKDRxseBfUS2PwZUKqwZIrEoxdFHKZ8VPo38kBywkNTgUC4ECWuWctW1FtkE7w==}
+  '@frontify/fondue-sdk@0.3.1':
+    resolution: {integrity: sha512-DO27567YQtEYQ5ZvjC/0XjVOU4QRoHt8UcBEiMJrDtzloJLx0SL5VHOfcUjtMpiSOFKvzFyowJD+qDuSxCIBoA==}
     engines: {node: '>=20'}
 
-  '@frontify/fondue-tokens@5.1.2':
-    resolution: {integrity: sha512-fKif/+w9f37ZtrHXwIjPkngLrQcN8tHEtylPdwjNcDhiR3XsNNDKDiPqZSqtd4vznJH6+xRcGpNTPAYOteaWCw==}
+  '@frontify/fondue-tokens@5.2.0':
+    resolution: {integrity: sha512-HElBLFjsMPcG1yx1txSsXnF9pRphlcp9Z6wpyZSL8iBy5dzvfOG9432yONLi3m1Gpqb7CzASMcWMza4iB7cJhw==}
     peerDependencies:
       tailwindcss: ^3.4.17
 
-  '@frontify/fondue@13.10.0':
-    resolution: {integrity: sha512-KWGhqHQJyDlJjj+L8pd+YpHmknD4RErlxJpkbMdgtmqFYK40h5/+wjz9oCa5YqVDI49vlTQR9PsE0wi16Ee7lQ==}
+  '@frontify/fondue@13.11.1':
+    resolution: {integrity: sha512-e9LsLZWjyIErA1d/WathFYo8qKqLJlOxP6U7nB2I/ef6JX5gsuXQr7un+0XNNczmlUBZ8y2bH/H65zpXcy67PA==}
     engines: {node: '>=18'}
     hasBin: true
     peerDependencies:
@@ -1460,57 +1460,57 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@next/env@16.4.2':
-    resolution: {integrity: sha512-nTUTFH7G5/J/fmpkjVLegOkqyKOP0CEsJcMsyO4UCYeN1su+YMW/MfaSErnJskL7XM+UDK6aTvslxsRCyya/sA==}
+  '@next/env@16.4.3':
+    resolution: {integrity: sha512-a7tz1QCcWWkwC/rPJcPMJk/UNRu9CFhDd3OHYE5hddbJrs8BqRTalxI6GlKCWEGzRLHN+S/B7a4PAHCtm25aBQ==}
 
-  '@next/swc-darwin-arm64@16.4.2':
-    resolution: {integrity: sha512-ONkhFvZNFWlsEHOM/81AtxdyuJP2KRYKYR0JxPwvcu1AuPMMMgcL+wW2luldJvMtZwKtUxoSkCychW5wIeoYSw==}
+  '@next/swc-darwin-arm64@16.4.3':
+    resolution: {integrity: sha512-4yq5EXBt+VDtAZwTyfijaFp5D2C5oz3Ikw5a2kiX2K9nw72vrZX2q5UuAlkPtUMO1tQz6JTKpaKWjS7OOefTDQ==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
 
-  '@next/swc-darwin-x64@16.4.2':
-    resolution: {integrity: sha512-luPCMbOsCoaF+kXJEUjmjmOZg1lC3BflhmUu+ZmW4tBu2vW/4AXak8JBFvePizGkxVmNiAw/r9ra+6UviCWtWQ==}
+  '@next/swc-darwin-x64@16.4.3':
+    resolution: {integrity: sha512-1Rvkn/LUhnEF8WxnRkOrqGhbwXui1bkWFxONKIbN+r7C+9KHDSZ+iUoj4CzymVMWUyZIyx9szcb9+kbKhD500A==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
 
-  '@next/swc-linux-arm64-gnu@16.4.2':
-    resolution: {integrity: sha512-xhwFTAncJyaCNy5KqKKuKaIIdCy1/1ZV1s5S1G0hhT7wGMkDTlfJ6aQbfRFnIG/s3/kDrxQ8aycVe+c5QnP8ow==}
+  '@next/swc-linux-arm64-gnu@16.4.3':
+    resolution: {integrity: sha512-dCKpXErGg3abUM6t5JTJV/ottVBTStJB5lRJTbgdUdQaQ+jNHiK56Hsc0YAEg/rinSh42hYG3HWiYmEMdilnxg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@next/swc-linux-arm64-musl@16.4.2':
-    resolution: {integrity: sha512-T1PNmfbPcxr5ndtWUL/3wQtLXsz808lq6sc2GrNT5k2oquF7UyqZddHSuAewHVsWsGXe6nsl9HoN1YNriVjuSg==}
+  '@next/swc-linux-arm64-musl@16.4.3':
+    resolution: {integrity: sha512-WwYbhWkhYBvBtib1K4W0kL8MW2snBD2A5b3SN4vPpqalZbZs5+bQ1yzAdepVoOqrFfEW3dmREy4Zs1MrWcrFbw==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@next/swc-linux-x64-gnu@16.4.2':
-    resolution: {integrity: sha512-N9cDUOCGtkJG5PNKDFZUF3xXndrJJcpLp121uAGjIGvO/U2p9tfdNOM9htj7+5f72l0m8rMw/cvYacUJBQoudg==}
+  '@next/swc-linux-x64-gnu@16.4.3':
+    resolution: {integrity: sha512-QymWvfUwDEC5/lpJOsxX5VAbyoR2D13+2Jsjz4be7gT4LPqEgdpkeLIR/HFfCLgKzoMhpJbp6I/JnogyNZHcaA==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@next/swc-linux-x64-musl@16.4.2':
-    resolution: {integrity: sha512-yY2uh1YhX6ufuYy2FCbw1dqblbhI57GLYAJfCkqD9auTv6pLrH67Uccjc3QMKBeCYAG6lkgu08ExmX1bbjejjQ==}
+  '@next/swc-linux-x64-musl@16.4.3':
+    resolution: {integrity: sha512-Vmjd9D7DpA4Vv3cUlr82QWgJD/BQZmns801vtC5VWHg6jCIA4a5vMKpQnfrM2pyCrp2eV0ENdUg4PlN3bAc2Yw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@next/swc-win32-arm64-msvc@16.4.2':
-    resolution: {integrity: sha512-j/ArWRIHpMMB6wYLMhr2puTguBt70lNU/Cmjl9p6dTDE8DGknYJMP9PdwPk2dqpCNL/KIX9yfngDvIesxJPmsg==}
+  '@next/swc-win32-arm64-msvc@16.4.3':
+    resolution: {integrity: sha512-lG1pPdPLk7gTyGb00n5JIMLdBJgjb+UEhSdZvFbhUMg0DyC6z4B7RnpSKF9VCd4imkLObVbXOFA0kFCpw7yFow==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [win32]
 
-  '@next/swc-win32-x64-msvc@16.4.2':
-    resolution: {integrity: sha512-AA4edyWHDko3NCSo0x6GomsdgFb0oR1J3MXU1b5xt6FRFg4AucrMPW3S0hCe/9onU0O1BbpGQBsqo1r0Gneu1g==}
+  '@next/swc-win32-x64-msvc@16.4.3':
+    resolution: {integrity: sha512-NmQC9RkJdnPXRaMxtkCzobB3teVjqF33oSOnwDfi+XYGWWYpt+xlGK3mtktSKLbdjwaWbJu2OkkMiRFGUUncKg==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
@@ -4393,8 +4393,8 @@ packages:
   neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
 
-  next@16.4.2:
-    resolution: {integrity: sha512-r+oBJojfefUjOiWkBhXgLS+igxX/7BWyK59uHnyOyplMSLtBZ+QLP3okrdYTbrfrbrmNTVWLBPaHDX9KRaIt3w==}
+  next@16.4.3:
+    resolution: {integrity: sha512-OqxKTGi9u80FydydsMNYNjnuje9Au+kvHlt2GZ//ftdpDHm1dxKqAaENoOOTX5wKzn+9vaKUNIfZeyZUuLhCnA==}
     engines: {node: '>=20.9.0'}
     hasBin: true
     peerDependencies:
@@ -6575,9 +6575,9 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
-  '@frontify/fondue-charts@8.0.2(@frontify/fondue-tokens@5.1.2(tailwindcss@3.4.19(tsx@4.23.15)))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@frontify/fondue-charts@9.0.0(@frontify/fondue-tokens@5.2.0(tailwindcss@3.4.19(tsx@4.23.15)))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@frontify/fondue-tokens': 5.1.2(tailwindcss@3.4.19(tsx@4.23.15))
+      '@frontify/fondue-tokens': 5.2.0(tailwindcss@3.4.19(tsx@4.23.15))
       '@react-spring/web': 10.1.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@visx/axis': 4.0.0(@types/react@19.3.0)(react@19.3.1)
       '@visx/glyph': 4.0.0(@types/react@19.3.0)(react@19.3.1)
@@ -6597,12 +6597,12 @@ snapshots:
       - '@types/react'
       - '@types/react-dom'
 
-  '@frontify/fondue-components@34.0.0(@frontify/fondue-icons@0.30.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15)))(@frontify/fondue-tokens@5.1.2(tailwindcss@3.4.19(tsx@4.23.15)))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@frontify/fondue-components@36.0.0(@frontify/fondue-icons@0.32.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15)))(@frontify/fondue-tokens@5.2.0(tailwindcss@3.4.19(tsx@4.23.15)))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@dnd-kit/abstract': 0.3.2
       '@dnd-kit/react': 0.3.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      '@frontify/fondue-icons': 0.30.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15))
-      '@frontify/fondue-tokens': 5.1.2(tailwindcss@3.4.19(tsx@4.23.15))
+      '@frontify/fondue-icons': 0.32.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15))
+      '@frontify/fondue-tokens': 5.2.0(tailwindcss@3.4.19(tsx@4.23.15))
       '@headless-tree/core': 1.7.0
       '@headless-tree/react': 1.7.0(@headless-tree/core@1.7.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@radix-ui/react-accordion': 1.2.20(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -6632,24 +6632,24 @@ snapshots:
       - '@types/react'
       - '@types/react-dom'
 
-  '@frontify/fondue-icons@0.30.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15))':
+  '@frontify/fondue-icons@0.32.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15))':
     dependencies:
-      '@frontify/fondue-tokens': 5.1.2(tailwindcss@3.4.19(tsx@4.23.15))
+      '@frontify/fondue-tokens': 5.2.0(tailwindcss@3.4.19(tsx@4.23.15))
       react: 19.3.1
     transitivePeerDependencies:
       - tailwindcss
 
-  '@frontify/fondue-rte@0.1.12(@babel/core@7.29.7(supports-color@7.2.0))(@babel/template@7.29.7)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@udecode/plate-common@42.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(scheduler@0.28.0)(slate-history@0.113.1(slate@0.102.0))(slate-hyperscript@0.125.0(slate@0.102.0))(supports-color@7.2.0)(tailwindcss@3.4.19(tsx@4.23.15))(zustand@4.5.7(@types/react@19.3.0)(immer@10.1.1)(react@19.3.1))':
+  '@frontify/fondue-rte@0.1.14(@babel/core@7.29.7(supports-color@7.2.0))(@babel/template@7.29.7)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@udecode/plate-common@42.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(scheduler@0.28.0)(slate-history@0.113.1(slate@0.102.0))(slate-hyperscript@0.125.0(slate@0.102.0))(supports-color@7.2.0)(tailwindcss@3.4.19(tsx@4.23.15))(zustand@4.5.7(@types/react@19.3.0)(immer@10.1.1)(react@19.3.1))':
     dependencies:
       '@ctrl/tinycolor': 4.2.1
       '@dnd-kit/core': 6.1.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@dnd-kit/modifiers': 7.0.0(@dnd-kit/core@6.1.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)
       '@dnd-kit/sortable': 8.0.0(@dnd-kit/core@6.1.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)
       '@dnd-kit/utilities': 3.2.2(react@19.3.1)
-      '@frontify/fondue-charts': 8.0.2(@frontify/fondue-tokens@5.1.2(tailwindcss@3.4.19(tsx@4.23.15)))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      '@frontify/fondue-components': 34.0.0(@frontify/fondue-icons@0.30.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15)))(@frontify/fondue-tokens@5.1.2(tailwindcss@3.4.19(tsx@4.23.15)))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      '@frontify/fondue-icons': 0.30.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15))
-      '@frontify/fondue-tokens': 5.1.2(tailwindcss@3.4.19(tsx@4.23.15))
+      '@frontify/fondue-charts': 9.0.0(@frontify/fondue-tokens@5.2.0(tailwindcss@3.4.19(tsx@4.23.15)))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@frontify/fondue-components': 36.0.0(@frontify/fondue-icons@0.32.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15)))(@frontify/fondue-tokens@5.2.0(tailwindcss@3.4.19(tsx@4.23.15)))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@frontify/fondue-icons': 0.32.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15))
+      '@frontify/fondue-tokens': 5.2.0(tailwindcss@3.4.19(tsx@4.23.15))
       '@popperjs/core': 2.11.8
       '@radix-ui/react-popover': 1.1.23(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@radix-ui/react-toolbar': 1.1.19(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -6734,11 +6734,11 @@ snapshots:
       - tailwindcss
       - zustand
 
-  '@frontify/fondue-sdk@0.2.4(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15))':
+  '@frontify/fondue-sdk@0.3.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15))':
     dependencies:
-      '@frontify/fondue-components': 34.0.0(@frontify/fondue-icons@0.30.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15)))(@frontify/fondue-tokens@5.1.2(tailwindcss@3.4.19(tsx@4.23.15)))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      '@frontify/fondue-icons': 0.30.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15))
-      '@frontify/fondue-tokens': 5.1.2(tailwindcss@3.4.19(tsx@4.23.15))
+      '@frontify/fondue-components': 36.0.0(@frontify/fondue-icons@0.32.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15)))(@frontify/fondue-tokens@5.2.0(tailwindcss@3.4.19(tsx@4.23.15)))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@frontify/fondue-icons': 0.32.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15))
+      '@frontify/fondue-tokens': 5.2.0(tailwindcss@3.4.19(tsx@4.23.15))
     transitivePeerDependencies:
       - '@types/react'
       - '@types/react-dom'
@@ -6746,11 +6746,11 @@ snapshots:
       - react-dom
       - tailwindcss
 
-  '@frontify/fondue-tokens@5.1.2(tailwindcss@3.4.19(tsx@4.23.15))':
+  '@frontify/fondue-tokens@5.2.0(tailwindcss@3.4.19(tsx@4.23.15))':
     dependencies:
       tailwindcss: 3.4.19(tsx@4.23.15)
 
-  '@frontify/fondue@13.10.0(@babel/core@7.29.7(supports-color@7.2.0))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@7.2.0))(supports-color@7.2.0))(@babel/template@7.29.7)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@udecode/plate-common@42.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(scheduler@0.28.0)(slate-history@0.113.1(slate@0.102.0))(slate-hyperscript@0.125.0(slate@0.102.0))(supports-color@7.2.0)(tailwindcss@3.4.19(tsx@4.23.15))(zustand@4.5.7(@types/react@19.3.0)(immer@10.1.1)(react@19.3.1))':
+  '@frontify/fondue@13.11.1(@babel/core@7.29.7(supports-color@7.2.0))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@7.2.0))(supports-color@7.2.0))(@babel/template@7.29.7)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@udecode/plate-common@42.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(scheduler@0.28.0)(slate-history@0.113.1(slate@0.102.0))(slate-hyperscript@0.125.0(slate@0.102.0))(supports-color@7.2.0)(tailwindcss@3.4.19(tsx@4.23.15))(zustand@4.5.7(@types/react@19.3.0)(immer@10.1.1)(react@19.3.1))':
     dependencies:
       '@ctrl/tinycolor': 4.2.1
       '@dnd-kit/core': 6.1.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -6758,12 +6758,12 @@ snapshots:
       '@dnd-kit/sortable': 8.0.0(@dnd-kit/core@6.1.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)
       '@dnd-kit/utilities': 3.2.2(react@19.3.1)
       '@floating-ui/dom': 1.8.0
-      '@frontify/fondue-charts': 8.0.2(@frontify/fondue-tokens@5.1.2(tailwindcss@3.4.19(tsx@4.23.15)))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      '@frontify/fondue-components': 34.0.0(@frontify/fondue-icons@0.30.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15)))(@frontify/fondue-tokens@5.1.2(tailwindcss@3.4.19(tsx@4.23.15)))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      '@frontify/fondue-icons': 0.30.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15))
-      '@frontify/fondue-rte': 0.1.12(@babel/core@7.29.7(supports-color@7.2.0))(@babel/template@7.29.7)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@udecode/plate-common@42.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(scheduler@0.28.0)(slate-history@0.113.1(slate@0.102.0))(slate-hyperscript@0.125.0(slate@0.102.0))(supports-color@7.2.0)(tailwindcss@3.4.19(tsx@4.23.15))(zustand@4.5.7(@types/react@19.3.0)(immer@10.1.1)(react@19.3.1))
-      '@frontify/fondue-sdk': 0.2.4(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15))
-      '@frontify/fondue-tokens': 5.1.2(tailwindcss@3.4.19(tsx@4.23.15))
+      '@frontify/fondue-charts': 9.0.0(@frontify/fondue-tokens@5.2.0(tailwindcss@3.4.19(tsx@4.23.15)))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@frontify/fondue-components': 36.0.0(@frontify/fondue-icons@0.32.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15)))(@frontify/fondue-tokens@5.2.0(tailwindcss@3.4.19(tsx@4.23.15)))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@frontify/fondue-icons': 0.32.0(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15))
+      '@frontify/fondue-rte': 0.1.14(@babel/core@7.29.7(supports-color@7.2.0))(@babel/template@7.29.7)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@udecode/plate-common@42.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(scheduler@0.28.0)(slate-history@0.113.1(slate@0.102.0))(slate-hyperscript@0.125.0(slate@0.102.0))(supports-color@7.2.0)(tailwindcss@3.4.19(tsx@4.23.15))(zustand@4.5.7(@types/react@19.3.0)(immer@10.1.1)(react@19.3.1))
+      '@frontify/fondue-sdk': 0.3.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss@3.4.19(tsx@4.23.15))
+      '@frontify/fondue-tokens': 5.2.0(tailwindcss@3.4.19(tsx@4.23.15))
       '@popperjs/core': 2.11.8
       '@react-aria/accordion': 3.0.0-alpha.37(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@react-aria/breadcrumbs': 3.6.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -6997,30 +6997,30 @@ snapshots:
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
 
-  '@next/env@16.4.2': {}
+  '@next/env@16.4.3': {}
 
-  '@next/swc-darwin-arm64@16.4.2':
+  '@next/swc-darwin-arm64@16.4.3':
     optional: true
 
-  '@next/swc-darwin-x64@16.4.2':
+  '@next/swc-darwin-x64@16.4.3':
     optional: true
 
-  '@next/swc-linux-arm64-gnu@16.4.2':
+  '@next/swc-linux-arm64-gnu@16.4.3':
     optional: true
 
-  '@next/swc-linux-arm64-musl@16.4.2':
+  '@next/swc-linux-arm64-musl@16.4.3':
     optional: true
 
-  '@next/swc-linux-x64-gnu@16.4.2':
+  '@next/swc-linux-x64-gnu@16.4.3':
     optional: true
 
-  '@next/swc-linux-x64-musl@16.4.2':
+  '@next/swc-linux-x64-musl@16.4.3':
     optional: true
 
-  '@next/swc-win32-arm64-msvc@16.4.2':
+  '@next/swc-win32-arm64-msvc@16.4.3':
     optional: true
 
-  '@next/swc-win32-x64-msvc@16.4.2':
+  '@next/swc-win32-x64-msvc@16.4.3':
     optional: true
 
   '@nodelib/fs.scandir@2.1.5':
@@ -10241,9 +10241,9 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  next@16.4.2(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+  next@16.4.3(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
     dependencies:
-      '@next/env': 16.4.2
+      '@next/env': 16.4.3
       '@swc/helpers': 0.5.23
       baseline-browser-mapping: 2.11.29
       caniuse-lite: 1.0.30001816
@@ -10252,14 +10252,14 @@ snapshots:
       react-dom: 19.3.1(react@19.3.1)
       styled-jsx: 5.1.6(@babel/core@7.29.7(supports-color@7.2.0))(react@19.3.1)
     optionalDependencies:
-      '@next/swc-darwin-arm64': 16.4.2
-      '@next/swc-darwin-x64': 16.4.2
-      '@next/swc-linux-arm64-gnu': 16.4.2
-      '@next/swc-linux-arm64-musl': 16.4.2
-      '@next/swc-linux-x64-gnu': 16.4.2
-      '@next/swc-linux-x64-musl': 16.4.2
-      '@next/swc-win32-arm64-msvc': 16.4.2
-      '@next/swc-win32-x64-msvc': 16.4.2
+      '@next/swc-darwin-arm64': 16.4.3
+      '@next/swc-darwin-x64': 16.4.3
+      '@next/swc-linux-arm64-gnu': 16.4.3
+      '@next/swc-linux-arm64-musl': 16.4.3
+      '@next/swc-linux-x64-gnu': 16.4.3
+      '@next/swc-linux-x64-musl': 16.4.3
+      '@next/swc-win32-arm64-msvc': 16.4.3
+      '@next/swc-win32-x64-msvc': 16.4.3
       sharp: 0.35.5(@types/node@26.6.6)
     transitivePeerDependencies:
       - '@babel/core'
