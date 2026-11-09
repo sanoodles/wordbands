@@ -29,7 +29,7 @@
     "probe": "node scripts/probe.mjs"
   },
   "devDependencies": {
-    "skills": "^1.7.5",
+    "skills": "^1.7.6",
     "turbo": "^2.11.10",
     "typescript": "^5.9.2"
   }
