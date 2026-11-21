@@ -366,7 +366,9 @@ const STEM_REPAIR: [RegExp, string][] = [[/á$/, "ar"], [/ê$/, "er"], [/ô$/, "
 // i) would slot in as a small hook here.
 const CASING_MIN_SHARE = 0.7;
 const CASING_MIN_COUNT = 5;
-const CASING_TOKEN = /[^\W\d_]+(?:['’-][^\W\d_]+)*/gu;
+// \p{L}, not [^\W\d_]: JavaScript's \W is ASCII even under the u flag, so that class
+// splits `Mejía` into `Mej` and `a`, and every accented word went unmeasured.
+const CASING_TOKEN = /[\p{L}\p{M}]+(?:['’-][\p{L}\p{M}]+)*/gu;
 
 // Case-homograph: a lemma whose two casings are genuinely both used (German "Essen"
 // the noun vs "essen" the verb) — merged into one source entry, but worth translating
