@@ -129,6 +129,7 @@ dictionary, so each language has its own count.
 | BAND-13 | The defining figure's data carries one level per ranked word |
 | BAND-14 | In typeahead a letter typed without a diacritic also matches that letter with any diacritic, and a letter typed with one matches only itself. The exact match it leads with is exact in its diacritics too |
 | BAND-15 | The `defining` view offers every level its language's dictionary peels into, D1 to Dn, and the figure draws one row per level. n is the language's own |
+| BAND-16 | No list runs past rank 50,000, where C2 ends |
 
 ## FILTER — what the artifacts hold
 
@@ -148,6 +149,10 @@ re-runs the build.
 | FILTER-8 | A lemma headword that is not a word of the language holds no entry; its frequency sits under the form that is written |
 | FILTER-9 | Below the dictionary gate, a list holds no word its language's own spell checker rejects in every spelling that language writes |
 | FILTER-10 | Past the dictionary gate, German keeps a word its own compounding or derivation accounts for, and still drops what the corpus tail is made of |
+| FILTER-11 | A word ranks by the mean of its frequency in the subtitles and in wordfreq, so a word of written text ranks where it is used. A proper noun, an abbreviation and a hyphenated word rank by the subtitles alone |
+| FILTER-12 | Past the dictionary gate, a word that only its language's Wiktionary vouches for stays where the spell checker accepts it, and goes where the spell checker refuses it |
+| FILTER-13 | An inflected form that Wiktionary files under one lemma, and that the lemma list lacks, merges into that lemma. A form Wiktionary also files as a lemma keeps its own entry |
+| FILTER-14 | A name the lemma list lacks is dropped as a name even where Wiktionary files it as an ordinary word. A place Wiktionary files as a country or a continent, or never as a person, is kept |
 
 ## FORM — looking a word up by an inflected form
 
@@ -206,6 +211,7 @@ Wiktionary's translations follow the pair.
 | CREDIT-3 | Every language credits the Leipzig Corpora, since every language's casing is measured from them |
 | CREDIT-4 | Every language credits the lemmatization list under its license, since every language's ranking is lemma-merged |
 | CREDIT-5 | Where the word card can show Wiktionary's translations, the credits name both editions they come from. For a pair with English they say that the editions stand in where Google has nothing. Elsewhere they name neither for translations |
+| CREDIT-6 | Every language credits wordfreq and its license, names the SUBTLEX authors and says SUBTLEX is freely available, and links Google Books Ngram, since every language's ranking averages wordfreq in |
 
 ## ETYM — the etymology link
 
@@ -245,7 +251,7 @@ static picture. Full screen, it zooms and pans, so one word in the crowd can be 
 | --- | --- |
 | FIG-1 | The figure opens full screen on every device, including in a browser with no element fullscreen |
 | FIG-2 | Full screen, the figure zooms by wheel, pinch, keys and buttons, and pans by drag, keys and buttons |
-| FIG-3 | The zoom runs from the whole figure to 512 times, and the view never pans past the figure's edges |
+| FIG-3 | The zoom runs from the whole figure to 1,024 times, and the view never pans past the figure's edges |
 | FIG-4 | A pick lands on the word drawn under it at every zoom. A drag or a pinch picks nothing |
 | FIG-5 | Zoomed, every level and band in view keeps its name in view, and the ranks along the bottom stay labelled |
 | FIG-6 | In the page the figure neither zooms nor pans, so the wheel and a finger scroll the page across it |

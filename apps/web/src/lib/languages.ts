@@ -35,7 +35,7 @@ export const definingLevel = (c: string): number | null => (c === "-" ? null : p
 export const DEFINING_EXAMPLE: Record<SourceLang, string> = {
   pt: "olá",
   it: "ciao",
-  fr: "allô",
+  fr: "demain",
   es: "hola",
   de: "hallo",
   en: "tomorrow",

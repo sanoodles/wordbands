@@ -101,14 +101,23 @@ describe("band definitions", () => {
 });
 
 // C2 ends at rank 50,000 and `rare` past it is open-ended, which is what lets `getWord`
-// assert that a band exists at every rank. German reaches it, on the strength of the
-// morphology vouch (FILTER-10); the other five stop inside C2. See CEFR_BANDS in
-// scripts/build-bands.ts.
+// assert that a band exists at every rank. Every list now ends where C2 ends, so no list
+// reaches `rare`. See CEFR_BANDS and LIST_END in scripts/build-bands.ts.
 describe("CEFR tail", () => {
   // @spec BAND-1
   it("bounds C2 instead of letting it swallow the list", () => {
-    const c2 = getBandSummary("es", "cefr").find((b) => b.key === "C2")!;
-    expect(c2.count).toBeLessThan(25000);
+    for (const lang of ["en", "es", "fr", "de", "pt", "it"] as const) {
+      const c2 = getBandSummary(lang, "cefr").find((b) => b.key === "C2")!;
+      expect(c2.count, lang).toBeLessThanOrEqual(25000);
+    }
+  });
+
+  // @spec BAND-16
+  it("ends every list by rank 50,000", () => {
+    for (const lang of ["en", "es", "fr", "de", "pt", "it"] as const) {
+      const total = getBandSummary(lang, "cefr").reduce((n, b) => n + b.count, 0);
+      expect(total, lang).toBeLessThanOrEqual(50000);
+    }
   });
 
   // @spec BAND-4, FILTER-4
@@ -262,12 +271,12 @@ describe("the defining view", () => {
     }
     const none = (lang: Parameters<typeof getBandSummary>[0]) =>
       getBandSummary(lang, "defining").find((b) => b.key === "none")?.count;
-    expect(none("pt")).toBe(6330);
-    expect(none("it")).toBe(5886);
-    expect(none("fr")).toBe(976);
-    expect(none("es")).toBe(7349);
-    expect(none("de")).toBe(18751);
-    expect(none("en")).toBe(3696);
+    expect(none("pt")).toBe(11602);
+    expect(none("it")).toBe(7436);
+    expect(none("fr")).toBe(1262);
+    expect(none("es")).toBe(11286);
+    expect(none("de")).toBe(10907);
+    expect(none("en")).toBe(1600);
   });
 
   // A wordier dictionary peels further, so each language has its own count.
@@ -282,10 +291,10 @@ describe("the defining view", () => {
     expect(getDefiningPoints("pt").levelCount).toBe(7);
     expect(getDefiningPoints("fr").levelCount).toBe(14);
     expect(getDefiningPoints("en").levelCount).toBe(20);
-    expect(getBand("fr", "defining", "D14")!.words).toHaveLength(9554);
+    expect(getBand("fr", "defining", "D14")!.words).toHaveLength(23715);
     expect(getBand("fr", "defining", "D15")).toBeNull();
     expect(getBand("pt", "defining", "D8")).toBeNull();
-    expect(getBand("en", "defining", "D20")!.words).toHaveLength(12526);
+    expect(getBand("en", "defining", "D20")!.words).toHaveLength(21070);
     expect(getBand("en", "defining", "D21")).toBeNull();
   });
 
@@ -312,7 +321,7 @@ describe("the defining view", () => {
     expect(getWord("pt", "max")?.defining?.key).toBe("none");
     expect(getWord("it", "acqua")?.defining?.key).toBe("D2");
     expect(getWord("it", "essere")?.defining?.key).toBe("D1");
-    expect(getWord("it", "max")?.defining?.key).toBe("none");
+    expect(getWord("it", "ehi")?.defining?.key).toBe("none");
     expect(getWord("fr", "eau")?.defining?.key).toBe("D3");
     expect(getWord("fr", "être")?.defining?.key).toBe("D1");
     expect(getWord("fr", "new")?.defining?.key).toBe("none");
@@ -321,7 +330,7 @@ describe("the defining view", () => {
     expect(getWord("es", "déjame")?.defining?.key).toBe("none");
     expect(getWord("de", "Wasser")?.defining?.key).toBe("D2");
     expect(getWord("de", "sein")?.defining?.key).toBe("D1");
-    expect(getWord("de", "Schneemaschine")?.defining?.key).toBe("none");
+    expect(getWord("de", "gesagt")?.defining?.key).toBe("none");
     expect(getWord("en", "dog")?.defining?.key).toBe("D3");
     expect(getWord("en", "be")?.defining?.key).toBe("D1");
     expect(getWord("en", "okay")?.defining?.key).toBe("none");
@@ -352,29 +361,29 @@ describe("the defining view", () => {
     }
     const levelled = (lang: Parameters<typeof getBandSummary>[0]) =>
       [...getDefiningPoints(lang).levels].filter((c) => c !== "-");
-    expect(getDefiningPoints("pt").words).toHaveLength(28623);
-    expect(levelled("pt")).toHaveLength(22293);
-    expect(getDefiningPoints("it").words).toHaveLength(27416);
-    expect(levelled("it")).toHaveLength(21530);
-    expect(getDefiningPoints("fr").words).toHaveLength(28788);
-    expect(levelled("fr")).toHaveLength(27812);
-    expect(getDefiningPoints("en").words).toHaveLength(38322);
-    expect(levelled("en")).toHaveLength(34626);
+    expect(getDefiningPoints("pt").words).toHaveLength(44352);
+    expect(levelled("pt")).toHaveLength(32750);
+    expect(getDefiningPoints("it").words).toHaveLength(41422);
+    expect(levelled("it")).toHaveLength(33986);
+    expect(getDefiningPoints("fr").words).toHaveLength(48566);
+    expect(levelled("fr")).toHaveLength(47304);
+    expect(getDefiningPoints("en").words).toHaveLength(50000);
+    expect(levelled("en")).toHaveLength(48400);
   });
 
   it("lists a band in frequency order", () => {
     const d1 = getBand("pt", "defining", "D1")!;
     expect(d1.words).toHaveLength(54);
-    expect(d1.words.slice(0, 4)).toEqual(["o", "que", "a", "não"]);
+    expect(d1.words.slice(0, 4)).toEqual(["o", "de", "a", "que"]);
     const d1It = getBand("it", "defining", "D1")!;
-    expect(d1It.words).toHaveLength(366);
-    expect(d1It.words.slice(0, 4)).toEqual(["essere", "e", "il", "avere"]);
+    expect(d1It.words).toHaveLength(371);
+    expect(d1It.words.slice(0, 4)).toEqual(["essere", "di", "e", "il"]);
     const d1Fr = getBand("fr", "defining", "D1")!;
     expect(d1Fr.words).toHaveLength(76);
-    expect(d1Fr.words.slice(0, 4)).toEqual(["il", "le", "être", "avoir"]);
+    expect(d1Fr.words.slice(0, 4)).toEqual(["le", "il", "être", "de"]);
     const d1En = getBand("en", "defining", "D1")!;
-    expect(d1En.words).toHaveLength(902);
-    expect(d1En.words.slice(0, 4)).toEqual(["I", "be", "the", "a"]);
+    expect(d1En.words).toHaveLength(904);
+    expect(d1En.words.slice(0, 4)).toEqual(["the", "I", "be", "a"]);
   });
 });
 

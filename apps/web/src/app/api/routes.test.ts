@@ -205,10 +205,10 @@ describe("GET /api/translate/[word] levels", () => {
 
   // Phrases and words the list has no headword for are ordinary, and go unbadged.
   it("skips a term the target language has no entry for", async () => {
-    vi.stubGlobal("fetch", mockGtx("navaja", "noun", [["navaja", 0.6], ["cortaplumas", 0.5]]));
+    vi.stubGlobal("fetch", mockGtx("navaja", "noun", [["navaja", 0.6], ["navajuela", 0.5]]));
     const { levels } = await (await translate("penknife", "source=en&target=es&dict=1")).json();
     expect(levels.navaja).toBeDefined();
-    expect(levels.cortaplumas).toBeUndefined();
+    expect(levels.navajuela).toBeUndefined();
   });
 });
 

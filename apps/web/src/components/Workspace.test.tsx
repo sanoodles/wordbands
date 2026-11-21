@@ -606,6 +606,19 @@ describe("Workspace", () => {
     }
   });
 
+  // @spec CREDIT-6
+  it("credits wordfreq as its terms ask, in every language", () => {
+    for (const source of SOURCE_LANGS) {
+      const credits = creditsFor(source);
+      const link = (name: string) => within(credits).getByRole("link", { name });
+      expect(link("wordfreq")).toHaveAttribute("href", "https://github.com/rspeer/wordfreq");
+      expect(link("Google Books Ngram")).toHaveAttribute("href", "https://books.google.com/ngrams");
+      expect(credits).toHaveTextContent("Creative Commons Attribution-ShareAlike 4.0 license");
+      expect(credits).toHaveTextContent("the freely available SUBTLEX lists of Brysbaert et al.");
+      cleanup();
+    }
+  });
+
   // WCAG 3.1.4: an <abbr title> reaches neither touch nor the keyboard, and Chrome
   // leaves it out of the link's name — so the expansion has to be visible text.
   it("expands every abbreviation it uses in the sentence itself", () => {

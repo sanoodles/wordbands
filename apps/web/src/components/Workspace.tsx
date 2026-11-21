@@ -51,6 +51,9 @@ const TRANSLATE_URL = "https://translate.google.com/";
 const WIKTEXTRACT_URL = "https://kaikki.org/";
 const CC_BY_SA_URL = "https://creativecommons.org/licenses/by-sa/4.0/";
 const ODBL_URL = "https://opendatacommons.org/licenses/odbl/1-0/";
+const WORDFREQ_URL = "https://github.com/rspeer/wordfreq";
+// wordfreq's terms ask for Google Books Ngram's acknowledgement with this link.
+const NGRAM_URL = "https://books.google.com/ngrams";
 
 // The works the defining levels' method follows.
 const BLONDIN_MASSE_URL = "https://aclanthology.org/W08-2003/";
@@ -284,12 +287,25 @@ function CorpusCredit({ source, target }: { source: SourceLang; target: TargetLa
       {/* Every abbreviation here expands in the sentence itself (WCAG 3.1.4). A title on
           an <abbr> reaches neither touch nor the keyboard, and Chrome leaves it out of
           the link's name — so it was a mechanism for nobody. */}
-      Word frequencies from{" "}
+      Word frequencies are the mean of{" "}
       <a className={CORPUS_LINK} href={corpus.url}>
         {source === "en" ? "SUBTLEX-US" : corpus.name}
       </a>
-      {source === "en" ? " (US-English word frequencies from film subtitles; Brysbaert & New, 2009)" : null}
-      , with inflections merged onto their base form via a{" "}
+      {source === "en" ? " (US-English word frequencies from film subtitles; Brysbaert & New, 2009)" : " from film and TV subtitles"}{" "}
+      and{" "}
+      {/* @spec CREDIT-6
+          wordfreq's terms: its data is CC BY-SA 4.0, the SUBTLEX authors are credited and
+          SUBTLEX is said to be freely available, and Google Books Ngram is linked. */}
+      <a className={CORPUS_LINK} href={WORDFREQ_URL}>
+        wordfreq
+      </a>{" "}
+      (Speer, 2022; its data is under the {CC_BY_SA_TITLE} 4.0 license), which blends
+      Wikipedia, news, web text, books from{" "}
+      <a className={CORPUS_LINK} href={NGRAM_URL}>
+        Google Books Ngram
+      </a>{" "}
+      and subtitles, among them the freely available SUBTLEX lists of Brysbaert et al.
+      Inflections are merged onto their base form via a{" "}
       {/* @spec CREDIT-4 */}
       <a className={CORPUS_LINK} href={LEMMA_URL}>
         lemmatization list
@@ -298,7 +314,7 @@ function CorpusCredit({ source, target }: { source: SourceLang; target: TargetLa
       <a className={CORPUS_LINK} href={ODBL_URL}>
         ODbL 1.0
       </a>
-      , the {ODBL_TITLE}). CEFR ({CEFR_TITLE}) levels are estimated from frequency. The
+      , the {ODBL_TITLE}) and the {name} Wiktionary. CEFR ({CEFR_TITLE}) levels are estimated from frequency. The
       band boundaries are calibrated to the{" "}
       <a className={CORPUS_LINK} href="https://www.cefr-j.org/">
         CEFR-J

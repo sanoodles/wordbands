@@ -34,7 +34,7 @@ const points = {
 const fourteen = {
   levels: "1e-3" + "e".repeat(6),
   levelCount: 14,
-  words: ["il", "le", "new", "eau", "allô", "ouais", "a", "b", "c", "d"],
+  words: ["il", "le", "new", "eau", "demain", "ouais", "a", "b", "c", "d"],
 };
 
 /** jsdom has no layout, so the caption's width test has to be told the answer. */
@@ -101,7 +101,7 @@ describe("DefiningScatter", () => {
     render(<DefiningScatter source="fr" anchorWord={null} onSelect={() => {}} />);
     const fig = await screen.findByRole("figure");
     expect(fig.textContent).toContain("D14 at the bottom is never used to define a word outside D14");
-    expect(fig.textContent).toContain("allô is A1 vocabulary sitting at D14");
+    expect(fig.textContent).toContain("demain is A1 vocabulary sitting at D14");
   });
 
   it("asks only the active language for its points", async () => {
@@ -423,12 +423,12 @@ describe("the view", () => {
   };
 
   // @spec FIG-3
-  it("zooms out no further than the whole figure, and in no further than 512 times", () => {
+  it("zooms out no further than the whole figure, and in no further than 1,024 times", () => {
     expect(zoomView(WHOLE, 0.25)).toEqual(WHOLE);
     let v = WHOLE;
     for (let i = 0; i < 12; i++) v = zoomView(v, 2, [0.9, 0.1]);
-    expect(MAX_ZOOM).toBe(512);
-    expect(v.k).toBe(512);
+    expect(MAX_ZOOM).toBe(1024);
+    expect(v.k).toBe(1024);
     inside(v);
   });
 
