@@ -5,10 +5,10 @@
 // rather than on every run.
 //
 //   tsx scripts/build-lexicon.ts [lang]   # one language, or all when omitted
-import { createReadStream, writeFileSync } from "node:fs";
-import { createGunzip } from "node:zlib";
+import { writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { jsonLines } from "./json-lines";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const data = (f: string) => resolve(here, "../data", f);
@@ -45,17 +45,6 @@ const COUNTRY = /countr|continent|países|continentes|\bpays\b|länder|staat|naz
 // Not "nomi propri": Italian files every proper noun there, `Italia` included.
 const PERSON = /given name|surname|antropónim|apellido|prénom|nom de famille|vorname|nachname|familienname|prenomi|cognomi|prenome|sobrenome/i;
 
-// The dump's lines, split on "\n" alone. node:readline also ends a line at U+2028 and
-// U+2029, which JSON allows unescaped inside a string, and the German dump has some.
-async function* jsonLines(file: string): AsyncGenerator<string> {
-  let rest = "";
-  for await (const chunk of createReadStream(file).pipe(createGunzip()).setEncoding("utf8")) {
-    const parts = (rest + (chunk as string)).split("\n");
-    rest = parts.pop()!;
-    yield* parts;
-  }
-  if (rest) yield rest;
-}
 
 type Category = string | { name?: string };
 type Sense = { tags?: string[]; topics?: string[]; categories?: Category[]; form_of?: { word?: string }[]; alt_of?: unknown[] };
@@ -76,7 +65,6 @@ async function extract(lang: string): Promise<Lexicon> {
   const forms = new Map<string, [string, string]>();
   const place = new Set<string>(), person = new Set<string>(), country = new Set<string>();
   for await (const line of jsonLines(data(`wiktextract-${lang}.jsonl.gz`))) {
-    if (!line) continue;
     const e = JSON.parse(line) as Entry;
     const w = e.word?.trim();
     if (e.lang_code !== lang || !w || w.includes(" ")) continue;

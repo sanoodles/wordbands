@@ -12,11 +12,10 @@
 // Inputs: `data/wiktextract-<code>.jsonl.gz`, Wiktextract's extract of that language's own
 // edition, from kaikki.org — the files the defining-vocabulary repo already downloads.
 // Wiktionary's text is CC BY-SA 4.0. CLAUDE.md holds the measurements behind the choices.
-import { createReadStream, readFileSync, writeFileSync } from "node:fs";
-import { createGunzip } from "node:zlib";
-import { createInterface } from "node:readline";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { jsonLines } from "./json-lines";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const data = (f: string) => resolve(here, "../data", f);
@@ -77,8 +76,7 @@ interface Edition {
 async function harvest(lang: string): Promise<Edition> {
   const translations = new Map(LANGS.filter((l) => l !== lang).map((l) => [l, new Map<string, string[]>()]));
   const heads = new Set<string>();
-  const lines = createInterface({ input: createReadStream(data(`wiktextract-${lang}.jsonl.gz`)).pipe(createGunzip()) });
-  for await (const line of lines) {
+  for await (const line of jsonLines(data(`wiktextract-${lang}.jsonl.gz`))) {
     type Item = { word?: string; lang_code?: string; lang?: string; tags?: string[] };
     const e = JSON.parse(line) as {
       word?: string;
