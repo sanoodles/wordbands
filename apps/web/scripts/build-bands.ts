@@ -250,6 +250,7 @@ interface Lexicon {
   names: string[];
   abbrev: string[];
   forms: [string, string][];
+  places: string[];
 }
 
 function readLexicon(code: string): Lexicon {
@@ -1082,8 +1083,10 @@ function buildLang(cfg: LangConfig) {
   // (`granger`, `galloway`), which would spare them.
   // @spec FILTER-14
   const names = cased ? loadNames() : null;
+  // A place spares itself too: the surname list holds `España`, `Francia` and `England`.
+  const places = new Set(lex.places);
   const isName = (w: string) => {
-    if (!names || !cased || listed.has(w) || !names.has(w)) return false;
+    if (!names || !cased || listed.has(w) || places.has(w) || !names.has(w)) return false;
     const s = cased.corpus.get(w);
     if (!s || s.tot < NAME_MIN_OBS || s.cap / s.tot < NAME_CAP_SHARE) return false;
     return s.det / s.tot < NAME_DET_SHARE;

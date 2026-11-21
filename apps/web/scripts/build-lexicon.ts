@@ -30,7 +30,20 @@ export interface Lexicon {
   abbrev: string[];
   /** `[lemma, form]` pairs from the senses that say "form of", in the dump's order. */
   forms: [string, string][];
+  /** Lowercase names filed as a place and never as a person, or as a country or continent at all. */
+  places: string[];
 }
+
+// How each edition marks a place or a person among its names. The editions differ:
+// Spanish tags `España` with the topic "countries", Italian `Italia` as toponymic, and
+// English files `France` under "Countries in Europe". A name that is also a person's,
+// such as `Mary` or `Israel`, matches both and counts as neither.
+const PLACE = /countr|\bcit(y|ies)\b|\bplaces\b|\bregions\b|continent|\bstates\b|provinces|islands|capitals|toponym|geograph|países|ciudades|penínsulas|\bpays\b|villes|régions|staaten|städte|länder|nazioni|città|cidades|capitais/i;
+// A country or a continent is vocabulary even where it is also a surname or a given name,
+// as `España`, `Francia`, `France` and `India` are.
+const COUNTRY = /countr|continent|países|continentes|\bpays\b|länder|staat|nazioni|stati\b/i;
+// Not "nomi propri": Italian files every proper noun there, `Italia` included.
+const PERSON = /given name|surname|antropónim|apellido|prénom|nom de famille|vorname|nachname|familienname|prenomi|cognomi|prenome|sobrenome/i;
 
 // The dump's lines, split on "\n" alone. node:readline also ends a line at U+2028 and
 // U+2029, which JSON allows unescaped inside a string, and the German dump has some.
@@ -44,8 +57,16 @@ async function* jsonLines(file: string): AsyncGenerator<string> {
   if (rest) yield rest;
 }
 
-type Sense = { tags?: string[]; form_of?: { word?: string }[]; alt_of?: unknown[] };
-type Entry = { word?: string; lang_code?: string; pos?: string; senses?: Sense[] };
+type Category = string | { name?: string };
+type Sense = { tags?: string[]; topics?: string[]; categories?: Category[]; form_of?: { word?: string }[]; alt_of?: unknown[] };
+type Entry = { word?: string; lang_code?: string; pos?: string; senses?: Sense[]; categories?: Category[] };
+
+// Everything an entry says about what kind of name it is, as one string to match against.
+function nameSignals(e: Entry): string {
+  const cats = [...(e.categories ?? []), ...(e.senses ?? []).flatMap((s) => s.categories ?? [])];
+  const marks = (e.senses ?? []).flatMap((s) => [...(s.tags ?? []), ...(s.topics ?? [])]);
+  return [...cats.map((c) => (typeof c === "string" ? c : c.name ?? "")), ...marks].join(" | ");
+}
 
 async function extract(lang: string): Promise<Lexicon> {
   const lemmaSpelt = new Map<string, Set<string>>();
@@ -53,6 +74,7 @@ async function extract(lang: string): Promise<Lexicon> {
   const named = new Set<string>(), other = new Set<string>();
   const abbrev = new Set<string>(), plain = new Set<string>();
   const forms = new Map<string, [string, string]>();
+  const place = new Set<string>(), person = new Set<string>(), country = new Set<string>();
   for await (const line of jsonLines(data(`wiktextract-${lang}.jsonl.gz`))) {
     if (!line) continue;
     const e = JSON.parse(line) as Entry;
@@ -62,6 +84,10 @@ async function extract(lang: string): Promise<Lexicon> {
     (spelt.get(lw) ?? spelt.set(lw, new Set()).get(lw)!).add(w);
     if (e.pos === "name") {
       named.add(lw);
+      const signals = nameSignals(e);
+      if (PLACE.test(signals)) place.add(lw);
+      if (COUNTRY.test(signals)) country.add(lw);
+      if (PERSON.test(signals)) person.add(lw);
       continue;
     }
     other.add(lw);
@@ -92,6 +118,7 @@ async function extract(lang: string): Promise<Lexicon> {
     names: [...names].sort(),
     abbrev: [...abbrev].filter((w) => !plain.has(w) && !headSet.has(w)).sort(),
     forms: [...forms.values()].filter(([lemma]) => !names.has(lemma.toLowerCase())),
+    places: [...place].filter((w) => country.has(w) || !person.has(w)).sort(),
   };
 }
 
@@ -106,7 +133,8 @@ async function main() {
     const lex = await extract(lang);
     writeFileSync(data(`lexicon.${lang}.json`), JSON.stringify(lex));
     console.log(`[${lang}] heads ${lex.heads.length.toLocaleString()}, names ${lex.names.length.toLocaleString()},`,
-      `abbreviations ${lex.abbrev.length.toLocaleString()}, forms ${lex.forms.length.toLocaleString()}`);
+      `abbreviations ${lex.abbrev.length.toLocaleString()}, forms ${lex.forms.length.toLocaleString()},`,
+      `places ${lex.places.length.toLocaleString()}`);
   }
 }
 
