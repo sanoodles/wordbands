@@ -253,6 +253,9 @@ interface Lexicon {
   places: string[];
 }
 
+// Pieces of web addresses that written text carries and no one learns.
+const WEB_TOKENS = ["http", "https", "www", "html"];
+
 function readLexicon(code: string): Lexicon {
   const file = data(`lexicon.${code}.json`);
   if (!existsSync(file)) throw new Error(`lexicon.${code}.json is missing from data/: run build:lexicon`);
@@ -948,7 +951,7 @@ function buildLang(cfg: LangConfig) {
   // German so do the build's own casing signal and a spell checker that takes a word no
   // dictionary lists only capitalized.
   // @spec FILTER-11
-  const proper = new Set([...lex.names, ...lex.abbrev]);
+  const proper = new Set([...lex.names, ...lex.abbrev, ...WEB_TOKENS]);
   if (cfg.code !== "de") {
     for (const [w, s] of corpus) if (s.tot >= NAME_MIN_OBS && s.cap / s.tot >= NAME_CAP_SHARE) proper.add(w);
     if (cfg.spellDict) {
@@ -1115,9 +1118,12 @@ function buildLang(cfg: LangConfig) {
   // Wiktionary's lemma headwords vouch too, where the spell checker agrees. The written
   // source fills the tail with words the lemma list never held (`logicamente`,
   // `rigoureusement`), and the French edition alone holds `bucaille`, `tarla` and `misson`.
-  const wiktOnly = namedKeys.filter((w, i) => i >= gate && !known(w) && !vouch(w) && wiktHeads.has(w));
+  // A word known only through Wiktionary's inflections counts as Wiktionary's too: listing
+  // `bucailles` makes `bucaille` a lemma, and would otherwise spare it the check.
+  const byWiktionary = (w: string) => !listed.has(w) && (known(w) || wiktHeads.has(w));
+  const wiktOnly = namedKeys.filter((w, i) => i >= gate && !vouch(w) && byWiktionary(w));
   const wiktRefused = cfg.spellDict ? spellRejects(wiktOnly, cfg.spellDict, cfg.spellVariants) : new Set(wiktOnly);
-  const kept = (w: string) => known(w) || vouch(w) || (wiktHeads.has(w) && !wiktRefused.has(w));
+  const kept = (w: string) => listed.has(w) || vouch(w) || (byWiktionary(w) && !wiktRefused.has(w));
   // @spec BAND-16
   const keptKeys = namedKeys.filter((w, i) => (i < gate ? !misspelt.has(w) : kept(w))).slice(0, LIST_END);
   const gated = namedKeys.filter((w, i) => i >= gate && !kept(w)).length;
