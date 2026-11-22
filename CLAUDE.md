@@ -369,7 +369,7 @@ our egress IP, so an abuser's flood lands on real lookups.
 
 | Gate | Rule | Where the bound comes from |
 | --- | --- | --- |
-| `isSingleWord` | `GATE-1`, `GATE-2` | The longest word in the six artifacts is 28, `antidisestablishmentarianism`, and none holds whitespace. Hyphens and apostrophes are ordinary vocabulary — fr alone has 1,145 hyphenated headwords, `arc-en-ciel`, `quelqu'un` — so only whitespace splits a word |
+| `isSingleWord` | `GATE-1`, `GATE-2` | Every word in the six artifacts is well under 64 characters, and none holds whitespace. Hyphens and apostrophes are ordinary vocabulary, as in `arc-en-ciel` and `quelqu'un`, so only whitespace splits a word |
 | `isSourceLang` | `GATE-3` | It is the language being studied, so it always is |
 | `isLangCode` | `GATE-4` | The target is any language Google takes, not one of the six, so shape is all there is to check. It still separates `ja` and `haw` from a string to hand upstream |
 
@@ -547,7 +547,7 @@ How `build-wiktionary.ts` builds one direction:
 | Clean every string | Drop notes in brackets, split variants on `,` `;` `/`, drop a leading article (`ARTICLE`, elisions such as `l'` included, and the `to` before an English verb), drop anything with a digit or past two words | The German edition writes `bolso (Handtasche), bolsa (Einkaufstasche)`, and whole proverbs. A target headword passes the same cleaning, or `landauf, landab` arrives as one term |
 | Order (`WIKT-4`) | Terms both editions give first, then the more frequent in the target list, then table order | Two sets of editors reaching a term separately is the one signal Wiktionary has. Frequency puts `mordsmäßig` and `Blättermagen` last |
 | Cap (`WIKT-4`) | Four terms | Google's line holds four |
-| Titles | The page is the entry the terms came from, under its own casing. Stored only where it differs from the word as the list displays it | `soler` displays as "Soler", the surname, but its translations are on `soler`. The German list writes some nouns lowercase: `hölle` |
+| Titles | The page is the entry the terms came from, under its own casing. Stored only where it differs from the word as the list displays it | `soler` displays as "Soler", the surname, but its translations are on `soler`. |
 
 | Load-bearing detail | Why |
 | --- | --- |
