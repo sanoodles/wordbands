@@ -10,6 +10,9 @@
 //   - a rule nothing asserts is a wish, not a rule
 //   - an annotation naming a rule the spec no longer defines is a leftover
 //
+// And one on the text itself: a sentence past MAX_WORDS has packed several facts into
+// one, which is how a rule comes to need two readings.
+//
 //   node scripts/check-spec.mjs [--list | --file]
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -25,6 +28,11 @@ const MODE = process.argv.includes("--file") ? "file" : process.argv.includes("-
 const RULE_ROW = /^\|\s*`?([A-Z]+-\d+)`?\s*\|(.*)$/;
 // `@spec GATE-1, GATE-2` — one annotation may carry several.
 const ANNOTATION = /@spec\s+([A-Z]+-\d+(?:\s*[,\s]\s*[A-Z]+-\d+)*)/g;
+const MAX_WORDS = 25;
+// A colon introduces a list inside its sentence, so only these end one.
+const SENTENCE_END = /(?<=[.;!?])\s+/;
+// `/` between band names and a lone `·` are not words.
+const isWord = (t) => /[\p{L}\p{N}]/u.test(t);
 
 // Two kinds of annotation, and only one of them is proof. A rule cannot be proven by the
 // code implementing it — that is the tautology this whole file exists to prevent. An
@@ -61,9 +69,10 @@ function readRules() {
     const [, id, rest] = m;
     // The statement is whatever the row says after the ID — the second cell for a prose
     // rule, the whole row for the decode table, which states itself in columns.
-    const text = rest.split("|").map((c) => c.trim()).filter(Boolean).join(" · ");
+    const cells = rest.split("|").map((c) => c.trim()).filter(Boolean);
+    const text = cells.join(" · ");
     if (rules.has(id)) dupes.push(id);
-    else rules.set(id, { area: area ?? id.split("-")[0], text, proof: [], code: [] });
+    else rules.set(id, { area: area ?? id.split("-")[0], text, cells, proof: [], code: [] });
   }
   return { rules, dupes };
 }
@@ -95,6 +104,15 @@ for (const file of walk(ROOT)) {
 }
 
 const unproven = [...rules].filter(([, r]) => !r.proof.length).map(([id]) => id);
+// A row stated in several columns, like the decode table, has no sentence to measure.
+const long = [];
+for (const [id, r] of rules) {
+  if (r.cells.length !== 1) continue;
+  for (const s of r.cells[0].split(SENTENCE_END)) {
+    const n = s.split(/\s+/).filter(isWord).length;
+    if (n > MAX_WORDS) long.push(`${id.padEnd(10)} ${n} words: ${s}`);
+  }
+}
 const marked = [...rules.values()].filter((r) => r.code.length).length;
 const short = (f) => f.replace("apps/web/src/", "").replace("apps/web/", "");
 
@@ -136,7 +154,9 @@ say(
   [...new Set(unknown.map(({ id, file }) => `${file} names ${id}`))],
 );
 
+say(`too long — split these into sentences of ${MAX_WORDS} words or fewer, one fact each:`, long);
+
 if (dupes.length || unproven.length || unknown.length) {
   console.error(`\nEither the rule needs a test, or SPEC.md and the @spec comment need to agree.`);
-  process.exit(1);
 }
+if (dupes.length || unproven.length || unknown.length || long.length) process.exit(1);

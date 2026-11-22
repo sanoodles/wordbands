@@ -18,7 +18,7 @@ and a mark differ.
 
 | Command | Does |
 | --- | --- |
-| `pnpm spec:check` | Fail on a rule nothing proves, and on an annotation naming a rule that no longer exists |
+| `pnpm spec:check` | Fail on a rule nothing proves, on an annotation naming a rule that no longer exists, and on a rule sentence over 25 words |
 | `pnpm spec:list` | Every rule by area, with its proofs and its marks |
 | `pnpm spec:files` | The reverse: a file at a time, the rules it carries |
 
