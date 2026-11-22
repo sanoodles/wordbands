@@ -929,8 +929,9 @@ describe("full screen", () => {
       wait(SETTLE);
       const [word] = wordsIn(dialog);
       const shift = () => {
-        const [, x, y] = /translate\((.+)px, (.+)px\)/.exec(word!.parentElement!.style.transform)!;
-        return [parseFloat(x!), parseFloat(y!)];
+        // jsdom writes translate(0px, 0px) as translate(0px), leaving out a y of zero.
+        const [, x, y = "0"] = /translate\(([^,]+)px(?:, (.+)px)?\)/.exec(word!.parentElement!.style.transform)!;
+        return [parseFloat(x!), parseFloat(y)];
       };
       expect(shift()).toEqual([0, 0]);
       fireEvent.keyDown(document, { key: "ArrowRight" });
