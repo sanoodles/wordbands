@@ -273,7 +273,7 @@ defining-vocabulary repo builds them from each language's own Wiktionary and wri
 
 | Detail | Why |
 | --- | --- |
-| A level count per language (`BAND-15`) | The count is how far the peel goes, and a dictionary whose definitions use more words peels further. Links per word run from 10.7 in German to 30.2 in English, and the counts run from 5 to 20 with them. One count for every language would mean merging or splitting levels, and then a level stops being one round of the peel |
+| A level count per language (`BAND-15`) | The count is how far the peel goes, and a dictionary whose definitions use more words peels further. Links per word run from 11.0 in German to 26.2 in English, and the counts run from 5 to 20 with them. One count for every language would mean merging or splitting levels, and then a level stops being one round of the peel |
 | `DEFINING_LEVEL_COUNT` holds the count for the client | The glossary names the bottom level and has no data to read it from. `bands` reads the count off the artifact instead, and `bands.test.ts` proves the two agree |
 | One base-36 digit per level | The artifact keeps one character per word, so D10 to D14 are `a` to `e`, and a language under ten levels reads as plain digits. `definingLevel` decodes it |
 | The six languages | 74% to 97% of each list has a level. Spanish's D2 holds 9 words, the smallest tab of any language, and `BAND-15` keeps it rather than merging it into D1 |
@@ -283,7 +283,7 @@ defining-vocabulary repo builds them from each language's own Wiktionary and wri
 | D1 carries the merge's lumping | `para`, `como` and `una` are not entries, because the merge sums them into `parar`, `comer` and `unir`, so those three sit in Spanish D1 in their place. Portuguese D1 has `parar`, `comer` and `pelar` the same way, French D1 has `Dan` for `dans`, and German D1's `ich` takes the uses of `du`, `sie`, `er`, `es`, `wir` and `ihr`. The fix belongs to the merge, not the peel |
 | The artifact is positional | It holds one level per word of `ranked`, in order. A rebuild of `wordbands.<code>.json` needs the levels emitted again, and `artifacts.test.ts` fails on the digest until they are |
 | Each language names its own example | The figure's caption names an A1 word at the bottom level from `DEFINING_EXAMPLE`. `bands.test.ts` checks that the claim holds. French takes `demain`, as English takes the same word, because `bonjour` sits at D12, `salut` at D10, and `allô` at rank 1,630 is A2. English takes `tomorrow`, because `hello` sits at D17 and `bye` at D18 |
-| `coeur` has the level of `cœur` | The French list holds 21 words in both spellings, and the dictionary writes only the ligature. The emitter gives the `oe` spelling its twin's level, or `oeil` at rank 257 would have none |
+| `coeur` has the level of `cœur` | The French list holds 43 words in both spellings, and the dictionary writes only the ligature. The emitter gives the `oe` spelling its twin's level, or `oeil` at rank 281 would have none |
 
 To add a language: emit its levels in the defining-vocabulary repo, add it to
 `DEFINING_LEVEL_COUNT` with its count and to `DEFINING_EXAMPLE`, and import its artifact in
