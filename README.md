@@ -34,7 +34,8 @@ learning order than any dictionary-structure metric, so the ranking rests on it 
   past that rank a word stays only if the lemmatization list vouches for it, or the
   language's own Wiktionary and its spell checker both do. Among the 25,000 most frequent
   words, the spell checker removes what it rejects, mostly untranslated English and names.
-  Every list ends at rank 50,000, where C2 ends.
+  Every list ends at rank 50,000, where C2 ends, and each language keeps 40,000 to 50,000
+  words.
   [docs/build-filters.md](docs/build-filters.md) explains every filter the build applies.
 - **Display casing** is measured from the
   [Leipzig Corpora](https://wortschatz.uni-leipzig.de/en/download) sentence collection:
@@ -61,7 +62,8 @@ learning order than any dictionary-structure metric, so the ranking rests on it 
   Contemporary English* (1978).
 - **Translations** — the word card's short meaning — come from
   [Google Translate](https://translate.google.com/) (its public `gtx` endpoint), in the
-  reader's chosen language. The server asks Google for each word. A second line comes
+  reader's chosen language. The server asks Google for each word, and Vercel's data
+  cache keeps the answer for a few hours. A second line comes
   from the translation tables of both languages' own Wiktionaries. Between two of Spanish,
   German, French, Italian and Portuguese, it sits under Google's line when it adds a term.
   Between English and one of them, it shows only when Google has nothing.
@@ -91,9 +93,9 @@ pnpm test        # run tests
 pnpm typecheck   # type-check everything
 ```
 
-A push to `main` deploys, so `.githooks/pre-push` type-checks and runs the suite first. Git
-only looks in `.githooks` once `core.hooksPath` points there, hence the one-time setup above.
-`git push --no-verify` skips it.
+A push to `main` deploys, so `.githooks/pre-push` type-checks and runs the suite first,
+in about forty seconds. Git only looks in `.githooks` once `core.hooksPath` points there,
+hence the one-time setup above. `git push --no-verify` skips it.
 
 [docs/page-load.md](docs/page-load.md) explains how the page loads on a phone, and how to
 measure it with `pnpm load:check`.

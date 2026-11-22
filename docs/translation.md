@@ -30,7 +30,7 @@ flowchart TD
   cdn -- "The CDN does not have the answer." --> hop
 
   subgraph gtx ["Server: gtx(), in order"]
-    s1["Step 1: The server looks in Next's data cache, which Vercel keeps for the server.<br/>The cache may keep an answer for 180 days, which is revalidate.<br/>Vercel may drop an answer sooner."]
+    s1["Step 1: The server looks in Next's data cache, which Vercel keeps for the server.<br/>The cache may keep an answer for 180 days, which is revalidate.<br/>In practice Vercel drops the entries within hours."]
     s2["Step 2: The server asks Google at translate.googleapis.com.<br/>It asks for the translation, dt=t, and for the dictionary block, dt=bd."]
     s1 -- "The data cache does not have the answer." --> s2
   end
@@ -61,7 +61,7 @@ flowchart TD
 | --- | --- | --- | --- | --- |
 | `glossCache` | [`WordCard.tsx`](../apps/web/src/components/WordCard.tsx) | In the browser | It holds the answers this tab has received, for words with one casing. | It decides whether the browser asks the server again. |
 | `dict` | The query string | The browser sends it, and the server reads it. | The card always sends `dict=1`. | It makes the server ask Google for the dictionary block, `dt=bd`, and keep the word's casing. |
-| `revalidate` | [`route.ts`](../apps/web/src/app/api/translate/%5Bword%5D/route.ts) | On the server | It is 180 days. | It decides how long the data cache and the CDN may reuse an answer. Vercel may drop a data cache entry sooner, and a deploy empties the CDN. |
+| `revalidate` | [`route.ts`](../apps/web/src/app/api/translate/%5Bword%5D/route.ts) | On the server | It is 180 days. | It decides how long the data cache and the CDN may reuse an answer. In practice Vercel drops the data cache's entries within hours, and a deploy empties the CDN. |
 | `keptAtCdn` | [`cdn.ts`](../apps/web/src/lib/cdn.ts) | On the server, read at the edge | It writes `Vercel-CDN-Cache-Control`. | It lets the CDN answer the same URL again without asking the server. |
 | `needsPivot` | [`translate.ts`](../apps/web/src/lib/translate.ts) | On the server | It is true when neither language is `en`. | It decides whether the server translates through English first. The server then asks for the plain translation only when that finds nothing. |
 | `MIN_RELATIVE_SCORE` | [`translate.ts`](../apps/web/src/lib/translate.ts) | On the server | It is 0.01 of the best score in the group. | It decides which senses a group keeps. |
