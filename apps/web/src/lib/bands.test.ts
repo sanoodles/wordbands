@@ -271,12 +271,12 @@ describe("the defining view", () => {
     }
     const none = (lang: Parameters<typeof getBandSummary>[0]) =>
       getBandSummary(lang, "defining").find((b) => b.key === "none")?.count;
-    expect(none("pt")).toBe(11602);
-    expect(none("it")).toBe(7436);
-    expect(none("fr")).toBe(1262);
-    expect(none("es")).toBe(11286);
-    expect(none("de")).toBe(10907);
-    expect(none("en")).toBe(1600);
+    expect(none("pt")).toBe(9081);
+    expect(none("it")).toBe(5993);
+    expect(none("fr")).toBe(899);
+    expect(none("es")).toBe(8786);
+    expect(none("de")).toBe(6338);
+    expect(none("en")).toBe(1130);
   });
 
   // A wordier dictionary peels further, so each language has its own count.
@@ -291,10 +291,10 @@ describe("the defining view", () => {
     expect(getDefiningPoints("pt").levelCount).toBe(7);
     expect(getDefiningPoints("fr").levelCount).toBe(14);
     expect(getDefiningPoints("en").levelCount).toBe(20);
-    expect(getBand("fr", "defining", "D14")!.words).toHaveLength(23715);
+    expect(getBand("fr", "defining", "D14")!.words).toHaveLength(23781);
     expect(getBand("fr", "defining", "D15")).toBeNull();
     expect(getBand("pt", "defining", "D8")).toBeNull();
-    expect(getBand("en", "defining", "D20")!.words).toHaveLength(21070);
+    expect(getBand("en", "defining", "D20")!.words).toHaveLength(21152);
     expect(getBand("en", "defining", "D21")).toBeNull();
   });
 
@@ -318,25 +318,37 @@ describe("the defining view", () => {
   it("answers a word with its level", () => {
     expect(getWord("pt", "água")?.defining?.key).toBe("D3");
     expect(getWord("pt", "ser")?.defining?.key).toBe("D1");
-    expect(getWord("pt", "max")?.defining?.key).toBe("none");
+    expect(getWord("pt", "Michael")?.defining?.key).toBe("none");
     expect(getWord("it", "acqua")?.defining?.key).toBe("D2");
     expect(getWord("it", "essere")?.defining?.key).toBe("D1");
     expect(getWord("it", "ehi")?.defining?.key).toBe("none");
     expect(getWord("fr", "eau")?.defining?.key).toBe("D3");
     expect(getWord("fr", "être")?.defining?.key).toBe("D1");
-    expect(getWord("fr", "new")?.defining?.key).toBe("none");
+    expect(getWord("fr", "messieurs")?.defining?.key).toBe("none");
     expect(getWord("es", "agua")?.defining?.key).toBe("D4");
     expect(getWord("es", "ser")?.defining?.key).toBe("D1");
     expect(getWord("es", "déjame")?.defining?.key).toBe("none");
     expect(getWord("de", "Wasser")?.defining?.key).toBe("D2");
     expect(getWord("de", "sein")?.defining?.key).toBe("D1");
-    expect(getWord("de", "gesagt")?.defining?.key).toBe("none");
+    expect(getWord("de", "gerettet")?.defining?.key).toBe("none");
     expect(getWord("en", "dog")?.defining?.key).toBe("D3");
     expect(getWord("en", "be")?.defining?.key).toBe("D1");
-    expect(getWord("en", "okay")?.defining?.key).toBe("none");
+    expect(getWord("en", "anymore")?.defining?.key).toBe("none");
     // The dictionary spells it only with the ligature, so the other spelling takes its level.
     expect(getWord("fr", "coeur")?.defining?.key).toBe(getWord("fr", "cœur")?.defining?.key);
     expect(getWord("fr", "oeil")?.defining?.key).toBe("D4");
+  });
+
+  // The Spanish Wiktionary's page for `proliferar` numbers two senses and leaves both
+  // empty. The definitions of `hongo`, `musgo` and `proliferación` use the word. German
+  // `anderen` and French `aux` are forms that Wiktionary files only under another word.
+  // @spec BAND-17
+  it("gives a level to a word that definitions use, whatever its own entry holds", () => {
+    for (const [lang, w] of [
+      ["es", "proliferar"], ["es", "introducir"], ["it", "casa"],
+      ["fr", "aux"], ["de", "anderen"], ["en", "etc"],
+    ] as const) expect(getWord(lang, w)?.defining?.key, `${lang} ${w}`).not.toBe("none");
+    expect(getWord("es", "proliferar")?.defining?.key).toBe("D10");
   });
 
   // The scale measures what the dictionary leans on, not what a learner meets first, and
@@ -362,13 +374,13 @@ describe("the defining view", () => {
     const levelled = (lang: Parameters<typeof getBandSummary>[0]) =>
       [...getDefiningPoints(lang).levels].filter((c) => c !== "-");
     expect(getDefiningPoints("pt").words).toHaveLength(44352);
-    expect(levelled("pt")).toHaveLength(32750);
+    expect(levelled("pt")).toHaveLength(35271);
     expect(getDefiningPoints("it").words).toHaveLength(41422);
-    expect(levelled("it")).toHaveLength(33986);
+    expect(levelled("it")).toHaveLength(35429);
     expect(getDefiningPoints("fr").words).toHaveLength(48566);
-    expect(levelled("fr")).toHaveLength(47304);
+    expect(levelled("fr")).toHaveLength(47667);
     expect(getDefiningPoints("en").words).toHaveLength(50000);
-    expect(levelled("en")).toHaveLength(48400);
+    expect(levelled("en")).toHaveLength(48870);
   });
 
   it("lists a band in frequency order", () => {
@@ -376,13 +388,13 @@ describe("the defining view", () => {
     expect(d1.words).toHaveLength(54);
     expect(d1.words.slice(0, 4)).toEqual(["o", "de", "a", "que"]);
     const d1It = getBand("it", "defining", "D1")!;
-    expect(d1It.words).toHaveLength(371);
+    expect(d1It.words).toHaveLength(376);
     expect(d1It.words.slice(0, 4)).toEqual(["essere", "di", "e", "il"]);
     const d1Fr = getBand("fr", "defining", "D1")!;
-    expect(d1Fr.words).toHaveLength(76);
+    expect(d1Fr.words).toHaveLength(79);
     expect(d1Fr.words.slice(0, 4)).toEqual(["le", "il", "être", "de"]);
     const d1En = getBand("en", "defining", "D1")!;
-    expect(d1En.words).toHaveLength(904);
+    expect(d1En.words).toHaveLength(906);
     expect(d1En.words.slice(0, 4)).toEqual(["the", "I", "be", "a"]);
   });
 });

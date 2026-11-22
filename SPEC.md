@@ -131,6 +131,7 @@ dictionary, so each language has its own count.
 | BAND-14 | In typeahead a letter typed without a diacritic also matches that letter with any diacritic, and a letter typed with one matches only itself. The exact match it leads with is exact in its diacritics too |
 | BAND-15 | The `defining` view offers every level its language's dictionary peels into, D1 to Dn, and the figure draws one row per level. n is the language's own |
 | BAND-16 | No list runs past rank 50,000, where C2 ends |
+| BAND-17 | A word has a level when the definition of another listed word uses it. Its own entry need not define anything |
 
 ## FILTER — what the artifacts hold
 
