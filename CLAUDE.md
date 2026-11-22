@@ -171,7 +171,7 @@ the source language is wrong.
 
 | Detail | Why |
 | --- | --- |
-| Only a word the user typed is kept | The opening word, a chip and a swap put words in the field that nobody typed for the new language. Kept, they land on whatever the new list holds under that spelling: the opening `water` is Italian for a toilet, at rank 5,393, and `agua` redirects to the Portuguese verb `aguar` |
+| Only a word the user typed is kept | The opening word, a chip and a swap put words in the field that nobody typed for the new language. Kept, they land on whatever the new list holds under that spelling: the opening `water` is Italian for a toilet, and `agua` redirects to the Portuguese verb `aguar` |
 | A typed word the old language found is kept only where the new one has it | Then the switch was about the language, not the word. `water` typed under English lands on `agua` in Spanish, not on a miss |
 | A typed word the old language did not find is kept even where the new one lacks it | It was probably typed for the new language, and is misspelt or half-typed. The miss then offers the folded spelling: `madchen` under German offers `Mädchen` |
 | The spelling is kept, not translated | The typeahead looks a word up once it matches one exactly, so a German `die` typed under English is on the card as the English verb. Translated, it would arrive in German as `sterben` |
@@ -196,7 +196,7 @@ from two frequency sources, subtitles and wordfreq, plus the band definitions.
 | `names.txt` | shared | `smashew/NameDatabases` | Personal-name gazetteer, one name a line |
 | `<base>.{dic,aff}` | all | `LibreOffice/dictionaries` | Hunspell spell checkers. Named by `spellDict`, one base per file, listed below |
 | `wordfreq-<code>.msgpack.gz` | all | wordfreq 3.1.1, the `large_<code>.msgpack.gz` files in its PyPI wheel's `wordfreq/data/`, renamed | The ranking's other half, beside the subtitles above. One `pip download wordfreq==3.1.1 --no-deps` fetches all six. Its data is CC BY-SA 4.0 |
-| `wiktextract-<code>.jsonl.gz` | es de fr it pt en | kaikki.org, Wiktextract's extract of that language's own Wiktionary | Read by `build:wiktionary` and `build:lexicon`. The same files the defining-vocabulary repo downloads, so a symlink to them serves. 1.7GB for the six. That repo's README records which kaikki dump each one is |
+| `wiktextract-<code>.jsonl.gz` | es de fr it pt en | kaikki.org, Wiktextract's extract of that language's own Wiktionary | Read by `build:wiktionary` and `build:lexicon`. The same files the defining-vocabulary repo downloads, so a symlink to them serves. That repo's README records which kaikki dump each one is |
 | `lexicon.<code>.json` | all | Written by `build:lexicon` from the extract above | Wiktionary's lemma headwords, names, abbreviations, places and inflections, for `build:bands`. Rebuild it when an extract is replaced |
 
 Take `_full.txt` because the cut belongs in code, where it is version-controlled, not in
@@ -248,10 +248,10 @@ too. It is not settled here either.
 
 | Command | Does |
 | --- | --- |
-| `pnpm --filter @wordbands/web build:lexicon [code]` | Read each language's Wiktionary extract into `lexicon.<code>.json`. Run it before `build:bands`, and again when an extract is replaced. About 20s for Spanish and several minutes for French and English |
+| `pnpm --filter @wordbands/web build:lexicon [code]` | Read each language's Wiktionary extract into `lexicon.<code>.json`. Run it before `build:bands`, and again when an extract is replaced. French and English take several minutes |
 | `pnpm --filter @wordbands/web build:bands` | Rebuild every language |
 | `pnpm --filter @wordbands/web build:bands <code>` | Rebuild one |
-| `pnpm --filter @wordbands/web build:wiktionary` | Rebuild Wiktionary's translations, all 30 directions. About 3m40s, at 2.6GB |
+| `pnpm --filter @wordbands/web build:wiktionary` | Rebuild Wiktionary's translations, all 30 directions. It takes a few minutes, at 2.6GB |
 
 To add a language: drop its inputs in `data/`, its wordfreq list and Wiktionary extract
 included, add it to `LANGS` in `build-lexicon.ts` and run `build:lexicon <code>`, add a
@@ -277,14 +277,14 @@ defining-vocabulary repo builds them from each language's own Wiktionary and wri
 | `DEFINING_LEVEL_COUNT` holds the count for the client | The glossary names the bottom level and has no data to read it from. `bands` reads the count off the artifact instead, and `bands.test.ts` proves the two agree |
 | One base-36 digit per level | The artifact keeps one character per word, so D10 to D14 are `a` to `e`, and a language under ten levels reads as plain digits. `definingLevel` decodes it |
 | A word whose own entry defines nothing still has a level (`BAND-17`) | A level counts the definitions that use a word, not the word's own definition. The Spanish Wiktionary leaves `proliferar` and `introducir` empty. The German and French editions file `anderen` and `aux` only as forms of another word. Such a word adds no link to the graph. So no other word's level moves |
-| The six languages | 80% to 98% of each list has a level. Spanish's D2 holds 9 words, the smallest tab of any language, and `BAND-15` keeps it rather than merging it into D1 |
-| German's D5 | It holds 59% of the words with a level, against 43% to 55% at the bottom elsewhere, because German definitions link the fewest words. That is 52% of the list, against the 50% its C2 tab holds in the CEFR view |
-| German's no-level tab | 3,675 of its 6,338 words are forms that the merge keeps as entries. The German Wiktionary files them only as forms of another word. No definition uses them. One is `gerettet`, which michmech headwords on its own. A form michmech does not list, such as `komm` or `musst`, merges into its verb instead (`FILTER-13`). Portuguese, Italian and Spanish have 441 to 895 such words. A1 to B2 holds 437 German words with no level, 922 Italian and 707 Spanish. The fix belongs to the merge, not the peel |
+| Spanish's D2 | It is the smallest tab of any language. `BAND-15` keeps it rather than merging it into D1 |
+| German's D5 | It holds a larger share of the words than any other language's bottom level, because German definitions link the fewest words |
+| German's no-level tab | Many of its words are forms that the merge keeps as entries. The German Wiktionary files them only as forms of another word. No definition uses them. One is `gerettet`, which michmech headwords on its own. A form michmech does not list, such as `komm` or `musst`, merges into its verb instead (`FILTER-13`). Portuguese, Italian and Spanish have fewer such words. The fix belongs to the merge, not the peel |
 | English's 20 rows | On a 320×568 phone the row labels clear each other by 3.7px. Full screen on a phone held sideways, 740×340, they clear by 0.7px and touch, until one zoom step gives 9.7px. French clears by 4.7px there. Accepted: the labels never overlap, and only that one view crowds them |
 | D1 carries the merge's lumping | `para`, `como` and `una` are not entries, because the merge sums them into `parar`, `comer` and `unir`, so those three sit in Spanish D1 in their place. Portuguese D1 has `parar`, `comer` and `pelar` the same way, French D1 has `Dan` for `dans`, and German D1's `ich` takes the uses of `du`, `sie`, `er`, `es`, `wir` and `ihr`. A lemma can also take its whole level from a lumped word (`BAND-17`): `antiguar` sits at D4 on the uses of `antiguo`. The fix belongs to the merge, not the peel |
 | The artifact is positional | It holds one level per word of `ranked`, in order. A rebuild of `wordbands.<code>.json` needs the levels emitted again, and `artifacts.test.ts` fails on the digest until they are |
 | Each language names its own example | The figure's caption names an A1 word at the bottom level from `DEFINING_EXAMPLE`. `bands.test.ts` checks that the claim holds. French takes `demain`, as English takes the same word, because `bonjour` sits at D12, `salut` at D10, and `allô` at rank 1,630 is A2. English takes `tomorrow`, because `hello` sits at D17 and `bye` at D18 |
-| `coeur` has the level of `cœur` | The French list holds 43 words in both spellings, and the dictionary writes only the ligature. The emitter gives the `oe` spelling its twin's level, or `coeur` at rank 613 would have none |
+| `coeur` has the level of `cœur` | The French list holds some words in both spellings, and the dictionary writes only the ligature. The emitter gives the `oe` spelling its twin's level, or `coeur` would have none |
 
 To add a language: emit its levels in the defining-vocabulary repo, add it to
 `DEFINING_LEVEL_COUNT` with its count and to `DEFINING_EXAMPLE`, and import its artifact in
@@ -319,7 +319,7 @@ The merge folds every inflection onto its lemma, so a form is not an entry.
 | Detail | Why |
 | --- | --- |
 | Consulted only after an exact lookup misses | It is the rare path, and it must never shadow a real entry |
-| Imported dynamically, not statically | The six maps are 11.0MB against the artifacts' 3.4MB, and a static import parses all six at module load on every route. They land in their own chunks |
+| Imported dynamically, not statically | The six maps are larger than the artifacts, and a static import parses all six at module load on every route. They land in their own chunks |
 | Read through a `Map`, not the parsed object | This is the one lookup keyed straight on caller input, and a plain object answers `__proto__` and `constructor` with inherited members. `hostile-input.test.ts` caught exactly that |
 | Keyed on what the corpus writes | The lemma lists carry productive morphology nobody types (`abinha`, `aes`), which doubles the map for nothing |
 | The card says it redirected | The field is rewritten to the word that was found, so the typed word would otherwise just vanish |
@@ -334,9 +334,9 @@ and `scapole` to `scapolo` — about two words lost for every one fixed.
 
 The **chase** is the one thing on top of `lemmaOf`. Where the gates dropped the lemma
 itself, the form follows to whichever of that entry's forms survived, because pointing at
-michmech's headword would name a word no longer in the list. About 1,000–2,500 forms per
-language depend on it, and it is what makes `jede` answer `jeder` rather than the stem
-`FILTER-8` removed. `FORM-2` asserts the whole map against the index, not a sample.
+michmech's headword would name a word no longer in the list. It is what makes `jede`
+answer `jeder` rather than the stem `FILTER-8` removed. `FORM-2` asserts the whole map
+against the index, not a sample.
 
 **Known wart, inherited from the lemma lists.** Where michmech lumps distinct words under
 one lemma, the redirect reports that lumping as a confident answer: es `para` answers
@@ -421,7 +421,7 @@ what can be done about it, so the route says it.
 | Where | Reads |
 | --- | --- |
 | The 502's body | The command below |
-| Vercel's runtime logs, filtered on `[translate]` | The same reason, with the pair. Hobby keeps an hour |
+| Vercel's runtime logs, filtered on `[translate]` | The same reason, with the pair |
 
 A word looked up in the last few hours can come back 200 from the data cache, refusal or not.
 So the command asks for a new one each time. The gate takes any string without whitespace:
@@ -442,14 +442,7 @@ refusal is per IP rather than per word.
 ### The data cache
 
 Every lookup is cached by Next's fetch cache, with `revalidate` at 180 days. That number
-is only how long an entry counts as fresh. Vercel's data cache docs say:
-
-| Rule | What it means here |
-| --- | --- |
-| Each region has its own cache | Hobby runs functions in a single region, so every lookup shares one |
-| It persists across deployments | A deploy does not empty it |
-| On Hobby, every project in the team shares one cache | defining-vocabulary's entries take space from the same limit |
-| A fixed size, with no figure published. When full, the least recently read entries go first | An entry can go long before it goes stale |
+is only how long an entry counts as fresh.
 
 Measured on production on 2026-10-14 and 2026-10-16:
 
@@ -474,7 +467,7 @@ drops one is not worth chasing.
 | To read the cache | How |
 | --- | --- |
 | Vercel's own count | The Runtime Cache page: hit rate, reads, writes, size and evictions, for 12 hours. It is the one view that reads the cache without changing it: `https://vercel.com/sanoodles-dev/wordbands/observability/runtime-cache` |
-| One lookup at a time | Vercel's request log gives each request's time on the server, as `functionEvents[0].durationMs` in the API `vercel logs --debug` names. A cache read takes 10–15 ms, a Google round trip 41 ms or more. Hobby keeps an hour of it |
+| One lookup at a time | Vercel's request log gives each request's time on the server, as `functionEvents[0].durationMs` in the API `vercel logs --debug` names. A cache read takes 10–15 ms, a Google round trip 41 ms or more |
 | While Google refuses us | A cached word still answers 200 and an uncached one 502, so no timing is needed |
 
 | Measured and rejected | Why not |
@@ -521,12 +514,11 @@ as well, on both endpoints a server can call (`gtx`, and `dict-chrome-ex`):
 | `mujer` | women | Frauen | Frau |
 | `siesta` | snap | Schnapp | Siesta |
 
-The es→de response names its model, `en_de_2023q1`. The pivot above takes the same flaw
-from the English word it passes through. `siesta` goes through "nap", which is also the pile
-of cloth, so `Flor` and `Strich` arrive beside `Nickerchen`. `criar` goes through "raise" and
-comes back as `erhöhen`, which raises a price. `tiempo` goes through "time" and loses
-`Wetter`. Each language's own Wiktionary lists translations into the others, by sense, with
-no English between.
+The pivot above takes the same flaw from the English word it passes through. `siesta` goes
+through "nap", which is also the pile of cloth, so `Flor` and `Strich` arrive beside
+`Nickerchen`. `criar` goes through "raise" and comes back as `erhöhen`, which raises a
+price. `tiempo` goes through "time" and loses `Wetter`. Each language's own Wiktionary
+lists translations into the others, by sense, with no English between.
 
 Measured on 2026-10-09:
 
@@ -538,7 +530,7 @@ Measured on 2026-10-09:
 | So | Show both, each named. The target is the reader's own language, so the reader can judge its words, and a second list beside the first makes a stray sense visible |
 | Do the other 18 directions hold up? | Spot-checked on eight everyday words each, the leading term was right in every one. The odd terms trail, where frequency puts them: `haus` → gars, type in de→fr, `notte` → Nyx in it→fr |
 
-A direction covers 69% to 95% of A1. The French edition is the richest and the Italian and
+The French edition is the richest and the Italian and
 Portuguese ones the thinnest, so it↔pt and es↔it are the weakest directions. Where a direction
 has no entry for a word, the card shows Google's line.
 
@@ -549,9 +541,9 @@ How `build-wiktionary.ts` builds one direction:
 
 | Step | Rule | Why |
 | --- | --- | --- |
-| Per-sense tables | Read the tables an entry files under each sense, as well as its own | English keeps most of its tables there: 594,115 items into the five, against 42,395 on entries. The other five keep none there, so reading both changes none of their 20 directions |
+| Per-sense tables | Read the tables an entry files under each sense, as well as its own | English keeps most of its tables there. The other five keep none there, so reading both changes none of their 20 directions |
 | The English edition's dialects | Drop an item whose language is a variety (`Bavarian German`, `Louisiana French`) or whose tags call it dialectal, archaic or obsolete (`Alemannic-German`). Regional standards stay: `Brazil`, `Mexico`, `Switzerland` | The edition files them under the standard language, so `not` came out as nicht, net, nit, nüt |
-| Both editions | The source edition's entry lists its translations. The target edition's entries list theirs back, and inverting them finds the target words whose translations include the source word | Either half alone leaves most of a list out. For es↔de the German edition carries most of both directions: 49% of the Spanish list by inversion against 25% from the Spanish edition, and 31% of the German list against 14% |
+| Both editions | The source edition's entry lists its translations. The target edition's entries list theirs back, and inverting them finds the target words whose translations include the source word | Either half alone leaves most of a list out. For es↔de the German edition carries most of both directions |
 | Clean every string | Drop notes in brackets, split variants on `,` `;` `/`, drop a leading article (`ARTICLE`, elisions such as `l'` included, and the `to` before an English verb), drop anything with a digit or past two words | The German edition writes `bolso (Handtasche), bolsa (Einkaufstasche)`, and whole proverbs. A target headword passes the same cleaning, or `landauf, landab` arrives as one term |
 | Order (`WIKT-4`) | Terms both editions give first, then the more frequent in the target list, then table order | Two sets of editors reaching a term separately is the one signal Wiktionary has. Frequency puts `mordsmäßig` and `Blättermagen` last |
 | Cap (`WIKT-4`) | Four terms | Google's line holds four |
@@ -564,7 +556,7 @@ How `build-wiktionary.ts` builds one direction:
 | Hidden where it adds nothing (`WIKT-3`) | `agua` would show `Wasser` twice |
 | The source's name trails its line | The line is a translation first. Leading names would also start the two lists at different places |
 | The source's name is `select-none` | A copied line stays the translation, as with the badges |
-| A link only where the edition has a page | In es→de 752 Spanish words have none under any casing, and in de→es 60 German. The name stays, as plain text |
+| A link only where the edition has a page | Some words have no page under any casing. The name stays, as plain text |
 | Where Google has nothing, its line says why | `couldn’t translate` where the lookup failed, `no translation` where Google answered empty. A failure is usually Google refusing our server for a while, so it must not read as a word with no translation. It names no source, because Google's own page still works for the reader |
 | Its link becomes a pill where nothing on the card translates | **Google Translate**, in full. Google's page is then the only way left to a meaning. So it is louder than the etymology pill under the search field, with full-contrast text and a `line-strong` border. Where Wiktionary's line translates, the link stays its source's quiet name |
 | Where Google's line has nothing, Wiktionary's leads (`WIKT-1`) | The meaning comes first, level with the select, and Google's status follows it. Led by the status, the card would open on "couldn’t translate" above a translation |
@@ -607,7 +599,7 @@ quiet `CefrBadge` carrying the band name and rank in its tooltip.
 | The order stays Google's | The badge lets a learner filter; it does not re-rank |
 | Annotate server-side | It happens in the route that already fetches the translation, so it costs no extra round trip |
 | `levels` is keyed by the term as Google spelled it | `getLevel` keys case-insensitively underneath |
-| Some terms go unbadged | Phrases ("de agua") and inflected forms the lemma merge folded away ("eating"): about 4% of terms |
+| Some terms go unbadged | Phrases ("de agua") and inflected forms the lemma merge folded away ("eating") |
 | The looked-up word gets the same badge inside the search field | In Frequency view that is the only place its CEFR level shows at all |
 
 ### Clicking an alternative
@@ -785,12 +777,11 @@ and it runs in the pre-push hook and in `pr.yml` alongside the typecheck.
 | `<abbr>` needs a `title` | A `no-restricted-syntax` selector. There is no `jsx-a11y` rule for it. Nothing uses `<abbr>`, so it guards rather than checks |
 | Unused disables are errors | An exemption that outlives its reason is a finding of its own |
 
-Six places disable a rule inline, each with the reason above it. Four are the same two
-blind spots: a composite using **roving tabindex** looks unfocusable to
+Each place that disables a rule inline gives the reason above it. Most of those places work
+around two blind spots of the plugin: a composite using **roving tabindex** looks unfocusable to
 `interactive-supports-focus`, because the tabindex is on the children; and an ARIA
 combobox's options look inert to `click-events-have-key-events`, because the keys are on
-the input. The other two are the deliberate `autoFocus` and `CefrBadge`'s focusable
-`role="img"`.
+the input.
 
 ### The transcript
 
@@ -813,7 +804,7 @@ Both take a target, and `pnpm a11y:check http://localhost:3000` against a runnin
 dev` reads the same as production — so a change of ours can be seen before it is pushed.
 Unlike `decode:check`, the two targets are not expected to differ: nothing here is a
 property of the edge. It stays out of the pre-push hook all the same, since it needs a
-browser and a server, and its forty seconds would double the hook's.
+browser and a server.
 
 It **asserts nothing**, which is the point. The three layers divide like this:
 
@@ -855,8 +846,8 @@ class is a build hash; the last has a literal class to name.
 | `Select` options | Calls the row's click handler on `touchstart`, so a finger that lands to scroll the menu picks the row under it (`SELECT-1`) | Spread `PICK_ON_CLICK` from `components/select.ts` onto every `Select.Item`. It sets downshift's `preventDownshiftDefault` on that event, and a tap still picks through its own click. It runs first because Radix's `Slot` calls the child's handler before the slot's. Fondue finds its items by element type, so a wrapper around `Select.Item` is no way in. Fondue's source calls its handler a workaround for a click that touch devices do not fire. Chromium fires it, and so does an iPhone, checked by hand on 2026-10-30. A report of a tap that picks nothing starts here |
 | `Select` options | Closes the menu under the finger, so a second touch lands on what the menu covered (`SELECT-2`). At 390px the German row of the source select sits over the etymology link, and the word chips lie under other menus | `PICK_ON_CLICK` also drops clicks outside the menu for `QUIET_MS` after a finger lifts off a row. It is armed on `touchend` and not on the pick, so it holds wherever the menu closes before the click. It exempts the row's own `ul` rather than `[role="option"]`, because the word chips are options too. A drag arms it as well, so a tap on the trigger straight after a drag does nothing. In Chromium a single tap reached the link at no hold from 5 to 500 ms, and a second touch reached it 80 ms later |
 | `SegmentedControl.Root` | Ships its segments at 34px, under 2.5.5's 44 | `min-height: 46px` on the group, never on a segment. The group is a grid whose row the segments **and the selected-state indicator** share, so sizing a segment leaves the indicator behind at 34 and the control stops reading as one piece. 46 rather than 44 because the group's own 1px border sits outside the row |
-| `fondue-icons` | Declares no `sideEffects: false`, so Fondue's imports from its barrel keep all 407 icons in the page's JS, 362KB raw | `optimizePackageImports` in `next.config.mjs` |
-| Its stylesheet | Ships one file for every component, 361KB raw, and that file blocks the first paint | `src/app/fondue.css`, cut to 93KB by walking Fondue's own imports from each component the app imports. A selector goes only if it names a class none of those modules holds, so a state a component reaches later keeps its rule. `fondue-css.test.ts` fails on a Fondue upgrade or a new import, and `build:fondue-css` is the fix. A Dependabot bump of Fondue needs that run too |
+| `fondue-icons` | Declares no `sideEffects: false`, so Fondue's imports from its barrel keep every icon in the page's JS | `optimizePackageImports` in `next.config.mjs` |
+| Its stylesheet | Ships one file for every component, and that file blocks the first paint | `src/app/fondue.css`, cut down by walking Fondue's own imports from each component the app imports. A selector goes only if it names a class none of those modules holds, so a state a component reaches later keeps its rule. `fondue-css.test.ts` fails on a Fondue upgrade or a new import, and `build:fondue-css` is the fix. A Dependabot bump of Fondue needs that run too |
 | `ThemeProvider` | Sets `--color-focus-default` on its own element, so the same token set on `<html>` reaches nothing inside it | Set it on `.fondue-theme-provider` as well — a literal class in Fondue's markup beside the hashed theme one, so this is the one correction here matched by name |
 
 The Tailwind preset replaces the outline scales with a single `DEFAULT` — 4px wide, 2px
@@ -873,7 +864,7 @@ on — a panel, the page, a chip fill.
 | --- | --- |
 | Light collapses secondary into muted | Fondue's secondary is 4.97:1 on a chip there. `neutral-80` is the step that clears 7:1 on all four light surfaces at once, so both tiers take it and the page keeps two steps rather than three |
 | Dark keeps both | Its secondary is 8.5:1 on a chip and 13:1 on a panel already, so darkening it would flatten the page for nothing |
-| `--color-secondary-default` is redefined, not the classes | Every `tw-text-secondary` in the app and inside Fondue reads it, and 47 of its 48 uses in that stylesheet are `color`. Set on `.fondue-theme-provider` for the reason the focus ring is |
+| `--color-secondary-default` is redefined, not the classes | Every `tw-text-secondary` in the app and inside Fondue reads it, and nearly all of its uses in that stylesheet are `color`. Set on `.fondue-theme-provider` for the reason the focus ring is |
 | The error colour is a class of ours, not a token override | `--color-error-default` fills and outlines as well as colouring text, so overriding it would move the fills under other text. `.text-error-aaa` is 8.53:1 light and 10.73:1 dark |
 | Nothing is dimmed with opacity | `tw-opacity-90` takes the band count to 5.61:1 under a tab that is itself fine |
 | A picked or highlighted select row takes the row's own colour, not the muted one | No single grey holds 7:1 on all six fills. Dark would need `neutral-25`, which is the text colour itself and stops the code reading as muted at all; light would need `neutral-80`. So the two state rows are coloured per row and the plain ones stay muted |
@@ -890,7 +881,7 @@ highlighted option are drawn in.
 | Detail | Why |
 | --- | --- |
 | Two lines, the surface inside and the focus colour outside | The shape Fondue already draws. It is what makes the ring visible over a filled control — the fill cannot swallow both lines at once |
-| The token, not the rules | Every ring in Fondue's stylesheet reads `--color-focus-default`, in 44 places, all of them an outline or a box-shadow. Overriding rules instead means chasing one component at a time |
+| The token, not the rules | Every ring in Fondue's stylesheet reads `--color-focus-default`, always in an outline or a box-shadow. Overriding rules instead means chasing one component at a time |
 | `#main` silences both | It takes programmatic focus from the skip link, and a ring around the whole page is not what that means |
 | Measured by `p2-focus.mjs` | Its `ringContrast` reads the outline and the box-shadow, and `ringSelfContrast` reads the two lines against each other |
 
@@ -1134,20 +1125,20 @@ any function runs, and that path is `app/home/[theme]/[country]/page.tsx`.
 | Detail | Why |
 | --- | --- |
 | The theme and the country are in the path, not in `Vary` | Vercel keeps nothing with `Vary: Cookie`. For the country, Next sends a `Vary` of its own, and a function's header beats a config's. Had it beaten ours, one country's page would reach every country with no error |
-| The key is the path after the rewrite | Vercel's docs say only "the request URL". Checked on a preview on 2026-10-31: a `light` visitor took a MISS of their own straight after a `dark` visitor's HIT |
-| `Vercel-CDN-Cache-Control` beats the `private` Next sends | Vercel's docs list `private` as blocking the cache, and also give this header top priority. Checked on the same preview: MISS, then HIT. The browser still receives `private, no-store` |
+| The key is the path after the rewrite | Checked on a preview on 2026-10-31: a `light` visitor took a MISS of their own straight after a `dark` visitor's HIT |
+| `Vercel-CDN-Cache-Control` beats the `private` Next sends | Checked on the same preview: MISS, then HIT. The browser still receives `private, no-store` |
 | The query is part of the key | `generateMetadata` reads `?word=`, so a link names its word. Each URL is a miss once per deploy |
 | The root layout sits under `[theme]`, so there is no `app/layout.tsx` | The layout needs the theme for `<html>`. So `/foo` gets Next's built-in 404, outside our layout |
 | The two cookie names are written again in `next.config.mjs` | A config cannot import TypeScript. `next-config.test.ts` runs the rules against the names in `lib/theme.ts`, so a rename fails it |
 | They live in `lib/theme.ts`, not beside the provider | A server component that imports from a `"use client"` file receives a reference, not the string |
-| `x-vercel-cache` tells a hit from a miss | A hit took 119–140 ms on a new connection, and a miss about 357 ms on a preview |
+| `x-vercel-cache` tells a hit from a miss | The CDN writes it. A response time only hints at which one it was |
 | The search field is in the HTML (`LOAD-4`) | `WorkspaceClient` sends the Workspace's hero with a real `<input>`. It shares its layout with `Workspace` through `panel.ts` and the same heights, so a change to the hero changes both |
 | That field's `<form>` has `action="/"`, and its input is named `word` | Enter before any script has run loads the word through the URL. `searchParams` gives the page the same word, which a link therefore shows in its first paint |
 
 | Known cost | Detail |
 | --- | --- |
 | The field is two different inputs | The Workspace replaces the server's `<input>` with its own, so a finger that tapped it first can lose the keyboard on a phone. The text stays. This has not been tried on an iPhone |
-| The stylesheets are in every HTML | `inlineCss` adds about 18KB to each answer, and React keeps a second copy in the RSC payload, which brotli absorbs. A repeat visit pays for that, and a first visit saves a round trip |
+| The stylesheets are in every HTML | `inlineCss` puts them in each answer, and React keeps a second copy in the RSC payload, which brotli absorbs. A repeat visit pays for that, and a first visit saves a round trip |
 | `inlineCss` is experimental | It is one line in `next.config.mjs`, and removing it costs nothing but the round trip |
 ## Verifying a build while the web dev server is running
 
@@ -1244,8 +1235,8 @@ Some peer ranges are accepted rather than matched, under `peerDependencyRules` i
 
 | Accepted | Over | Why it is safe |
 | --- | --- | --- |
-| eslint 10 for `eslint-plugin-jsx-a11y` | Its peer range, `^3` to `^9`. 6.10.2, from October 2024, is its latest release | Every rule runs under eslint 10. A component with eight known violations reported all eight, with no rule crashing (2026-10-16) |
-| React 19 for `@frontify/fondue`, `fondue-components` and `fondue-icons` | `^18`. 13.10.0 is fondue's latest release | `@frontify/fondue/components` and `/icons` are all we import, and they only re-export the other two. What we use of those — `Select`, `Tooltip`, `ThemeProvider`, `SegmentedControl`, `LoadingCircle`, `TextInput` and the icons — renders under React 19, in the suite and on the deployed page |
+| eslint 10 for `eslint-plugin-jsx-a11y` | Its peer range, `^3` to `^9` | Every rule runs under eslint 10. A component with eight known violations reported all eight, with no rule crashing (2026-10-16) |
+| React 19 for `@frontify/fondue`, `fondue-components` and `fondue-icons` | `^18` | `@frontify/fondue/components` and `/icons` are all we import, and they only re-export the other two. What we use of those — `Select`, `Tooltip`, `ThemeProvider`, `SegmentedControl`, `LoadingCircle`, `TextInput` and the icons — renders under React 19, in the suite and on the deployed page |
 | React 19 for `fondue-charts`, `fondue-rte`, `react-datepicker`, `react-onclickoutside` and `react-popper` | `^18`, or ranges that end at 18 | Nothing we import loads them. They belong to fondue's main entry and its rich-text editor |
 | slate 0.102 for `slate-hyperscript` | `>=0.114.3` | Both belong to fondue's rich-text editor, which nothing we import loads |
 
@@ -1261,7 +1252,7 @@ Dependabot moves neither version.
 | Version | Set in | Read by |
 | --- | --- | --- |
 | Node | `.node-version`, a major alone | The workflows, through `node-version-file`. Vercel reads no version file, so `apps/web/package.json` repeats the major as `engines.node`, and `node-version.test.ts` fails when the two differ. pnpm warns on a machine running another major, and installs anyway |
-| pnpm | `packageManager` in the root `package.json` | `pnpm/action-setup`, in `pr.yml`. pnpm also writes its own version, with each platform binary's integrity, into the first of `pnpm-lock.yaml`'s two YAML documents, so a bump of `packageManager` changes the lockfile too. On a machine with no cache, the first install checks every locked package against npm's registry, about 1,000 requests. That took 3 seconds on a GitHub runner and 5 on Vercel, on 2026-10-21 |
+| pnpm | `packageManager` in the root `package.json` | `pnpm/action-setup`, in `pr.yml`. pnpm also writes its own version, with each platform binary's integrity, into the first of `pnpm-lock.yaml`'s two YAML documents, so a bump of `packageManager` changes the lockfile too. |
 
 `pnpm versions:check` compares both pins' majors with upstream: Node with its newest LTS
 line, and pnpm with its latest release. It also asks GitHub's advisory database about the
@@ -1324,7 +1315,7 @@ checkout that wrote the symlink as text because `core.symlinks` was off.
 `.github/workflows/skills-freshness.yml` runs both syncs weekly and opens a PR on the
 `chore/skills-sync` branch when either upstream has moved. Keeping copies rather than
 installing Vercel's Next.js plugin is a deliberate trade: the plugin would track `canary`
-on its own, but it clones a 2.42GB monorepo for a few markdown files and pins nothing.
+on its own, but it clones the whole Next.js monorepo for a few markdown files and pins nothing.
 
 | Trap | Detail |
 | --- | --- |

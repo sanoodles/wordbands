@@ -27,8 +27,7 @@ learning order than any dictionary-structure metric, so the ranking rests on it 
 - **The tail is filtered.** A subtitle corpus does not trail off into rare words, it
   trails off into character names, untranslated English, misspellings and OCR debris —
   past rank 25,000 only about one word in seven is in the language's own dictionary. So
-  past that rank the lemmatization list has to vouch for a word for it to be listed,
-  which leaves each language with 33–40k words of genuine vocabulary.
+  past that rank the lemmatization list has to vouch for a word for it to be listed.
   [docs/build-filters.md](docs/build-filters.md) explains every filter the build applies.
 - **Display casing** is measured from the
   [Leipzig Corpora](https://wortschatz.uni-leipzig.de/en/download) sentence collection:
@@ -55,9 +54,9 @@ learning order than any dictionary-structure metric, so the ranking rests on it 
   Contemporary English* (1978).
 - **Translations** — the word card's short meaning — come from
   [Google Translate](https://translate.google.com/) (its public `gtx` endpoint), in the
-  reader's chosen language. The server asks Google for each word, and Vercel's data cache
-  keeps the answer for a few hours. [docs/translation.md](docs/translation.md) draws the order
-  the sources are tried in. Google is the only outside service the server calls while it runs.
+  reader's chosen language. The server asks Google for each word.
+  [docs/translation.md](docs/translation.md) draws the order the sources are tried in. Google
+  is the only outside service the server calls while it runs.
   Everything in the bullets above is built into the committed artifacts ahead of time.
 
 This keeps the data footprint small and **scales to other languages**: add a frequency
@@ -84,9 +83,9 @@ pnpm test        # run tests
 pnpm typecheck   # type-check everything
 ```
 
-A push to `main` deploys, so `.githooks/pre-push` type-checks and runs the suite first —
-about forty seconds. Git only looks in `.githooks` once `core.hooksPath` points there, hence
-the one-time setup above. `git push --no-verify` skips it.
+A push to `main` deploys, so `.githooks/pre-push` type-checks and runs the suite first. Git
+only looks in `.githooks` once `core.hooksPath` points there, hence the one-time setup above.
+`git push --no-verify` skips it.
 
 [docs/page-load.md](docs/page-load.md) explains how the page loads on a phone, and how to
 measure it with `pnpm load:check`.
