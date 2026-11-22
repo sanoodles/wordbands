@@ -18,7 +18,7 @@ and a mark differ.
 
 | Command | Does |
 | --- | --- |
-| `pnpm spec:check` | Fail on a rule nothing proves, and on an annotation naming a rule that no longer exists |
+| `pnpm spec:check` | Fail on a rule nothing proves, on an annotation naming a rule that no longer exists, and on a rule sentence over 25 words |
 | `pnpm spec:list` | Every rule by area, with its proofs and its marks |
 | `pnpm spec:files` | The reverse: a file at a time, the rules it carries |
 
@@ -184,8 +184,8 @@ the source language is wrong.
 ## Build inputs
 
 All inputs are gitignored and live in `apps/web/data/`. The build reads them and writes
-one committed artifact per language, `wordbands.<code>.json`: a pure-frequency,
-lemma-merged word ranking plus the band definitions.
+one committed artifact per language, `wordbands.<code>.json`: a lemma-merged word ranking
+from two frequency sources, subtitles and wordfreq, plus the band definitions.
 
 | Input | Languages | Source | Notes |
 | --- | --- | --- | --- |
@@ -195,7 +195,9 @@ lemma-merged word ranking plus the band definitions.
 | `casing-<code>.txt` | all | Leipzig Corpora *sentences* file, from `downloads.wortschatz-leipzig.de` | Named by `casingFile`. **Which corpus each language took is not recorded** — see below |
 | `names.txt` | shared | `smashew/NameDatabases` | Personal-name gazetteer, one name a line |
 | `<base>.{dic,aff}` | all | `LibreOffice/dictionaries` | Hunspell spell checkers. Named by `spellDict`, one base per file, listed below |
-| `wiktextract-<code>.jsonl.gz` | es de fr it pt en | kaikki.org, Wiktextract's extract of that language's own Wiktionary | Read by `build:wiktionary` alone. The same files the defining-vocabulary repo downloads, so a symlink to them serves. 1.7GB for the six. That repo's README records which kaikki dump each one is |
+| `wordfreq-<code>.msgpack.gz` | all | wordfreq 3.1.1, the `large_<code>.msgpack.gz` files in its PyPI wheel's `wordfreq/data/`, renamed | The ranking's other half, beside the subtitles above. One `pip download wordfreq==3.1.1 --no-deps` fetches all six. Its data is CC BY-SA 4.0 |
+| `wiktextract-<code>.jsonl.gz` | es de fr it pt en | kaikki.org, Wiktextract's extract of that language's own Wiktionary | Read by `build:wiktionary` and `build:lexicon`. The same files the defining-vocabulary repo downloads, so a symlink to them serves. 1.7GB for the six. That repo's README records which kaikki dump each one is |
+| `lexicon.<code>.json` | all | Written by `build:lexicon` from the extract above | Wiktionary's lemma headwords, names, abbreviations, places and inflections, for `build:bands`. Rebuild it when an extract is replaced |
 
 Take `_full.txt` because the cut belongs in code, where it is version-controlled, not in
 whichever file someone happened to download.
@@ -240,15 +242,21 @@ build. They are also the one input under the GPL, which the others are not — a
 the committed artifact is a derived work of a GPL dictionary is an open question nobody
 has answered. The licence is named here; the question is not settled here.
 
+wordfreq's data is under CC BY-SA 4.0. Its terms ask for three credits, and `CREDIT-6`
+holds them. Whether the committed ranking must then be share-alike is an open question
+too. It is not settled here either.
+
 | Command | Does |
 | --- | --- |
+| `pnpm --filter @wordbands/web build:lexicon [code]` | Read each language's Wiktionary extract into `lexicon.<code>.json`. Run it before `build:bands`, and again when an extract is replaced. About 20s for Spanish and several minutes for French and English |
 | `pnpm --filter @wordbands/web build:bands` | Rebuild every language |
 | `pnpm --filter @wordbands/web build:bands <code>` | Rebuild one |
 | `pnpm --filter @wordbands/web build:wiktionary` | Rebuild Wiktionary's translations, all 30 directions. About 3m40s, at 2.6GB |
 
-To add a language: drop its inputs in `data/`, add a `LANGS` entry in the build script, add
-it to `SOURCE_LANG_META` and to `ETYMOLOGY` beside it, and add the registry import in
-`bands.ts`.
+To add a language: drop its inputs in `data/`, its wordfreq list and Wiktionary extract
+included, add it to `LANGS` in `build-lexicon.ts` and run `build:lexicon <code>`, add a
+`LANGS` entry in the build script, add it to `SOURCE_LANG_META` and to `ETYMOLOGY` beside
+it, and add the registry import in `bands.ts`.
 
 ## Build filters
 
@@ -265,17 +273,17 @@ defining-vocabulary repo builds them from each language's own Wiktionary and wri
 
 | Detail | Why |
 | --- | --- |
-| A level count per language (`BAND-15`) | The count is how far the peel goes, and a dictionary whose definitions use more words peels further. Links per word run from 10.7 in German to 30.2 in English, and the counts run from 5 to 20 with them. One count for every language would mean merging or splitting levels, and then a level stops being one round of the peel |
+| A level count per language (`BAND-15`) | The count is how far the peel goes, and a dictionary whose definitions use more words peels further. Links per word run from 11.0 in German to 26.2 in English, and the counts run from 5 to 20 with them. One count for every language would mean merging or splitting levels, and then a level stops being one round of the peel |
 | `DEFINING_LEVEL_COUNT` holds the count for the client | The glossary names the bottom level and has no data to read it from. `bands` reads the count off the artifact instead, and `bands.test.ts` proves the two agree |
 | One base-36 digit per level | The artifact keeps one character per word, so D10 to D14 are `a` to `e`, and a language under ten levels reads as plain digits. `definingLevel` decodes it |
-| The six languages | 65% to 97% of each list has a level. Spanish's D2 holds 9 words, the smallest tab of any language, and `BAND-15` keeps it rather than merging it into D1 |
-| German's D5 | It holds 64% of the words with a level, against 34% to 44% elsewhere, because German definitions link the fewest words. That is 42% of the list, under the 47% its C2 tab holds in the CEFR view |
-| German's no-level tab | 11,294 of its 18,751 words are forms the merge keeps as entries and the German Wiktionary files only as forms of another word: `gesagt`, which michmech headwords on its own, and `komm` and `musst`, which it does not list. Portuguese, Italian and Spanish have 818 to 1,380. They lead the tab. A1 to B2 holds 2,120 words with no level, against 2,008 in Italian and 1,872 in Spanish. The fix belongs to the merge, not the peel |
+| The six languages | 74% to 97% of each list has a level. Spanish's D2 holds 9 words, the smallest tab of any language, and `BAND-15` keeps it rather than merging it into D1 |
+| German's D5 | It holds 62% of the words with a level, against 44% to 56% at the bottom elsewhere, because German definitions link the fewest words. That is 49% of the list, against the 50% its C2 tab holds in the CEFR view |
+| German's no-level tab | 7,604 of its 10,907 words are forms the merge keeps as entries and the German Wiktionary files only as forms of another word: `gesagt`, which michmech headwords on its own. A form michmech does not list, such as `komm` or `musst`, merges into its verb instead (`FILTER-13`). Portuguese, Italian and Spanish have 690 to 1,529 such words. A1 to B2 holds 1,752 words with no level, against 1,364 in Italian and 1,269 in Spanish. The fix belongs to the merge, not the peel |
 | English's 20 rows | On a 320×568 phone the row labels clear each other by 3.7px. Full screen on a phone held sideways, 740×340, they clear by 0.7px and touch, until one zoom step gives 9.7px. French clears by 4.7px there. Accepted: the labels never overlap, and only that one view crowds them |
 | D1 carries the merge's lumping | `para`, `como` and `una` are not entries, because the merge sums them into `parar`, `comer` and `unir`, so those three sit in Spanish D1 in their place. Portuguese D1 has `parar`, `comer` and `pelar` the same way, French D1 has `Dan` for `dans`, and German D1's `ich` takes the uses of `du`, `sie`, `er`, `es`, `wir` and `ihr`. The fix belongs to the merge, not the peel |
 | The artifact is positional | It holds one level per word of `ranked`, in order. A rebuild of `wordbands.<code>.json` needs the levels emitted again, and `artifacts.test.ts` fails on the digest until they are |
-| Each language names its own example | The figure's caption names an A1 word at the bottom level from `DEFINING_EXAMPLE`. `bands.test.ts` checks that the claim holds. French takes `allô`, because `bonjour` sits at D12 and `salut` at D10. English takes `tomorrow`, because `hello` sits at D17 and `bye` at D18 |
-| `coeur` has the level of `cœur` | The French list holds 21 words in both spellings, and the dictionary writes only the ligature. The emitter gives the `oe` spelling its twin's level, or `oeil` at rank 257 would have none |
+| Each language names its own example | The figure's caption names an A1 word at the bottom level from `DEFINING_EXAMPLE`. `bands.test.ts` checks that the claim holds. French takes `demain`, as English takes the same word, because `bonjour` sits at D12, `salut` at D10, and `allô` at rank 1,630 is A2. English takes `tomorrow`, because `hello` sits at D17 and `bye` at D18 |
+| `coeur` has the level of `cœur` | The French list holds 43 words in both spellings, and the dictionary writes only the ligature. The emitter gives the `oe` spelling its twin's level, or `oeil` at rank 281 would have none |
 
 To add a language: emit its levels in the defining-vocabulary repo, add it to
 `DEFINING_LEVEL_COUNT` with its count and to `DEFINING_EXAMPLE`, and import its artifact in
@@ -310,7 +318,7 @@ The merge folds every inflection onto its lemma, so a form is not an entry.
 | Detail | Why |
 | --- | --- |
 | Consulted only after an exact lookup misses | It is the rare path, and it must never shadow a real entry |
-| Imported dynamically, not statically | The six maps are 12.3MB against the artifacts' 2.4MB, and a static import parses all six at module load on every route. They land in their own chunks |
+| Imported dynamically, not statically | The six maps are 11.0MB against the artifacts' 3.4MB, and a static import parses all six at module load on every route. They land in their own chunks |
 | Read through a `Map`, not the parsed object | This is the one lookup keyed straight on caller input, and a plain object answers `__proto__` and `constructor` with inherited members. `hostile-input.test.ts` caught exactly that |
 | Keyed on what the corpus writes | The lemma lists carry productive morphology nobody types (`abinha`, `aes`), which doubles the map for nothing |
 | The card says it redirected | The field is rewritten to the word that was found, so the typed word would otherwise just vanish |
@@ -717,7 +725,7 @@ browser as the page's own surface rather than a third card.
 
 ## Credits
 
-`CREDIT-1` to `CREDIT-5` are the rules. `CorpusCredit` in `Workspace.tsx` renders every
+`CREDIT-1` to `CREDIT-6` are the rules. `CorpusCredit` in `Workspace.tsx` renders every
 credit. The footer holds only the feedback link.
 
 | Detail | Why |
@@ -731,6 +739,7 @@ credit. The footer holds only the feedback link.
 | Every credit opens in this tab | The whole scenario rides in the query string, so Back restores the word, view and band the reader left. A new tab buys nothing Back does not, and 6 to 12 of them would each owe a warning (3.2.5) |
 | Ogden's *Basic English* is not cited | The spike's README compares against it. Nothing in the method comes from it |
 | Every language credits the Leipzig Corpora | Every language's `casingFile` is a Leipzig sentences file. Display casing and the name filter both read it, and its downloads are CC BY |
+| wordfreq is credited as its terms ask (`CREDIT-6`) | Every ranking uses it, and its data is under CC BY-SA 4.0. Its terms ask for three things: name the SUBTLEX authors, say that SUBTLEX is freely available, and link Google Books Ngram. The SUBTLEX address in those terms answers 404, so SUBTLEX is named without a link. The license is written out in full, because the page expands its abbreviation only later, in the Wiktionary credit |
 | Wiktionary's translations credit both editions (`CREDIT-5`) | They are Wiktionary's text, shown as written. The source edition and the license are already named with the defining levels, so the source edition is named again without a second link, which would put one credit in the tab order twice. For a pair with English the sentence says they stand in where Google has none |
 
 ## What the page says to a machine
@@ -993,7 +1002,7 @@ WCAG 1.4.13 asks that it be dismissible and hoverable, and it is neither by defa
 | A pick stays full screen | The word is looked up behind it and marked in it. Leaving on every pick would throw the zoom away mid-search |
 | Safari's trackpad pinch | Safari sends `gesturechange`, not a ctrl+wheel. A pinch on glass sends both, so the gesture handler stands down while a pointer is down |
 | A wheel with ctrl held zooms at `PINCH`, not at `WHEEL` (`FIG-10`) | It is a trackpad pinch. Chromium sends a pinch as wheels with ctrl held, and their deltaY sums to −100 ln(scale), as measured in headless Brave on 2026-10-17. At `PINCH` the figure then zooms by the fingers' own factor, as it does for Safari's gesture and for a pinch on glass. A mouse wheel turned with ctrl held is read at `PINCH` too, so it zooms faster than without ctrl |
-| `MAX_ZOOM` is 512 (`FIG-8`) | The first doubling at which the densest row fits its words 10mm apart on a phone. At 256 French cannot: 1,342 of its words would sit closer. A desktop never needs this much, and the extra costs it nothing |
+| `MAX_ZOOM` is 1,024 (`FIG-8`) | The first doubling at which the densest row fits its words 10mm apart on a phone. At 512 English cannot: its bottom level holds 21,070 words, and its closest pair would stand 7.7mm apart. A desktop never needs this much, and the extra costs it nothing |
 | 10mm is room for a large or a shaking fingertip | It is the closest pair that has to be pickable, not the typical one. A view of the densest row at full zoom holds two or three points, and a reader who needs less stops zooming sooner |
 | A word keeps its hashed offset unless that lands within 10mm of a word already in its row | The hashed offsets alone put 189 to 1,004 pairs per language within 0.05px of each other on a phone at 1×, and only 11,800× to 24,600× would pull the closest pair 10mm apart. The rule moves 5–10% of the words, and 17.5% in English, whose 20 rows are the thinnest. 87% to 98% of the moves are in the bottom two rows, so the picture is still the one the hash draws |
 | 10mm is measured on a 254 by 183 plot, at 160px an inch | The least plot full screen leaves a phone: 320px wide in portrait, 340px tall in landscape. 160px an inch is Android's, and near every phone's. A larger plot only spreads the points further, so `FIG-8`'s test reads this one |

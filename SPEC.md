@@ -13,7 +13,7 @@ rule it is. A statement lives in exactly one of the two files.
 ## How this binds
 
 Each rule carries an ID, and the test proving it names that ID. `pnpm spec:check` checks
-both directions and fails on either.
+both directions and fails on either. It also fails on a long sentence in a rule.
 
 | Piece | Rule |
 | --- | --- |
@@ -23,6 +23,7 @@ both directions and fails on either.
 | A mark | The same comment on the code a rule governs, so opening the file tells you which rule binds it. It never counts as proof — code cannot witness itself |
 | Unproven rule | An error. A rule nothing asserts is a wish |
 | Unknown ID | An error, in a proof or a mark alike. One naming a rule this file does not define is a leftover |
+| Long sentence | An error. No sentence in a rule runs past 25 words. A rule stated in several columns, like the decode table, is not measured |
 | Where it runs | `pnpm spec:check`, `pr.yml`, and `.githooks/pre-push`. It parses text and needs no network |
 
 `pnpm spec:list` prints every rule by area with its proofs and marks; `pnpm spec:files`
@@ -72,8 +73,8 @@ the word card could have made.
 | GATE-5 | A refused request answers 400, and Google is not called |
 | GATE-6 | An upstream failure answers 502 |
 | GATE-7 | Without `dict=1` the word is lowercased; with it the casing is kept |
-| GATE-8 | An upstream failure is logged, and its 502 says what went wrong: Google's status, content type, and the host and path that answered, or the name and code of the error that stopped the call. Neither names the word |
-| GATE-9 | Between two languages neither of which is English, a lookup asks Google through English first, and for the plain translation only where English yields nothing to go through or no sense of the word's part of speech |
+| GATE-8 | An upstream failure is logged. Its 502 says what went wrong. If Google answered, the 502 gives Google's status, the content type, and the host and path that answered. If an error stopped the call, the 502 gives the error's name and code. Neither the log nor the 502 names the word |
+| GATE-9 | When neither language is English, a lookup first asks Google through English. It asks Google for the plain translation only if that fails. That fails when English yields nothing to go through, or no sense of the word's part of speech |
 
 ## ROUTE — params, decoding and status
 
@@ -129,6 +130,7 @@ dictionary, so each language has its own count.
 | BAND-13 | The defining figure's data carries one level per ranked word |
 | BAND-14 | In typeahead a letter typed without a diacritic also matches that letter with any diacritic, and a letter typed with one matches only itself. The exact match it leads with is exact in its diacritics too |
 | BAND-15 | The `defining` view offers every level its language's dictionary peels into, D1 to Dn, and the figure draws one row per level. n is the language's own |
+| BAND-16 | No list runs past rank 50,000, where C2 ends |
 
 ## FILTER — what the artifacts hold
 
@@ -141,13 +143,17 @@ re-runs the build.
 | FILTER-1 | No clitic surface form survives in Portuguese or French |
 | FILTER-2 | Hyphenated vocabulary survives, because clitic segments are matched whole |
 | FILTER-3 | A surface word that heads its own lemma entry keeps it rather than merging into another |
-| FILTER-4 | However deep a list runs, its deepest word still falls in a band, and the tail band is offered exactly where a list runs past rank 50,000 |
+| FILTER-4 | However deep a list runs, its deepest word still falls in a band. A list offers the tail band if it runs past rank 50,000, and only then |
 | FILTER-5 | A personal name that is also an ordinary word of the language survives |
 | FILTER-6 | Display casing is measured mid-sentence, not ruled: German nouns and proper nouns are capitalized, weekdays and months are not |
 | FILTER-7 | A word measured lowercase mid-sentence is stored lowercase, in every language |
 | FILTER-8 | A lemma headword that is not a word of the language holds no entry; its frequency sits under the form that is written |
 | FILTER-9 | Below the dictionary gate, a list holds no word its language's own spell checker rejects in every spelling that language writes |
 | FILTER-10 | Past the dictionary gate, German keeps a word its own compounding or derivation accounts for, and still drops what the corpus tail is made of |
+| FILTER-11 | A word ranks by the mean of its frequency in the subtitles and its frequency in wordfreq. A proper noun, an abbreviation and a hyphenated word rank by their subtitle frequency alone |
+| FILTER-12 | Past rank 25,000, the list can keep a word that the lemma list lacks. It keeps the word when the language's own Wiktionary holds it and the spell checker accepts it |
+| FILTER-13 | The lemma list lacks some inflected forms. Such a form merges into the lemma that Wiktionary files it under, where Wiktionary names exactly one. A form that Wiktionary also files as a lemma keeps its own entry |
+| FILTER-14 | Wiktionary filing a surname as an ordinary word does not save it from the name filter. A country or a continent is never dropped as a name. Nor is a place that Wiktionary never files as a person |
 
 ## FORM — looking a word up by an inflected form
 
@@ -172,7 +178,7 @@ The build merges every inflection onto its lemma, so a form is not an entry of i
 | HEAD-3 | `default-src`, `object-src`, `frame-ancestors`, `base-uri` and `form-action` are all closed |
 | HEAD-4 | Production carries neither `unsafe-eval` nor a websocket source |
 | HEAD-5 | The framework is not named in a response header |
-| HEAD-6 | Every answer an API route reads from committed data, found or not, may be kept at Vercel's CDN until the next deploy, and so may a translation Google gave. A failed translation may not be kept |
+| HEAD-6 | Vercel's CDN may keep an API route's answer from committed data until the next deploy. That holds for a 404 as well. The CDN may also keep a translation Google gave. It may not keep a failed translation |
 | HEAD-7 | A browser may keep the manifest and the icon for a day |
 | HEAD-8 | The page may be kept at Vercel's CDN until the next deploy. The browser may not keep it |
 | HEAD-9 | Two visitors share a kept page only where their theme, their country and their query agree |
@@ -206,6 +212,7 @@ Wiktionary's translations follow the pair.
 | CREDIT-3 | Every language credits the Leipzig Corpora, since every language's casing is measured from them |
 | CREDIT-4 | Every language credits the lemmatization list under its license, since every language's ranking is lemma-merged |
 | CREDIT-5 | Where the word card can show Wiktionary's translations, the credits name both editions they come from. For a pair with English they say that the editions stand in where Google has nothing. Elsewhere they name neither for translations |
+| CREDIT-6 | Every language credits wordfreq, because every language's ranking uses it. The credit names wordfreq's license. It names the authors of SUBTLEX and says that SUBTLEX is freely available. It links Google Books Ngram |
 
 ## ETYM — the etymology link
 
@@ -215,7 +222,7 @@ dictionary written in that language.
 | ID | Rule |
 | --- | --- |
 | ETYM-1 | In every source language, the page links the looked-up word to its etymology in a dictionary of that language |
-| ETYM-2 | English links to Etymonline, German to the DWDS entry at its etymology, French to the CNRTL's etymology, Spanish to the RAE's dictionary, Italian to the Nuovo De Mauro and Portuguese to Priberam |
+| ETYM-2 | English links to Etymonline. German links to the DWDS entry, at its etymology. French links to the CNRTL's etymology. Spanish links to the RAE's dictionary. Italian links to the Nuovo De Mauro. Portuguese links to Priberam |
 | ETYM-3 | The word is spelt the way its dictionary looks it up: lowercase for the RAE's, and lowercase without diacritics for the Nuovo De Mauro |
 | ETYM-4 | The link is for the word the word card shows, in the dictionary of the language that word was found in. While a failed lookup's error shows, there is no link |
 
@@ -229,12 +236,12 @@ only when Google's has nothing.
 
 | ID | Rule |
 | --- | --- |
-| WIKT-1 | Between Spanish, German, French, Italian and Portuguese, every direction shows Wiktionary's translations on a line of their own: beneath Google's, or above it where Google's line has nothing. A pair of English and one of those five shows it only as WIKT-6 says, and any other pair never does |
-| WIKT-2 | Each line ends with the name of its source, linked to that source's page for the word: Google Translate, or the entry in the source language's own Wiktionary |
+| WIKT-1 | Between Spanish, German, French, Italian and Portuguese, every direction shows Wiktionary's translations on a line of their own. That line sits beneath Google's line. If Google's line has nothing, Wiktionary's line sits above it. A pair of English and one of those five shows the line only as WIKT-6 says. Any other pair never shows it |
+| WIKT-2 | Each line ends with the name of its source. The name links to that source's page for the word. For Google's line, that page is in Google Translate. For Wiktionary's line, it is the word's entry in the source language's own Wiktionary |
 | WIKT-3 | Wiktionary's line is left out when every term on it is already on Google's |
 | WIKT-4 | Wiktionary's line holds at most four terms, each one word or two. Terms both editions give come first, then the more frequent in the target language |
 | WIKT-5 | Wiktionary's translations are served from committed data, with no call out, so they show when Google fails |
-| WIKT-6 | Between English and Spanish, German, French, Italian or Portuguese, in either direction, the card shows Wiktionary's line only where Google's line has nothing, and asks for it only then |
+| WIKT-6 | For a pair of English and Spanish, German, French, Italian or Portuguese, the card shows Wiktionary's line only if Google's line has nothing. This holds in either direction. The card asks for Wiktionary's line only then |
 
 ## FIG — the defining figure
 
@@ -245,17 +252,17 @@ static picture. Full screen, it zooms and pans, so one word in the crowd can be 
 | --- | --- |
 | FIG-1 | The figure opens full screen on every device, including in a browser with no element fullscreen |
 | FIG-2 | Full screen, the figure zooms by wheel, pinch, keys and buttons, and pans by drag, keys and buttons |
-| FIG-3 | The zoom runs from the whole figure to 512 times, and the view never pans past the figure's edges |
+| FIG-3 | The zoom runs from the whole figure to 1,024 times, and the view never pans past the figure's edges |
 | FIG-4 | A pick lands on the word drawn under it at every zoom. A drag or a pinch picks nothing |
 | FIG-5 | Zoomed, every level and band in view keeps its name in view, and the ranks along the bottom stay labelled |
 | FIG-6 | In the page the figure neither zooms nor pans, so the wheel and a finger scroll the page across it |
 | FIG-7 | Leaving the browser's own full screen leaves the figure's too |
 | FIG-8 | Fully zoomed on a phone, no two points stand closer than 10mm |
 | FIG-9 | The label naming a point stays between the figure's left and right edges, whatever its word, on a screen as narrow as 320px |
-| FIG-10 | A pinch zooms the figure by the factor that the gap between the fingers grows or shrinks by, on a trackpad as on a touch screen |
+| FIG-10 | A pinch changes the zoom by the factor by which the gap between the fingers changes. If the gap doubles, the zoom doubles. This holds on a trackpad and on a touch screen |
 | FIG-11 | The figure's vertical lines divide its ranks into the bands of the CEFR view, and the row beneath names each band. Rare is among them wherever a list reaches past C2 |
 | FIG-12 | Each line between two bands falls between the last word of the one and the first word of the next, at every zoom |
-| FIG-13 | Full screen, wherever the view holds 300 points or fewer, a point's word shows beside it if the word covers no other point, no other word and no button. The looked-up word goes first, then the commonest |
+| FIG-13 | In full screen, a point's word can show beside the point. That happens only if the view holds 300 points or fewer. A word shows only if it covers no other point, no other word and no button. The looked-up word is placed first, then the commonest words |
 | FIG-14 | No frame of a zoom or a pan places words. While the view zooms the words are hidden, while it pans they move with their points, and once it stops they are placed again |
 | FIG-15 | A pick on a point's word picks that point |
 
@@ -280,14 +287,14 @@ language's code, and its name in that language.
 | --- | --- |
 | LANG-1 | Each language picker lists its languages in alphabetical order of their codes |
 | LANG-2 | A switch of source language keeps the word the user typed in the search box, and looks it up in the new language. Where the new language lacks it, the box still holds it and the lookup's error says so |
-| LANG-3 | The box takes the new language's example word instead in two cases: the user did not type the word, or the language just left found the word and the new language lacks it |
+| LANG-3 | In two cases the box takes the new language's example word instead. One is that the user did not type the word. The other is that the language just left found the word and the new language lacks it |
 
 ## SELECT — the menus of the selects
 
 | ID | Rule |
 | --- | --- |
 | SELECT-1 | On a touch screen, a tap on a row picks it. A finger that lands on a row and drags scrolls the menu, and picks nothing |
-| SELECT-2 | For half a second after a finger lifts off a row, a click outside that menu does nothing, so a second touch cannot activate what the menu covered. A pick with a mouse holds nothing back |
+| SELECT-2 | For half a second after a finger lifts off a row, a click outside that menu does nothing. So a second touch cannot activate what the menu covered. A pick with a mouse holds nothing back |
 
 ## LOAD — how soon a phone shows the page
 

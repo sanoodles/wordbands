@@ -166,14 +166,96 @@ describe("spell gate", () => {
 // @spec FILTER-10
 describe("morphology past the gate", () => {
   it("keeps a compound or derivation the lemma list does not hold", () => {
-    for (const w of ["Vergabe", "Blutspritzer", "Gletscherspalte", "Schneemaschine",
-      "Appetitlosigkeit", "Nobelpreisträger", "Geiselrettung"]) expect(held("de", w), w).toBe(true);
+    for (const w of ["Vergabe", "Blutspritzer", "Zulassungsstelle", "Vorbereitungszeit",
+      "Appetitlosigkeit", "Beurlaubung", "Projektleitung"]) expect(held("de", w), w).toBe(true);
   });
 
   it("still drops what the deep tail is actually made of", () => {
     for (const w of ["ryûji", "rrr", "lslam", "blabla", "connaughton", "gosheven"]) {
       expect(held("de", w), w).toBe(false);
     }
+  });
+});
+
+// Subtitles are dialogue, so a word of written text hardly occurs in them, and the lists
+// used to end before reaching it. A proper noun keeps the subtitles' rank, or Wikipedia's
+// places would stand in the first bands.
+// @spec FILTER-11
+describe("written text", () => {
+  it("ranks a word of written text in C1 or C2", () => {
+    for (const [lang, ...words] of [
+      ["en", "proliferate", "calumny"],
+      ["es", "farragoso", "consustancial"],
+      ["fr", "immixtion", "achopper"],
+      ["de", "anstandslos"],
+      ["pt", "consecução", "gáudio"],
+      ["it", "apodittico", "espungere"],
+    ] as const) for (const w of words) expect(getWord(lang, w)?.cefr.key, `${lang} ${w}`).toMatch(/^C[12]$/);
+  });
+
+  it("keeps a place at the rank dialogue gives it", () => {
+    // Averaged with wordfreq, these two stood at 1,655 and 523.
+    expect(getWord("es", "barcelona")!.rank).toBeGreaterThan(6000);
+    expect(getWord("it", "milano")!.rank).toBeGreaterThan(3000);
+  });
+
+  it("keeps a hyphenated word, which wordfreq splits", () => {
+    expect(held("fr", "vice-versa")).toBe(true);
+  });
+});
+
+// Past the gate the lemma list is thin on exactly what written text adds, so Wiktionary
+// vouches too. Its French edition alone holds words no one else does, which the spell
+// checker refuses.
+// @spec FILTER-12
+describe("Wiktionary's vouch past the gate", () => {
+  it("keeps a word the lemma list lacks where Wiktionary and the spell checker agree", () => {
+    for (const [lang, ...words] of [
+      ["fr", "phytoplancton", "métacognition", "horodatage"],
+      ["it", "endometriosi", "covarianza", "eutrofizzazione"],
+      ["en", "fatuous", "disconcertingly", "belligerency"],
+    ] as const) for (const w of words) expect(held(lang, w), `${lang} ${w}`).toBe(true);
+  });
+
+  it("drops one the spell checker refuses, though Wiktionary lists its plural", () => {
+    for (const w of ["bucaille", "tarla", "misson"]) expect(held("fr", w), w).toBe(false);
+  });
+});
+
+// The lemma list lacks most forms written text uses. Wiktionary has them, and files some
+// words as forms of rare homographs too: `pues` under the verb `puar`.
+// @spec FILTER-13
+describe("Wiktionary's inflections", () => {
+  it("merges a form the lemma list lacks into the lemma Wiktionary files it under", async () => {
+    for (const [lang, form, lemma] of [
+      ["de", "komm", "kommen"],
+      ["de", "musst", "müssen"],
+      ["es", "quédate", "quedarse"],
+    ] as const) {
+      expect(held(lang, form), form).toBe(false);
+      expect(await resolveForm(lang, form), form).toBe(lemma);
+    }
+  });
+
+  it("keeps a form that Wiktionary also files as a lemma", () => {
+    for (const w of ["pues", "jamás", "ojalá"]) expect(held("es", w), w).toBe(true);
+  });
+});
+
+// Wiktionary files many surnames as rare words, which would spare them from the name
+// filter, and the name list holds countries as surnames.
+// @spec FILTER-14
+describe("names and places", () => {
+  it("drops a name the lemma list lacks, though Wiktionary files it as a word", () => {
+    for (const w of ["granger", "galloway"]) expect(held("en", w), w).toBe(false);
+  });
+
+  it("keeps a country the name list also holds as a surname", () => {
+    for (const [lang, ...words] of [
+      ["en", "england", "france", "india"],
+      ["es", "españa", "francia", "italia"],
+      ["it", "italia", "inghilterra"],
+    ] as const) for (const w of words) expect(held(lang, w), `${lang} ${w}`).toBe(true);
   });
 });
 

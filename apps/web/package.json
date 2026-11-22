@@ -16,6 +16,7 @@
     "lint": "eslint src",
     "build:bands": "tsx scripts/build-bands.ts",
     "build:wiktionary": "tsx scripts/build-wiktionary.ts",
+    "build:lexicon": "tsx scripts/build-lexicon.ts",
     "build:fondue-css": "tsx scripts/build-fondue-css.ts"
   },
   "dependencies": {

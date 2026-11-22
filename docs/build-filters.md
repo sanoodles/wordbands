@@ -11,22 +11,27 @@ its commands.
 
 | Filter | Knob | Rule | Effect |
 | --- | --- | --- | --- |
-| Frequency floor | `minCount` | Drop words under 10 raw occurrences | Below that the OpenSubtitles tail is mostly hapax noise. Stated in occurrences, not rank, so it means the same in every language. Omitted for English, whose column is per-million. **Relaxing it is measured and rejected** — see below |
+| Two sources | `WRITTEN`, `FLOOR_PM` | `FILTER-11` | A word ranks by the mean of its frequency per million in the subtitles and in wordfreq. C2 holds 16,422 (it) to 25,000 words. See "Written text" below |
+| Frequency floor | `minCount`, `FLOOR_PM` | A blended word under 0.01 per million is dropped, where wordfreq's lists end. A word ranked by the subtitles alone also needs 10 raw occurrences there | Below 10 the OpenSubtitles tail is mostly hapax noise. Stated in occurrences, not rank, so it means the same in every language. English has no such floor, since its column is per-million. **Lowering it alone is measured and rejected** — see below |
+| Proper nouns, abbreviations, hyphens | `WEB_TOKENS` | `FILTER-11` | Rank by the subtitles alone. A word is a proper noun or an abbreviation where Wiktionary files it as one. Outside German, a word is also a proper noun where it is capitalized in 90% of its uses, or where the spell checker takes it only capitalized |
+| Wiktionary's inflections | `FORM_MAX_RATIO` | `FILTER-13` | Merge a form the lemma list lacks into its one Wiktionary lemma: German `komm` into `kommen`, Spanish `quédate` into `quedarse` |
 | Clitics | `clitics`, `mesoEndings`, `cliticExceptions` | Strip pronouns hyphenated onto verbs and merge the frequency back into the verb | 24% of the pt list and 12% of fr. pt `lembrar` 333 → 177, fr `excuser` 761 → 297 |
 | Own-entry | — | `FILTER-3` | The lists are lemma-sorted, so plain first-wins hands a shared form to the alphabetically-first claimant. That deletes common words (it `governo` into `governare`, fr `tu` into `il`; 100–160 of the top 1,000 per language) and floats the absorber into the beginner bands |
-| Dictionary gate | `dictGate` | Past rank 25,000, keep a word only if the lemma list vouches for it | Drops about 80 junk words per real one. Omitted for English, whose source is curated |
+| Dictionary gate | `dictGate` | Past rank 25,000, keep a word only if the lemma list vouches for it, or Wiktionary and the spell checker both do (`FILTER-12`) | Drops about 80 junk words per real one in the subtitle tail. Every language has it, English included |
+| List end | `LIST_END` | `BAND-16` | Every list ends at rank 50,000, where C2 ends. German's compounds would otherwise run past 190,000 |
 | Spell gate | `spellDict`, `spellVariants` | `FILTER-9` | 1,379 to 7,204 a language. The other half of the same list — see below |
 | Truncated stems | `spellDict`, `STEM_MIN_FORM` | `FILTER-8` | 14 in German, 2 to 6 elsewhere, because michmech headwords German determiners on a bare stem and does not do the same to the Romance five. `jed` → `jeder`, `mehrer` → `mehrere` |
-| Morphology | `morphology` | `FILTER-10` | +17,887 in German, taking it 35.6k → 53.5k. See below |
-| Personal names | `determiners`, `NAME_RANK_FLOOR` | Drop a word meeting all four tests below | 1,126 to 4,440 a language |
+| Morphology | `morphology` | `FILTER-10` | Keeps German compounds past the gate. With the written source they run German past 190,000 words, which `LIST_END` cuts at 50,000. See below |
+| Personal names | `determiners`, `NAME_RANK_FLOOR` | Drop a word that meets all four tests below. Keep a place (`FILTER-14`) | 1,126 to 4,440 a language |
 | Display casing | `casingFile` | Measure each word's mid-sentence capitalization and store that casing | Sentence-initial position is ignored, since it capitalizes everything |
 | Case-homographs | — | Keep both casings of one entry under `variants` | `"essen" -> ["Essen","essen"]`, most frequent first. `getWord` returns them as `forms` |
 
 ## Below the frequency floor, and why it stays at 10
 
-`minCount: 10` is the binding constraint on real-but-rare words, and lowering it is the
-one option here that was measured and **rejected outright**. Do not revisit it without
-new data.
+In the subtitles alone, `minCount: 10` is what keeps real but rare words out. Lowering it is
+the one option here that was measured and **rejected outright**. The written source below
+answers the same problem instead. It gives those words a frequency of their own, so they can
+land in C1.
 
 Measured on German at counts 3–9: 176,647 words land nowhere. The best filter found
 (hunspell plus a lemma-shaped test) admits 41,241 of them at about 3:1, and a 40-word
@@ -45,6 +50,66 @@ already in the list**, so they can only stack below it:
 | C2 / `rare` | 14,370 / 26,871 |
 
 Doubling the index to fill two bands nobody browses, at 3:1, is the worst trade available.
+
+## Written text
+
+`FILTER-11` is the rule. Subtitles are dialogue, so formal and technical words hardly occur
+in them, however large the corpus. With the subtitles alone, Spanish's 423M words fill 7,102
+of C2's 25,000 places, and Italian's 2,416. A news corpus shows the size of the gap. Take the
+real words that Leipzig's news sentences rank between 12,001 and 25,000. The subtitles alone
+miss 5.5% (en) to 19.5% (pt) of them. Of the words they miss, 74–100% occur fewer than 10
+times in the subtitles.
+
+So each word ranks by the mean of two frequencies per million. One is its frequency in the
+subtitles. The other is its frequency in wordfreq's large list. That list combines
+Wikipedia, subtitles, news, books, web text and social media with a trimmed mean.
+
+Measured on 2026-11-21, outside the repo, with every source run through the same build:
+
+| Source averaged in | Verdict |
+| --- | --- |
+| wordfreq | Taken. Best or near best on every graded list but EFLLex |
+| wordfreq alone, no subtitles | Best on the two Kelly lists, which are graded on web frequency. Worse on CEFR-J, FLELex and ELELex |
+| Wikipedia's word counts, or those and Leipzig's news | No better on any graded list, and larger lists |
+| Leipzig's larger corpora | Not fetched: the download page sits behind an anti-bot check |
+
+Against the graded lists, with a word the list lacks counted as past C2:
+
+| List | Measure | Subtitles alone | Both sources |
+| --- | --- | --- | --- |
+| CEFR-J + Octanove C1/C2 (en) | ρ / exact / within one band | 0.73 / 34.7% / 79.9% | 0.74 / 35.9% / 81.5% |
+| | C1 and C2 words held | 83% and 78% | 91% and 90% |
+| FLELex (fr) | ρ / exact / within one band | 0.57 / 20.7% / 54.9% | 0.59 / 22.8% / 59.7% |
+| | C1 and C2 words held | 80% and 75% | 96% and 95% |
+| ELELex (es) | ρ / exact / within one band | 0.54 / 22.6% / 53.3% | 0.55 / 24.4% / 57.6% |
+| Kelly (it) | ρ | 0.49 | 0.67 |
+| Kelly (en) | ρ | 0.65 | 0.75 |
+| EFLLex (en) | ρ | 0.59 | 0.56 |
+
+EFLLex, FLELex and ELELex grade a word by the first textbook level it appears in. Kelly's
+levels are rank bands of about 1,000 words, so only its ρ means anything.
+
+A hand reading took 40 random words a band from the words the written source adds. In
+English, German and Portuguese they held about as much junk as the subtitles alone give.
+French C1, Italian C2 and Spanish C1 held more. Spanish's junk is mostly verbs with an
+attached pronoun, such as `retirándose` and `implicarse`. The subtitles alone bring these
+too, such as `ducharte`, because the clitic logic sees only hyphens.
+
+| Load-bearing detail | Why |
+| --- | --- |
+| A proper noun keeps the subtitles' frequency | Averaged like any word, wordfreq puts `München` at 679 and `Trump` at 1,612. Dropping capitalized words instead takes country names with them |
+| A hyphenated word keeps the subtitles' frequency | wordfreq splits hyphens, so `vice-versa` would have half its frequency |
+| An elision is a left part that starts 50 or more words | Wikipedia writes `l'université` whole. `aujourd'hui` starts one word and stays whole |
+| wordfreq's `ss` is split over the `ß` spellings | wordfreq case-folds, which writes `groß` as `gross`. The split follows how often the subtitles and the casing corpus write each spelling |
+| Roman numerals the dictionaries lack go | Written text numbers centuries: `xiv`, `xviii`. Italian `ci` and `vi` stay |
+| `http`, `https`, `www` and `html` keep the subtitles' frequency | Otherwise `http` stands in A2 |
+
+| Known cost | Detail |
+| --- | --- |
+| A1–B2 moves | Of the words the subtitles alone put in A1–B2, 58% (de) to 67% (pt) keep their band and 31–38% move one band. Up to 2.9% leave the list, mostly forms that now merge onto a lemma. Written vocabulary rises (`notamment`, `insbesondere`, `publicación`), and so do web words such as `etc` |
+| A German proper noun can rise | German skips the casing signal, since its nouns are capitalized. A name that Wiktionary also files as a common form, `Bayern` the plural of `Bayer`, ranks on both sources, at 796 |
+| A plural-dominant noun shows its singular | The inflection merge folds `Windpocken` into `Windpocke` and `Innereien` into `Innerei`, as the lemma list already does for the words it holds |
+| wordfreq is no longer updated | Its 3.1.1 data is what the input is. Vocabulary moves slowly |
 
 ## Clitics
 
@@ -78,10 +143,10 @@ no entry for `ryûji` or `rrr`. The dictionary can, which is what `dictGate` use
 
 | Known cost | Detail |
 | --- | --- |
-| Not used for English | Its source is curated and its lemma list is the smallest by far, 808KB against French's 4.9MB. Gating it would cut 11k mostly-real words. The spell gate below still runs there, since it judges the head rather than the tail |
-| Real words lost | 1–3% of what the gate drops, 900–2,700 per language |
-| Where they cluster | Productive morphology the lists do not headword: `-mente`/`-ment` adverbs, `-ità`/`-ité` nouns, superlatives — `logicamente`, `unanimità`, `rigoureusement`, `Geborgenheit` |
-| Spot-check | Italian's list has no `entropia`, so the build's spot-check for it reports `—` |
+| English's lemma list is the smallest by far | 808KB against French's 4.9MB. On its own it would cut 11k mostly-real English words, so English leans on Wiktionary's vouch (`FILTER-12`) more than the others do |
+| Real words lost | 1–3% of what the lemma list alone drops, 900–2,700 per language, before Wiktionary's vouch |
+| Where they cluster | Productive morphology the lists do not headword: `-mente`/`-ment` adverbs, `-ità`/`-ité` nouns, superlatives. With the written source they rank below the gate, where the spell checker judges them: `logicamente` 13,293, `unanimità` 11,771, `rigoureusement` 14,622, `Geborgenheit` 19,213 |
+| Wiktionary's vouch needs the spell checker too | The French edition alone holds `bucaille`, `tarla` and `misson`, and lists their plurals, which would otherwise make them lemmas of the merge |
 
 ## Morphology, the second way past the gate
 
@@ -236,11 +301,20 @@ The top `NAME_RANK_FLOOR` (1,000) is exempt, because a hit there is likelier a l
 noun than a name. A language without a `casingFile` is skipped, since the gazetteer alone
 would eat "que", "por", "he" and "she".
 
-Known wart: a few country names sit in the surname list and go with them — `england`,
-`france`, `africa`, `canada`, `india` (en), `francia` and `italia` (es), `italia` and
-`inghilterra` (it). The determiner test rescues the rest, so fr and pt lose none, but
-English never articles a country ("the France" is ungrammatical) so it cannot fire there.
-The result looks arbitrary: `germany` stays, `france` goes.
+The name filter also spares a place (`FILTER-14`). The surname list holds country names:
+`england`, `france` and `india` (en), `españa` and `francia` (es), `italia` and
+`inghilterra` (it). English writes `France` and `India` without an article, so the
+determiner test cannot spare them. `build:lexicon` reads which names each Wiktionary files
+as a place and which as a person. The name filter keeps a country or a continent. It also
+keeps a place that Wiktionary never files as a person.
+
+| Detail | Why |
+| --- | --- |
+| A country or a continent counts even where it is also a person's name | Spanish Wiktionary files `España` and `Francia` as surnames too, and English files `France` and `India` as given names |
+| A city that is also a person's name is still dropped | `Washington` and `Jackson`. Nothing in the entry says which reading a list means |
+| Italian's "Nomi propri" marks no one as a person | The Italian edition files every proper noun there, `Italia` included |
+| Portuguese has no places | Its edition files names as plain nouns, `Joaçaba` as much as `Lisboa`. The determiner test already spares Portuguese countries |
+| The name test reads the lemma list alone | Wiktionary files many surnames as rare common words, `granger` and `galloway`, which would spare them |
 
 ## Display casing
 
@@ -267,7 +341,7 @@ at `max: null`.
 | --- | --- |
 | Tops roughly double, so C2 ends at 50k | Rather than running open-ended to the end of the list |
 | `rare` past it is open-ended | It is what lets `getWord` assert a band exists at every rank — keep `max: null` on whichever band is last |
-| **German reaches it and the other five do not** | The morphology vouch buys back ~18k compounds, taking the list past 50k, while `dictGate` and the spell gate keep the other five inside C2 |
+| **No list reaches it** | Every list ends at rank 50,000 (`BAND-16`). German's compounds and English's written tail would otherwise run far past it |
 
 **No language has a CEFR source of its own.** The whole calibration is one English
 measurement, and the rest is reuse:
@@ -300,7 +374,21 @@ past 7,000, and calls `corpse`, `convict` and `trauma` C1 where subtitles put th
 against 449 for the untagged, which is that difference made countable.
 
 The profiles are not committed, so this run is not reproducible from the repo. It predates
-the spell gate, and nothing has re-measured it.
+the spell gate.
+
+On 2026-11-21 the profiles were scored again, counting a word the list lacks as past C2
+rather than leaving it out, so the figures are lower than the ones above. The subtitles alone
+give ρ 0.73, 34.7% exact and 79.9% within one band. Both sources give 0.74, 35.9% and 81.5%.
+The median rank of each level's words:
+
+| | A1 | A2 | B1 | B2 | C1 | C2 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Subtitles alone | 767 | 2,135 | 4,114 | 7,441 | 12,201 | 18,451 |
+| Both sources | 779 | 2,030 | 3,723 | 6,687 | 11,517 | 17,751 |
+| Top of the band | 1,000 | 3,000 | 6,000 | 12,000 | 25,000 | 50,000 |
+
+Octanove's C2 words sit inside our C1 either way. The C1 and C2 tops are the extrapolated
+ones, and moving them is a decision of its own.
 
 Comparing one language against another through the bands is the weaker reading. The six
 agree almost everywhere, and where they disagree it is usually a word within 20% of a

@@ -23,6 +23,7 @@
 // each language takes, and what is not recorded.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { gunzipSync } from "node:zlib";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -96,6 +97,169 @@ interface FreqSource {
    * Omit where the column isn't a raw count (SUBTLEX's SUBTLWF is per-million).
    */
   minCount?: number;
+  /** The column is per million already, as SUBTLEX's SUBTLWF is. */
+  perMillion?: boolean;
+}
+
+// The written half of the frequency signal. Subtitles are dialogue, so formal and technical
+// words hardly occur in them: 423M words of Spanish subtitles left C2 three-quarters
+// empty. wordfreq averages Wikipedia, subtitles, news, books, web text and social media
+// with a trimmed mean, and each word's rank here is the mean of the two per-million
+// frequencies. `docs/build-filters.md` holds what else was measured.
+// @spec FILTER-11
+const WRITTEN = (code: string) => `wordfreq-${code}.msgpack.gz`;
+// Where wordfreq's own large lists end, in occurrences per million.
+const FLOOR_PM = 0.01;
+// The lists end where C2 ends. Written German's compounds would otherwise run past 190k.
+// @spec BAND-16
+const LIST_END = 50000;
+// A left part that starts this many different words is an elision (`l'`, `dell'`, `j'`)
+// rather than the front of one word (`aujourd'hui`).
+const ELISION_MIN_STARTS = 50;
+// A form this many times as frequent as the lemma Wiktionary files it under, and not spelt
+// as that lemma plus an ending, is a different word that happens to be spelt like that
+// form: `atores` (actors) under the verb `atorar`, `áfrica` under `áfrico`.
+const FORM_MAX_RATIO = 10;
+const ROMAN = /^m{0,4}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$/;
+
+const norm = (w: string) => w.normalize("NFC").replaceAll("’", "'").toLowerCase();
+
+/** The subset of MessagePack that wordfreq's files use: arrays, maps, strings and small ints. */
+function unpack(buf: Buffer): unknown {
+  let i = 0;
+  const str = (n: number) => {
+    const s = buf.toString("utf8", i, i + n);
+    i += n;
+    return s;
+  };
+  const u16 = () => ((i += 2), buf.readUInt16BE(i - 2));
+  const u32 = () => ((i += 4), buf.readUInt32BE(i - 4));
+  const arr = (n: number): unknown[] => Array.from({ length: n }, () => next());
+  const map = (n: number) => Object.fromEntries(Array.from({ length: n }, () => [next(), next()]));
+  function next(): unknown {
+    const b = buf[i++]!;
+    if (b <= 0x7f) return b;
+    if (b <= 0x8f) return map(b & 0x0f);
+    if (b <= 0x9f) return arr(b & 0x0f);
+    if (b <= 0xbf) return str(b & 0x1f);
+    switch (b) {
+      case 0xcc: return buf[i++]!;
+      case 0xcd: return u16();
+      case 0xce: return u32();
+      case 0xd9: return str(buf[i++]!);
+      case 0xda: return str(u16());
+      case 0xdb: return str(u32());
+      case 0xdc: return arr(u16());
+      case 0xdd: return arr(u32());
+      case 0xde: return map(u16());
+    }
+    throw new Error(`unexpected MessagePack byte 0x${b.toString(16)} at offset ${i - 1}`);
+  }
+  return next();
+}
+
+/**
+ * wordfreq's large list, per million. Words share a bin of one hundredth of a Zipf unit:
+ * bin `i` holds the words at 10^(-i/100) of all tokens.
+ */
+function readWritten(code: string): Map<string, number> {
+  const file = data(WRITTEN(code));
+  if (!existsSync(file)) throw new Error(`${WRITTEN(code)} is missing from data/ (see the build inputs table)`);
+  const bins = unpack(gunzipSync(readFileSync(file))) as unknown[];
+  const pm = new Map<string, number>();
+  bins.forEach((words, i) => {
+    if (i === 0) return; // the header, { format: "cB", version: 1 }
+    for (const w of words as string[]) {
+      const k = norm(w);
+      pm.set(k, (pm.get(k) ?? 0) + 1e6 * 10 ** (-i / 100));
+    }
+  });
+  return pm;
+}
+
+/** The subtitle list, per million, and its floor in the same unit. */
+function readSubtitles(cfg: LangConfig): { pm: Map<string, number>; floor: number } {
+  const lines = readFileSync(data(cfg.freq.file), "utf8").split(/\r?\n/);
+  let wCol: number, fCol: number, start: number;
+  if (cfg.freq.format === "csv") {
+    const [header] = lines;
+    // An empty input is a broken download, not a language with no words. Say so here
+    // rather than letting indexOf return -1 and every row come out blank.
+    if (header === undefined) throw new Error(`${cfg.freq.file} is empty`);
+    const head = header.split(",");
+    wCol = head.indexOf(cfg.freq.wordCol as string);
+    fCol = head.indexOf(cfg.freq.freqCol as string);
+    start = 1;
+  } else {
+    wCol = cfg.freq.wordCol as number;
+    fCol = cfg.freq.freqCol as number;
+    start = 0;
+  }
+  const raw = new Map<string, number>();
+  let total = 0;
+  for (const [i, line] of lines.entries()) {
+    if (i < start) continue;
+    const r = cfg.freq.format === "csv" ? line.split(",") : line.split(/\s+/);
+    const w = r[wCol]?.trim();
+    const f = Number(r[fCol]);
+    if (!w || !(f > 0)) continue;
+    const k = norm(w);
+    raw.set(k, (raw.get(k) ?? 0) + f);
+    total += f;
+  }
+  const scale = cfg.freq.perMillion ? 1 : 1e6 / total;
+  const pm = new Map([...raw].map(([w, f]) => [w, f * scale]));
+  return { pm, floor: (cfg.freq.minCount ?? 0) * scale };
+}
+
+/**
+ * Split a word at its apostrophes unless the language writes it whole, as SUBTLEX does.
+ * With `keep` the left parts keep their apostrophe, so the word test rejects `l'` and
+ * `dell'` as it rejects them in the subtitle lists.
+ */
+function splitApostrophes(pm: Map<string, number>, whole: Set<string>, keep: boolean): Map<string, number> {
+  const out = new Map<string, number>();
+  const add = (w: string, f: number) => out.set(w, (out.get(w) ?? 0) + f);
+  for (const [w, f] of pm) {
+    if (!w.includes("'") || whole.has(w)) {
+      add(w, f);
+      continue;
+    }
+    const parts = w.split("'");
+    parts.forEach((p, i) => {
+      if (p) add(keep && i < parts.length - 1 ? `${p}'` : p, f);
+    });
+  }
+  return out;
+}
+
+/** The asked spellings hunspell refuses, in one call. */
+function hunspellRefuses(asked: string[], dictBase: string | string[]): Set<string> {
+  const dict = [dictBase].flat().map(data).join(",");
+  const r = spawnSync("hunspell", ["-d", dict, "-l"], {
+    input: asked.join("\n") + "\n",
+    encoding: "utf8",
+    maxBuffer: 1 << 28,
+  });
+  if (r.error) throw new Error(`hunspell could not run: ${r.error.message}`);
+  return new Set(r.stdout.split(/\r?\n/).filter(Boolean));
+}
+
+interface Lexicon {
+  heads: string[];
+  names: string[];
+  abbrev: string[];
+  forms: [string, string][];
+  places: string[];
+}
+
+// Pieces of web addresses that written text carries and no one learns.
+const WEB_TOKENS = ["http", "https", "www", "html"];
+
+function readLexicon(code: string): Lexicon {
+  const file = data(`lexicon.${code}.json`);
+  if (!existsSync(file)) throw new Error(`lexicon.${code}.json is missing from data/: run build:lexicon`);
+  return JSON.parse(readFileSync(file, "utf8")) as Lexicon;
 }
 
 interface LangConfig {
@@ -178,8 +342,9 @@ interface LangConfig {
 const LANGS: Record<string, LangConfig> = {
   en: {
     code: "en",
-    freq: { file: "subtlex.csv", format: "csv", wordCol: "Word", freqCol: "SUBTLWF" },
+    freq: { file: "subtlex.csv", format: "csv", wordCol: "Word", freqCol: "SUBTLWF", perMillion: true },
     lemmaFile: "lemma-en.txt",
+    dictGate: DICT_GATE,
     spellDict: ["en_US", "en_GB"],
     singleLetterOk: new Set(["a", "i"]),
     fragments: new Set(["re", "ll", "ve", "em", "im", "n", "st", "nd", "rd", "th"]),
@@ -366,7 +531,9 @@ const STEM_REPAIR: [RegExp, string][] = [[/á$/, "ar"], [/ê$/, "er"], [/ô$/, "
 // i) would slot in as a small hook here.
 const CASING_MIN_SHARE = 0.7;
 const CASING_MIN_COUNT = 5;
-const CASING_TOKEN = /[^\W\d_]+(?:['’-][^\W\d_]+)*/gu;
+// \p{L}, not [^\W\d_]: JavaScript's \W is ASCII even under the u flag, so that class
+// splits `Mejía` into `Mej` and `a`, and every accented word went unmeasured.
+const CASING_TOKEN = /[\p{L}\p{M}]+(?:['’-][\p{L}\p{M}]+)*/gu;
 
 // Case-homograph: a lemma whose two casings are genuinely both used (German "Essen"
 // the noun vs "essen" the verb) — merged into one source entry, but worth translating
@@ -441,10 +608,9 @@ function corpusCasing(file: string, determiners: Set<string>): Map<string, Corpu
 // The lemma list's own casings: lowercase key -> its (non-ALL-CAPS) spellings. German
 // lists a capitalized spelling for nouns, so this is an authoritative "is there a noun
 // with this spelling" signal.
-function lemmaSpellings(lemmaFile: string): Map<string, Set<string>> {
+function lemmaSpellings(pairs: [string, string][]): Map<string, Set<string>> {
   const spellings = new Map<string, Set<string>>();
-  for (const line of readFileSync(data(lemmaFile), "utf8").split(/\r?\n/)) {
-    const lemma = line.replace(/^﻿/, "").split("\t")[0];
+  for (const [lemma] of pairs) {
     if (!lemma || isAllCaps(lemma)) continue;
     const key = lemma.toLowerCase();
     let s = spellings.get(key);
@@ -465,15 +631,12 @@ function dictCasing(spellings: Map<string, Set<string>>): Map<string, string> {
 
 // Casing display forms + case-homograph variants for a language.
 // @spec FILTER-6, FILTER-7
-function buildCasing(cfg: LangConfig): {
+function buildCasing(pairs: [string, string][], corpus: Map<string, CorpusStat>): {
   casing: Map<string, string>;
   variants: Map<string, string[]>;
   corpus: Map<string, CorpusStat>;
 } {
-  const corpus = cfg.casingFile
-    ? corpusCasing(cfg.casingFile, cfg.determiners ?? new Set())
-    : new Map<string, CorpusStat>();
-  const spellings = lemmaSpellings(cfg.lemmaFile);
+  const spellings = lemmaSpellings(pairs);
   const dict = dictCasing(spellings);
   const casing = new Map<string, string>();
   for (const key of new Set([...corpus.keys(), ...dict.keys()])) {
@@ -719,13 +882,139 @@ function formsMap(
 
 function buildLang(cfg: LangConfig) {
   const clean = makeClean(cfg);
+  const lex = readLexicon(cfg.code);
+  const wiktHeads = new Set(lex.heads);
 
-  // Lemma map: inflected form -> base lemma (michmech lists are `lemma<TAB>form`).
+  // The lemma list as written, `lemma<TAB>form`, and every word it writes in either column.
+  // The name filter and the numeral test consult it alone.
+  const listPairs: [string, string][] = [];
+  for (const line of readFileSync(data(cfg.lemmaFile), "utf8").split(/\r?\n/)) {
+    const [lemma, form] = line.replace(/^﻿/, "").split("\t");
+    if (lemma && form) listPairs.push([lemma, form]);
+  }
+  const listed = new Set(listPairs.flat().map((w) => w.trim().toLowerCase()));
+  const corpus = cfg.casingFile
+    ? corpusCasing(cfg.casingFile, cfg.determiners ?? new Set())
+    : new Map<string, CorpusStat>();
+
+  // --- The two frequency sources, per million, before any word is merged.
+  const subsIn = readSubtitles(cfg);
+  const writtenIn = readWritten(cfg.code);
+
+  // An apostrophe word stays whole where the lemma list holds it, or where the subtitles
+  // write it often and it does not start with an elision. Anything else splits.
+  const starts = new Map<string, number>();
+  for (const source of [subsIn.pm, writtenIn]) {
+    for (const w of source.keys()) {
+      if (!w.includes("'")) continue;
+      const left = w.split("'")[0]!;
+      starts.set(left, (starts.get(left) ?? 0) + 1);
+    }
+  }
+  const whole = new Set([...listed].filter((w) => w.includes("'")));
+  for (const [w, f] of subsIn.pm) {
+    if (w.includes("'") && f >= subsIn.floor && (starts.get(w.split("'")[0]!) ?? 0) < ELISION_MIN_STARTS) whole.add(w);
+  }
+  const subs = splitApostrophes(subsIn.pm, whole, true);
+  // wordfreq strips the apostrophe off an elision (`l'homme` -> `l`, `homme`), so the
+  // fragment arrives as a word. A word the subtitles write more often with an apostrophe is one.
+  const written = new Map<string, number>();
+  for (const [w, f] of splitApostrophes(writtenIn, whole, false)) {
+    if ((subs.get(`${w}'`) ?? 0) > (subs.get(w) ?? 0)) continue;
+    written.set(w, (written.get(w) ?? 0) + f);
+  }
+  // wordfreq case-folds, which turns ß into ss. Its frequency is split over the spellings
+  // the subtitles and the casing corpus write, in proportion to how often they write them.
+  if (cfg.code === "de") {
+    let corpusTotal = 0;
+    for (const s of corpus.values()) corpusTotal += s.tot;
+    const seen = (w: string) => (subs.get(w) ?? 0) + ((corpus.get(w)?.tot ?? 0) * 1e6) / Math.max(corpusTotal, 1);
+    for (const [w, f] of [...written]) {
+      const at = [...w.matchAll(/ss/g)].map((m) => m.index!);
+      if (!at.length) continue;
+      const spellings = new Set<string>();
+      for (let mask = 0; mask < 1 << at.length; mask++) {
+        let s = w;
+        for (let j = at.length - 1; j >= 0; j--) if (mask & (1 << j)) s = s.slice(0, at[j]) + "ß" + s.slice(at[j]! + 2);
+        spellings.add(s);
+      }
+      const weights = [...spellings].map((s) => [s, seen(s)] as const);
+      const total = weights.reduce((a, [, x]) => a + x, 0);
+      if (total === 0) continue;
+      written.delete(w);
+      for (const [s, x] of weights) if (x > 0) written.set(s, (written.get(s) ?? 0) + (f * x) / total);
+    }
+  }
+
+  // A proper noun or an abbreviation keeps the subtitles' frequency, so Wikipedia's places
+  // and people rank as they do in dialogue rather than in B1. Wiktionary names them; outside
+  // German so do the build's own casing signal and a spell checker that takes a word no
+  // dictionary lists only capitalized.
+  // @spec FILTER-11
+  const proper = new Set([...lex.names, ...lex.abbrev, ...WEB_TOKENS]);
+  if (cfg.code !== "de") {
+    for (const [w, s] of corpus) if (s.tot >= NAME_MIN_OBS && s.cap / s.tot >= NAME_CAP_SHARE) proper.add(w);
+    if (cfg.spellDict) {
+      const ask = [...new Set([...subs.keys(), ...written.keys()])].filter((w) =>
+        !listed.has(w) && !wiktHeads.has(w) && /^\p{L}+$/u.test(w) &&
+        Math.max(subs.get(w) ?? 0, written.get(w) ?? 0) >= FLOOR_PM);
+      const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
+      const refused = hunspellRefuses([...ask, ...ask.map(cap)], cfg.spellDict);
+      for (const w of ask) if (refused.has(w) && !refused.has(cap(w))) proper.add(w);
+    }
+  }
+  const value = (w: string) => {
+    if (proper.has(w)) {
+      const f = subs.get(w) ?? 0;
+      return f >= subsIn.floor ? f : 0;
+    }
+    // wordfreq splits a hyphenated word, so the subtitles alone know it.
+    if (w.includes("-")) return subs.get(w) ?? 0;
+    return ((subs.get(w) ?? 0) + (written.get(w) ?? 0)) / 2;
+  };
+  // Written text numbers its chapters and centuries: `xiv`, `xviii`. Italian `ci` and `vi` stay.
+  const roman = (w: string) => w.length > 1 && ROMAN.test(w) && !listed.has(w) && !wiktHeads.has(w);
+  const blended = new Map<string, number>();
+  for (const w of new Set([...subs.keys(), ...written.keys()])) {
+    const f = value(w);
+    if (f >= FLOOR_PM && !roman(w)) blended.set(w, f);
+  }
+
+  // --- Wiktionary's inflections, where the lemma list has none, so `umgestellt` merges into
+  // `umstellen` and `quédate` into `quedar`.
+  // @spec FILTER-13
+  const own = new Set(listPairs.map(([l]) => l.trim().toLowerCase()));
+  const lemmasOf = new Map<string, Map<string, [string, string]>>();
+  for (const [lemma, form] of lex.forms) {
+    const lf = form.toLowerCase();
+    let by = lemmasOf.get(lf);
+    if (!by) lemmasOf.set(lf, (by = new Map()));
+    by.set(lemma.toLowerCase(), [lemma, form]);
+  }
+  const pmOf = (w: string) => (subs.get(w) ?? 0) + (written.get(w) ?? 0);
+  const wiktPairs: [string, string][] = [];
+  for (const [lf, by] of lemmasOf) {
+    // The lemma list wins wherever it has the form. A form Wiktionary also lists as a lemma
+    // keeps its entry: `pues` is a form of the rare verb `puar`. A form with two lemmas is
+    // left out, since nothing here can choose between them.
+    if (listed.has(lf) || wiktHeads.has(lf) || by.size !== 1) continue;
+    const [lemma, form] = [...by.values()][0]!;
+    const ll = lemma.toLowerCase();
+    // A lemma the lemma list files as a form stays a form: `peckings` would make
+    // `pecking` a headword and split it from `peck`.
+    if (listed.has(ll) && !own.has(ll)) continue;
+    // A form far more frequent than its lemma is another word, unless it is spelt as the
+    // lemma plus an ending, which a noun used mostly in the plural is: `Tumorzellen`.
+    if (!lf.startsWith(ll) && pmOf(lf) > FORM_MAX_RATIO * Math.max(pmOf(ll), FLOOR_PM)) continue;
+    wiktPairs.push([lemma, form]);
+  }
+  const pairs = [...listPairs, ...wiktPairs];
+
+  // Lemma map: inflected form -> base lemma.
   const form2lemma = new Map<string, string>();
   const isHeadword = new Set<string>();
   const formsOf = new Map<string, string[]>();
-  for (const line of readFileSync(data(cfg.lemmaFile), "utf8").split(/\r?\n/)) {
-    const [lemma, form] = line.replace(/^﻿/, "").split("\t");
+  for (const [lemma, form] of pairs) {
     const l = clean(lemma), f = clean(form);
     if (!l || !f) continue;
     isHeadword.add(l);
@@ -737,7 +1026,7 @@ function buildLang(cfg: LangConfig) {
 
   // Read before the merge rather than after it: the stem repair below needs the corpus
   // to say which spellings are words, and the merge needs the repair.
-  const cased = cfg.casingFile ? buildCasing(cfg) : null;
+  const cased = cfg.casingFile ? buildCasing(pairs, corpus) : null;
   const repairs = cased && cfg.spellDict
     ? stemRepairs(formsOf, cased.corpus, cfg.spellDict, cfg.spellVariants)
     : new Map<string, string>();
@@ -763,38 +1052,15 @@ function buildLang(cfg: LangConfig) {
   };
 
   // Sum frequency per lemma across all its inflections.
-  const lines = readFileSync(data(cfg.freq.file), "utf8").split(/\r?\n/);
-  let wCol: number, fCol: number, start: number;
-  if (cfg.freq.format === "csv") {
-    const [header] = lines;
-    // An empty input is a broken download, not a language with no words. Say so here
-    // rather than letting indexOf return -1 and every row come out blank.
-    if (header === undefined) throw new Error(`${cfg.freq.file} is empty`);
-    const head = header.split(",");
-    wCol = head.indexOf(cfg.freq.wordCol as string);
-    fCol = head.indexOf(cfg.freq.freqCol as string);
-    start = 1;
-  } else {
-    wCol = cfg.freq.wordCol as number;
-    fCol = cfg.freq.freqCol as number;
-    start = 0;
-  }
-  const split = (line: string) => (cfg.freq.format === "csv" ? line.split(",") : line.split(/\s+/));
-
   const freq = new Map<string, number>();
   // Surface forms the corpus actually writes. A lemma list carries productive morphology
   // nobody types ("abinha", "aes"), which would double the redirect map for nothing.
   const attested = new Set<string>();
   let declitMerged = 0, declitDropped = 0;
-  // entries() rather than an index: it hands over a `string`, where lines[i] is
-  // `string | undefined` to the compiler and copies nothing the way slice(start) would.
-  for (const [i, line] of lines.entries()) {
-    if (i < start) continue;
-    const r = split(line);
-    const w = clean(r[wCol]); const wf = Number(r[fCol]);
-    if (!w || !(wf > 0)) continue;
+  for (const [raw, wf] of blended) {
+    const w = clean(raw);
+    if (!w) continue;
     attested.add(w);
-    if (cfg.freq.minCount !== undefined && wf < cfg.freq.minCount) continue;
     const stem = declitic(w, cfg);
     let base = w;
     if (stem !== null) {
@@ -816,9 +1082,14 @@ function buildLang(cfg: LangConfig) {
 
   // Drop personal names (see NAMES_FILE above); needs the casing corpus, so this is a
   // no-op for languages without one.
+  // The test asks the lemma list alone. Wiktionary files many surnames as rare words too
+  // (`granger`, `galloway`), which would spare them.
+  // @spec FILTER-14
   const names = cased ? loadNames() : null;
+  // A place spares itself too: the surname list holds `España`, `Francia` and `England`.
+  const places = new Set(lex.places);
   const isName = (w: string) => {
-    if (!names || !cased || isHeadword.has(w) || form2lemma.has(w) || !names.has(w)) return false;
+    if (!names || !cased || listed.has(w) || places.has(w) || !names.has(w)) return false;
     const s = cased.corpus.get(w);
     if (!s || s.tot < NAME_MIN_OBS || s.cap / s.tot < NAME_CAP_SHARE) return false;
     return s.det / s.tot < NAME_DET_SHARE;
@@ -843,8 +1114,18 @@ function buildLang(cfg: LangConfig) {
   // Past the gate the lemma list is not the only judge: a word the language's own
   // word-formation accounts for is vocabulary whether or not anyone listed it.
   const vouch = makeVouchMorphology(cfg, isHeadword, known);
-  const kept = (w: string) => known(w) || vouch(w);
-  const keptKeys = namedKeys.filter((w, i) => (i < gate ? !misspelt.has(w) : kept(w)));
+  // @spec FILTER-12
+  // Wiktionary's lemma headwords vouch too, where the spell checker agrees. The written
+  // source fills the tail with words the lemma list never held (`logicamente`,
+  // `rigoureusement`), and the French edition alone holds `bucaille`, `tarla` and `misson`.
+  // A word known only through Wiktionary's inflections counts as Wiktionary's too: listing
+  // `bucailles` makes `bucaille` a lemma, and would otherwise spare it the check.
+  const byWiktionary = (w: string) => !listed.has(w) && (known(w) || wiktHeads.has(w));
+  const wiktOnly = namedKeys.filter((w, i) => i >= gate && !vouch(w) && byWiktionary(w));
+  const wiktRefused = cfg.spellDict ? spellRejects(wiktOnly, cfg.spellDict, cfg.spellVariants) : new Set(wiktOnly);
+  const kept = (w: string) => listed.has(w) || vouch(w) || (byWiktionary(w) && !wiktRefused.has(w));
+  // @spec BAND-16
+  const keptKeys = namedKeys.filter((w, i) => (i < gate ? !misspelt.has(w) : kept(w))).slice(0, LIST_END);
   const gated = namedKeys.filter((w, i) => i >= gate && !kept(w)).length;
   const vouched = namedKeys.filter((w, i) => i >= gate && !known(w) && vouch(w)).length;
 
@@ -877,6 +1158,11 @@ function buildLang(cfg: LangConfig) {
   console.log(`\n[${cfg.code}] ranked ${ranked.length.toLocaleString()} lemmas -> ${outPath}`);
   console.log("  freq:", freqBands.map((d) => `${d.label}=${bandCount(d).toLocaleString()}`).join("  "));
   console.log("  CEFR:", cefrBands.map((d) => `${d.key}=${bandCount(d).toLocaleString()}`).join("  "));
+  console.log(`  blend: ${blended.size.toLocaleString()} surface forms;`,
+    `${proper.size.toLocaleString()} proper nouns and abbreviations on subtitle frequency`);
+  console.log(`  wiktionary: ${wiktPairs.length.toLocaleString()} inflections added;`,
+    `${(wiktOnly.length - wiktRefused.size).toLocaleString()} words vouched past the gate,`,
+    `${wiktRefused.size.toLocaleString()} refused by the spell checker`);
   console.log("  spot-checks:", cfg.spotChecks.map((w) => `${w}→${(rankOf.get(w) ?? "—").toLocaleString()}`).join("  "));
   if (cased) {
     const capped = keptKeys.filter((w) => cased.casing.has(w)).length;

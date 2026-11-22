@@ -77,7 +77,7 @@ const CAPTION_KEY = "wordbands:defining-caption";
 
 // @spec FIG-3, FIG-8
 /** The first doubling at which the densest row fits its words 10mm apart on a phone. */
-export const MAX_ZOOM = 512;
+export const MAX_ZOOM = 1024;
 /**
  * How far apart two points stand at full zoom, at the least: room for a large or a shaking
  * fingertip. Measured on the least plot full screen leaves a phone — 320px wide in portrait,

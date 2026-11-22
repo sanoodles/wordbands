@@ -25,3 +25,5 @@ apps/web/data/names.txt
 apps/web/data/*.dic
 apps/web/data/*.aff
 apps/web/data/wiktextract-*.jsonl.gz
+apps/web/data/wordfreq-*.msgpack.gz
+apps/web/data/lexicon.*.json
