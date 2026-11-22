@@ -15,14 +15,14 @@ its commands.
 | Frequency floor | `minCount`, `FLOOR_PM` | A blended word under 0.01 per million is dropped, where wordfreq's lists end. A word ranked by the subtitles alone also needs 10 raw occurrences there | Below 10 the OpenSubtitles tail is mostly hapax noise. Stated in occurrences, not rank, so it means the same in every language. English has no such floor, since its column is per-million. **Lowering it alone is measured and rejected** — see below |
 | Proper nouns, abbreviations, hyphens | `WEB_TOKENS` | `FILTER-11` | Rank by the subtitles alone. A word is a proper noun or an abbreviation where Wiktionary files it as one. Outside German, a word is also a proper noun where it is capitalized in 90% of its uses, or where the spell checker takes it only capitalized |
 | Wiktionary's inflections | `FORM_MAX_RATIO` | `FILTER-13` | Merge a form the lemma list lacks into its one Wiktionary lemma: German `komm` into `kommen`, Spanish `quédate` into `quedarse` |
-| Clitics | `clitics`, `mesoEndings`, `cliticExceptions` | Strip pronouns hyphenated onto verbs and merge the frequency back into the verb | 24% of the pt list and 12% of fr. pt `lembrar` 333 → 177, fr `excuser` 761 → 297 |
-| Own-entry | — | `FILTER-3` | The lists are lemma-sorted, so plain first-wins hands a shared form to the alphabetically-first claimant. That deletes common words (it `governo` into `governare`, fr `tu` into `il`; 100–160 of the top 1,000 per language) and floats the absorber into the beginner bands |
+| Clitics | `clitics`, `mesoEndings`, `cliticExceptions` | Strip pronouns hyphenated onto verbs and merge the frequency back into the verb | About a quarter of the pt list and a tenth of fr. A verb rises by the frequency of its clitic forms, as pt `lembrar` and fr `excuser` do |
+| Own-entry | — | `FILTER-3` | The lists are lemma-sorted, so plain first-wins hands a shared form to the alphabetically-first claimant. That deletes common words (it `governo` into `governare`, fr `tu` into `il`; over 100 of the top 1,000 per language) and floats the absorber into the beginner bands |
 | Dictionary gate | `dictGate` | Past rank 25,000, keep a word only if the lemma list vouches for it, or Wiktionary and the spell checker both do (`FILTER-12`) | Drops about 80 junk words per real one in the subtitle tail. Every language has it, English included |
 | List end | `LIST_END` | `BAND-16` | Every list ends at rank 50,000, where C2 ends. German's compounds would otherwise run past 190,000 |
-| Spell gate | `spellDict`, `spellVariants` | `FILTER-9` | 1,379 to 7,204 a language. The other half of the same list — see below |
-| Truncated stems | `spellDict`, `STEM_MIN_FORM` | `FILTER-8` | 14 in German, 2 to 6 elsewhere, because michmech headwords German determiners on a bare stem and does not do the same to the Romance five. `jed` → `jeder`, `mehrer` → `mehrere` |
+| Spell gate | `spellDict`, `spellVariants` | `FILTER-9` | About 1,000 to 7,000 a language. The other half of the same list — see below |
+| Truncated stems | `spellDict`, `STEM_MIN_FORM` | `FILTER-8` | About a dozen in German and a few elsewhere, because michmech headwords German determiners on a bare stem and does not do the same to the Romance five. `jed` → `jeder`, `mehrer` → `mehrere` |
 | Morphology | `morphology` | `FILTER-10` | Keeps German compounds past the gate. With the written source they run German past 190,000 words, which `LIST_END` cuts at 50,000. See below |
-| Personal names | `determiners`, `NAME_RANK_FLOOR` | Drop a word that meets all four tests below. Keep a place (`FILTER-14`) | 1,126 to 4,440 a language |
+| Personal names | `determiners`, `NAME_RANK_FLOOR` | Drop a word that meets all four tests below. Keep a place (`FILTER-14`) | About 1,000 to 4,000 a language |
 | Display casing | `casingFile` | Measure each word's mid-sentence capitalization and store that casing | Sentence-initial position is ignored, since it capitalizes everything |
 | Case-homographs | — | Keep both casings of one entry under `variants` | `"essen" -> ["Essen","essen"]`, most frequent first. `getWord` returns them as `forms` |
 
@@ -41,15 +41,8 @@ variants are *worse*: `.dic`-stems-only runs ~2.7:1, because the `.dic` carries 
 nouns (`montesquieu`, `skagerrak`, `ludwigsburg`).
 
 The ratio is not the deciding number. **Every sub-floor word is rarer than every word
-already in the list**, so they can only stack below it:
-
-| Where the 41,241 land | Count |
-| --- | --- |
-| German index | 35,630 → 76,871, more than double |
-| A1–C1 | **0** |
-| C2 / `rare` | 14,370 / 26,871 |
-
-Doubling the index to fill two bands nobody browses, at 3:1, is the worst trade available.
+already in the list**, so they can only stack below it, in C2 at best. At 3:1, filling the
+bottom of C2 is the worst trade available.
 
 ## Written text
 
@@ -120,7 +113,7 @@ surface form: `deixa-me`, `fazê-lo`, `donne-moi`, `a-t-il`. None of them is voc
 | --- | --- |
 | Mesoclisis | pt puts the pronoun inside the verb (`contar-te-ia`), so `mesoEndings` also strips a trailing future or conditional ending |
 | Stem repair | `STEM_REPAIR` restores the infinitive `-r` that pt drops before `-lo`/`-la` (`fazer` + `o` → `fazê-lo`) |
-| Unknown stem | Dropped, not kept: 346 forms in pt, 400 in fr |
+| Unknown stem | Dropped, not kept: a few hundred forms each in pt and fr |
 | Whole segments | Segments are matched whole. This is the load-bearing detail: it keeps `guarda-chuva` (ends in "chuva", not "a") and `arc-en-ciel` (ends in "ciel", not "en") |
 | Why whole | No lemma list holds a single hyphenated entry, so the dictionary cannot referee it, and rank cannot either — `peut-être` and `rendez-vous` sit among `avez-vous` and `dis-moi` |
 | Not clitics | `là` and `ci`, since `celui-là` and `là-bas` are vocabulary. `cliticExceptions` covers the rest (`rendez-vous`, `garde-à-vous`) |
@@ -166,7 +159,7 @@ looked up, and `FILTER-10` is the result.
 | Load-bearing detail | Why |
 | --- | --- |
 | The head of a compound and the stem of a derivation must be a **lemma**, not any known form | Otherwise inflections walk in as base words: `rettungsbooten` splits on `booten`, `bundeskanzlers` on `kanzlers` |
-| A part in the gazetteer that the lemma list lacks poisons the split | German compounding licenses names freely — `carleton` is carl+ton, `paulchen` is paul+chen. Costs ~1,083 words, and cleared the sample |
+| A part in the gazetteer that the lemma list lacks poisons the split | German compounding licenses names freely — `carleton` is carl+ton, `paulchen` is paul+chen. It costs about 1,000 words, and it cleared the sample |
 | The split is a yes/no vouch and is never shown | So a wrong analysis of a real word costs nothing: `gaststube` splits as gasts+tube and is admitted anyway |
 | Only German supplies `morphology` | The Romance five compound phrasally (`arc-en-ciel`), so there is nothing for them to re-derive |
 
@@ -222,14 +215,14 @@ separable-prefix verbs, diminutives, superlatives, intensifier compounds. It rej
 `Nobelpreisträger`, `Jungfernfahrt`, `blitzsauber`, `Spätzchen` and `grabschen`, and a
 40-word sample of its rejections past 25,000 held no junk at all. Run there it would be a
 vandal. Run on the head it removes `elizabeth` (frequency 5,084), `up`, `janet`, `night`,
-`squad` and `scouts` — and every one of its 4,561 drops is below rank 25,000 by
+`squad` and `scouts` — and every one of its drops is below rank 25,000 by
 construction, which is the range anyone browses.
 
 A word is refused only when **none of the spellings its language writes it in** is a word.
 Both casings, or German's own capitalization decides vocabulary questions. Plus whatever
 `spellVariants` adds, which is French's ligature: the corpus writes `oeil`, `coeur` and
 `soeur`, the dictionary holds `œil`, `cœur` and `sœur`, and `œ` is on no keyboard. Asking about
-the ligature too keeps 26 French words, every one of them real, and admits no junk —
+the ligature too keeps a few dozen French words, every one of them real, and admits no junk —
 `goes`, `moe` and `tahoe` are no more words with the ligature than without it.
 
 The cost in German is the ~11% it takes with them: real words the dictionary lacks
@@ -248,7 +241,7 @@ sample lies — it reads near-perfect where a random one reads 85–90%.
 
 | | en | es | fr | de | pt | it |
 | --- | --- | --- | --- | --- | --- | --- |
-| Dropped below 25,000 | 1,379 | 7,139 | 6,056 | 4,561 | 7,204 | 6,064 |
+| Dropped below 25,000, roughly | 1,000 | 7,000 | 6,000 | 5,000 | 7,000 | 6,000 |
 | Junk, in a hand-audit | ~85% | 92% | 94% | ~89% | 85% | 97% |
 
 Every one of them is dominated by the same two kinds: untranslated English, and the names the
@@ -256,15 +249,15 @@ gazetteer's four-way test spared. What differs is the third kind and the cost:
 
 | Language | The third kind of junk | What it takes with them |
 | --- | --- | --- |
-| en | Contraction debris the tokenizer left: `didn` at rank 87, `doesn`, `isn`, `wouldn`, `hasn`, ten more inside the top 800 | `tv`, `snuck`, `meds`, `arse` — abbreviations and the informal. Its drop is the smallest because SUBTLEX is curated |
+| en | Contraction debris the tokenizer left: `didn` inside the top 100, `doesn`, `isn`, `wouldn`, `hasn` and about ten more inside the top 1,000 | `tv`, `snuck`, `meds`, `arse` — abbreviations and the informal. Its drop is the smallest because SUBTLEX is curated |
 | es | Accentless spellings: `aqui`, `asi`, `estan`, `habia` | Enclitic verb forms (`vámonos`, `llevémoslo`, `págame`), diminutives (`amiguito`, `bolsitas`), loanwords `picnic`, `surf`, `beicon` |
 | fr | Accentless spellings: `ca`, `plait`, `ecoutez`, `etais` | The 1990 rectifications, which the *classique* list refuses: `diner`, `entrainement`, `traitres` |
-| pt | The pre-AO90 orthography, which is most of the drop above rank 3,000: `exactamente`, `acção`, `directo`, `objecto` | 89 of those 166 have no reformed twin in the list, so they go outright — `correcto`, `acto`, `efectuar`. The other 77 keep theirs: `ação` 3,010, `exatamente` 1,306, `diretor` 3,129 |
+| pt | The pre-AO90 orthography: `exactamente`, `acção`, `directo`, `objecto` | About half of those spellings have no reformed twin in the list, so they go outright: `correcto`, `acto`, `efectuar`. The others keep their twin: `ação`, `exatamente`, `diretor` |
 | it | Accent-stripped duplicates, and almost nothing else: `perche`, `piu`, `gia`, `citta`, `realta`, `verita` | Almost nothing, which is why it audits at 97%. `più` and `può` are the exception: neither has an accented entry, so the word leaves as an entry and stays only as a redirect, `più` → `molto` |
 
 | Measured and rejected | Why |
 | --- | --- |
-| Asking about the all-caps spelling too | It would keep `tv`, `gps`, `dvd` and the real acronyms `EEUU`, `OTAN`, `VIH`, `IVA` — and with them French's `ok`(133) and `ca`(158), and German's pre-1996 `ungewiß`, `bewußt`, `anschluß`, `rußland`, because uppercase `ß` is `SS`. It would change German's list for junk it does not have |
+| Asking about the all-caps spelling too | It would keep `tv`, `gps`, `dvd` and the real acronyms `EEUU`, `OTAN`, `VIH`, `IVA` — and with them French's `ok` and `ca`, and German's pre-1996 `ungewiß`, `bewußt`, `anschluß`, `rußland`, because uppercase `ß` is `SS`. It would change German's list for junk it does not have |
 
 ## Truncated lemma stems
 
@@ -348,7 +341,7 @@ measurement, and the rest is reuse:
 
 | Element | Where it comes from |
 | --- | --- |
-| The A1 to B2 medians, A1≈635 A2≈2275 B1≈4692 B2≈8394 | The CEFR-J Wordlist, English. Which version was used at calibration time was not recorded; the medians reproduce within 8–17% against Wordlist 1.5 on the current artifact |
+| The A1 to B2 medians, A1≈635 A2≈2275 B1≈4692 B2≈8394 | The CEFR-J Wordlist, English. Which version was used at calibration time was not recorded |
 | The C1 and C2 tops | Nothing external. CEFR-J stops at B2, so 25k and 50k extrapolate the doubling trend |
 | CEFR itself | No vocabulary at all. The framework specifies ability, not words, so every CEFR word list is a third party's construction and there is no ground truth under the labels |
 
@@ -392,6 +385,5 @@ ones, and moving them is a decision of its own.
 
 Comparing one language against another through the bands is the weaker reading. The six
 agree almost everywhere, and where they disagree it is usually a word within 20% of a
-threshold: en "green" at rank 909 against es 1,170 straddles the A1/A2 line at 1,000. The
-rank in the tooltip is what tells that apart from a real difference, like it "parete" at
-2,702.
+threshold: en "green" sits just inside A1, and es "verde" just past it in A2. The rank in the
+tooltip is what tells that apart from a real difference, like it "parete" well inside A2.
