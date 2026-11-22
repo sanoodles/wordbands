@@ -149,10 +149,10 @@ re-runs the build.
 | FILTER-8 | A lemma headword that is not a word of the language holds no entry; its frequency sits under the form that is written |
 | FILTER-9 | Below the dictionary gate, a list holds no word its language's own spell checker rejects in every spelling that language writes |
 | FILTER-10 | Past the dictionary gate, German keeps a word its own compounding or derivation accounts for, and still drops what the corpus tail is made of |
-| FILTER-11 | A word ranks by the mean of its frequency in the subtitles and in wordfreq, so a word of written text ranks where it is used. A proper noun, an abbreviation and a hyphenated word rank by the subtitles alone |
-| FILTER-12 | Past the dictionary gate, a word that only its language's Wiktionary vouches for stays where the spell checker accepts it, and goes where the spell checker refuses it |
-| FILTER-13 | An inflected form that Wiktionary files under one lemma, and that the lemma list lacks, merges into that lemma. A form Wiktionary also files as a lemma keeps its own entry |
-| FILTER-14 | A name the lemma list lacks is dropped as a name even where Wiktionary files it as an ordinary word. A place Wiktionary files as a country or a continent, or never as a person, is kept |
+| FILTER-11 | A word ranks by the mean of its frequency in the subtitles and its frequency in wordfreq. A proper noun, an abbreviation and a hyphenated word rank by their subtitle frequency alone |
+| FILTER-12 | Past rank 25,000, the list can keep a word that the lemma list lacks. It keeps the word when the language's own Wiktionary holds it and the spell checker accepts it |
+| FILTER-13 | The lemma list lacks some inflected forms. Such a form merges into the lemma that Wiktionary files it under, where Wiktionary names exactly one. A form that Wiktionary also files as a lemma keeps its own entry |
+| FILTER-14 | Wiktionary filing a surname as an ordinary word does not save it from the name filter. A country or a continent is never dropped as a name. Nor is a place that Wiktionary never files as a person |
 
 ## FORM — looking a word up by an inflected form
 
@@ -211,7 +211,7 @@ Wiktionary's translations follow the pair.
 | CREDIT-3 | Every language credits the Leipzig Corpora, since every language's casing is measured from them |
 | CREDIT-4 | Every language credits the lemmatization list under its license, since every language's ranking is lemma-merged |
 | CREDIT-5 | Where the word card can show Wiktionary's translations, the credits name both editions they come from. For a pair with English they say that the editions stand in where Google has nothing. Elsewhere they name neither for translations |
-| CREDIT-6 | Every language credits wordfreq and its license, names the SUBTLEX authors and says SUBTLEX is freely available, and links Google Books Ngram, since every language's ranking averages wordfreq in |
+| CREDIT-6 | Every language credits wordfreq, because every language's ranking uses it. The credit names wordfreq's license. It names the authors of SUBTLEX and says that SUBTLEX is freely available. It links Google Books Ngram |
 
 ## ETYM — the etymology link
 

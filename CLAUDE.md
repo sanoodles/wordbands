@@ -242,9 +242,9 @@ build. They are also the one input under the GPL, which the others are not — a
 the committed artifact is a derived work of a GPL dictionary is an open question nobody
 has answered. The licence is named here; the question is not settled here.
 
-wordfreq's data is CC BY-SA 4.0, and its terms ask for three credits, which `CREDIT-6`
-holds. Whether the committed ranking must then be share-alike is the same kind of open
-question, and it is not settled here either.
+wordfreq's data is under CC BY-SA 4.0. Its terms ask for three credits, and `CREDIT-6`
+holds them. Whether the committed ranking must then be share-alike is an open question
+too. It is not settled here either.
 
 | Command | Does |
 | --- | --- |
@@ -739,7 +739,7 @@ credit. The footer holds only the feedback link.
 | Every credit opens in this tab | The whole scenario rides in the query string, so Back restores the word, view and band the reader left. A new tab buys nothing Back does not, and 6 to 12 of them would each owe a warning (3.2.5) |
 | Ogden's *Basic English* is not cited | The spike's README compares against it. Nothing in the method comes from it |
 | Every language credits the Leipzig Corpora | Every language's `casingFile` is a Leipzig sentences file. Display casing and the name filter both read it, and its downloads are CC BY |
-| wordfreq is credited as its terms ask (`CREDIT-6`) | Every ranking averages it in, and its data is CC BY-SA 4.0. Its terms ask that the SUBTLEX authors be named and SUBTLEX called freely available, and that Google Books Ngram be linked. SUBTLEX's address in those terms answers 404, so it is named without a link. The license is written out in full, since its abbreviation is expanded only later, with Wiktionary |
+| wordfreq is credited as its terms ask (`CREDIT-6`) | Every ranking uses it, and its data is under CC BY-SA 4.0. Its terms ask for three things: name the SUBTLEX authors, say that SUBTLEX is freely available, and link Google Books Ngram. The SUBTLEX address in those terms answers 404, so SUBTLEX is named without a link. The license is written out in full, because the page expands its abbreviation only later, in the Wiktionary credit |
 | Wiktionary's translations credit both editions (`CREDIT-5`) | They are Wiktionary's text, shown as written. The source edition and the license are already named with the defining levels, so the source edition is named again without a second link, which would put one credit in the tab order twice. For a pair with English the sentence says they stand in where Google has none |
 
 ## What the page says to a machine
