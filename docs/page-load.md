@@ -13,8 +13,8 @@ it.
 
 The search field is in the HTML, so it shows at the first paint on either visit. That is when
 it shows, not when it is ready. The field reacts once the browser has run the page's
-JavaScript, about 600 ms into a repeat visit on a simulated phone. Text typed before then stays
-in the field, and Enter works, because the field is a plain form.
+JavaScript, which happens after the first paint. Text typed before then stays in the field,
+and Enter works, because the field is a plain form.
 
 The word chips have no budget. They need a second round trip to the API, after the word's own
 lookup answers.
@@ -37,20 +37,8 @@ cache. The budget holds for a page the CDN keeps. A miss renders in `iad1` and t
 
 ## Where the first paint goes
 
-A trace of the deployed page on the simulated phone, in headless Brave with no GPU:
-
-| Time | First visit | Repeat visit |
-| --- | --- | --- |
-| The HTML has arrived | About 210 ms | About 170–195 ms |
-| Parse the HTML | About 25 ms | About 25 ms |
-| Work out the styles | 29 ms | 28 ms |
-| Lay the page out | 50 ms | 56 ms |
-| The first paint | About 340 ms | 310–390 ms |
-
 No script holds the paint back. They run after it. So the paint is the connection, which
-nothing in this repo sets, plus the browser's work on its first frame. The long font stack
-accounts for about 16 ms of the layout on the Linux machine that measured this. An iPhone looks
-fonts up differently, so that number does not carry over.
+nothing in this repo sets, plus the browser's work on its first frame.
 
 ## Measure it
 
