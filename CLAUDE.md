@@ -267,7 +267,7 @@ lowering `minCount`.
 
 ## Defining levels
 
-`BAND-11` to `BAND-13` and `BAND-15` are the rules. The levels are not built here. The
+`BAND-11` to `BAND-13`, `BAND-15` and `BAND-17` are the rules. The levels are not built here. The
 defining-vocabulary repo builds them from each language's own Wiktionary and writes
 `data/defining.<code>.json`.
 
@@ -276,14 +276,15 @@ defining-vocabulary repo builds them from each language's own Wiktionary and wri
 | A level count per language (`BAND-15`) | The count is how far the peel goes, and a dictionary whose definitions use more words peels further. Links per word run from 11.0 in German to 26.2 in English, and the counts run from 5 to 20 with them. One count for every language would mean merging or splitting levels, and then a level stops being one round of the peel |
 | `DEFINING_LEVEL_COUNT` holds the count for the client | The glossary names the bottom level and has no data to read it from. `bands` reads the count off the artifact instead, and `bands.test.ts` proves the two agree |
 | One base-36 digit per level | The artifact keeps one character per word, so D10 to D14 are `a` to `e`, and a language under ten levels reads as plain digits. `definingLevel` decodes it |
-| The six languages | 74% to 97% of each list has a level. Spanish's D2 holds 9 words, the smallest tab of any language, and `BAND-15` keeps it rather than merging it into D1 |
-| German's D5 | It holds 62% of the words with a level, against 44% to 56% at the bottom elsewhere, because German definitions link the fewest words. That is 49% of the list, against the 50% its C2 tab holds in the CEFR view |
-| German's no-level tab | 7,604 of its 10,907 words are forms the merge keeps as entries and the German Wiktionary files only as forms of another word: `gesagt`, which michmech headwords on its own. A form michmech does not list, such as `komm` or `musst`, merges into its verb instead (`FILTER-13`). Portuguese, Italian and Spanish have 690 to 1,529 such words. A1 to B2 holds 1,752 words with no level, against 1,364 in Italian and 1,269 in Spanish. The fix belongs to the merge, not the peel |
+| A word whose own entry defines nothing still has a level (`BAND-17`) | A level counts the definitions that use a word, not the word's own definition. The Spanish Wiktionary leaves `proliferar` and `introducir` empty. The German and French editions file `anderen` and `aux` only as forms of another word. Such a word adds no link to the graph. So no other word's level moves |
+| The six languages | 80% to 98% of each list has a level. Spanish's D2 holds 9 words, the smallest tab of any language, and `BAND-15` keeps it rather than merging it into D1 |
+| German's D5 | It holds 59% of the words with a level, against 43% to 55% at the bottom elsewhere, because German definitions link the fewest words. That is 52% of the list, against the 50% its C2 tab holds in the CEFR view |
+| German's no-level tab | 3,675 of its 6,338 words are forms that the merge keeps as entries. The German Wiktionary files them only as forms of another word. No definition uses them. One is `gerettet`, which michmech headwords on its own. A form michmech does not list, such as `komm` or `musst`, merges into its verb instead (`FILTER-13`). Portuguese, Italian and Spanish have 441 to 895 such words. A1 to B2 holds 437 German words with no level, 922 Italian and 707 Spanish. The fix belongs to the merge, not the peel |
 | English's 20 rows | On a 320×568 phone the row labels clear each other by 3.7px. Full screen on a phone held sideways, 740×340, they clear by 0.7px and touch, until one zoom step gives 9.7px. French clears by 4.7px there. Accepted: the labels never overlap, and only that one view crowds them |
-| D1 carries the merge's lumping | `para`, `como` and `una` are not entries, because the merge sums them into `parar`, `comer` and `unir`, so those three sit in Spanish D1 in their place. Portuguese D1 has `parar`, `comer` and `pelar` the same way, French D1 has `Dan` for `dans`, and German D1's `ich` takes the uses of `du`, `sie`, `er`, `es`, `wir` and `ihr`. The fix belongs to the merge, not the peel |
+| D1 carries the merge's lumping | `para`, `como` and `una` are not entries, because the merge sums them into `parar`, `comer` and `unir`, so those three sit in Spanish D1 in their place. Portuguese D1 has `parar`, `comer` and `pelar` the same way, French D1 has `Dan` for `dans`, and German D1's `ich` takes the uses of `du`, `sie`, `er`, `es`, `wir` and `ihr`. A lemma can also take its whole level from a lumped word (`BAND-17`): `antiguar` sits at D4 on the uses of `antiguo`. The fix belongs to the merge, not the peel |
 | The artifact is positional | It holds one level per word of `ranked`, in order. A rebuild of `wordbands.<code>.json` needs the levels emitted again, and `artifacts.test.ts` fails on the digest until they are |
 | Each language names its own example | The figure's caption names an A1 word at the bottom level from `DEFINING_EXAMPLE`. `bands.test.ts` checks that the claim holds. French takes `demain`, as English takes the same word, because `bonjour` sits at D12, `salut` at D10, and `allô` at rank 1,630 is A2. English takes `tomorrow`, because `hello` sits at D17 and `bye` at D18 |
-| `coeur` has the level of `cœur` | The French list holds 43 words in both spellings, and the dictionary writes only the ligature. The emitter gives the `oe` spelling its twin's level, or `oeil` at rank 281 would have none |
+| `coeur` has the level of `cœur` | The French list holds 43 words in both spellings, and the dictionary writes only the ligature. The emitter gives the `oe` spelling its twin's level, or `coeur` at rank 613 would have none |
 
 To add a language: emit its levels in the defining-vocabulary repo, add it to
 `DEFINING_LEVEL_COUNT` with its count and to `DEFINING_EXAMPLE`, and import its artifact in
@@ -571,7 +572,7 @@ How `build-wiktionary.ts` builds one direction:
 | Known cost | Detail |
 | --- | --- |
 | The inverted half brings odd terms | `controlar` → annehmen, `amigo` → angenehm, `libro` → Blättermagen, `schön` → abeausir. The list beside it is what lets a reader see past them |
-| A form the merge keeps as an entry has no table | `gesagt`, `komm`, `dime`. Following Wiktionary's form-of links would take German A1 from 85% to about 95%, but the line would then show `sagen`'s translations under `gesagt` without saying so |
+| A form the merge keeps as an entry has no table | `gesagt` and `dime`. Following Wiktionary's form-of links would take German A1 from 85% to about 95%, but the line would then show `sagen`'s translations under `gesagt` without saying so |
 | A case-homograph gets one line | `essen` and `Essen` share the lowercase key, so the line holds `comer` and `comida` together, beside Google's line per casing |
 
 To add a language: put its extract in `data/`, add it to `LANGS` in `build-wiktionary.ts`
@@ -1002,7 +1003,7 @@ WCAG 1.4.13 asks that it be dismissible and hoverable, and it is neither by defa
 | A pick stays full screen | The word is looked up behind it and marked in it. Leaving on every pick would throw the zoom away mid-search |
 | Safari's trackpad pinch | Safari sends `gesturechange`, not a ctrl+wheel. A pinch on glass sends both, so the gesture handler stands down while a pointer is down |
 | A wheel with ctrl held zooms at `PINCH`, not at `WHEEL` (`FIG-10`) | It is a trackpad pinch. Chromium sends a pinch as wheels with ctrl held, and their deltaY sums to −100 ln(scale), as measured in headless Brave on 2026-10-17. At `PINCH` the figure then zooms by the fingers' own factor, as it does for Safari's gesture and for a pinch on glass. A mouse wheel turned with ctrl held is read at `PINCH` too, so it zooms faster than without ctrl |
-| `MAX_ZOOM` is 1,024 (`FIG-8`) | The first doubling at which the densest row fits its words 10mm apart on a phone. At 512 English cannot: its bottom level holds 21,070 words, and its closest pair would stand 7.7mm apart. A desktop never needs this much, and the extra costs it nothing |
+| `MAX_ZOOM` is 1,024 (`FIG-8`) | The first doubling at which the densest row fits its words 10mm apart on a phone. At 512, English and French cannot. English's bottom level holds 21,152 words, and its closest pair would stand 7.1mm apart. French's would stand 9.0mm apart. A desktop never needs this much, and the extra costs it nothing |
 | 10mm is room for a large or a shaking fingertip | It is the closest pair that has to be pickable, not the typical one. A view of the densest row at full zoom holds two or three points, and a reader who needs less stops zooming sooner |
 | A word keeps its hashed offset unless that lands within 10mm of a word already in its row | The hashed offsets alone put 189 to 1,004 pairs per language within 0.05px of each other on a phone at 1×, and only 11,800× to 24,600× would pull the closest pair 10mm apart. The rule moves 5–10% of the words, and 17.5% in English, whose 20 rows are the thinnest. 87% to 98% of the moves are in the bottom two rows, so the picture is still the one the hash draws |
 | 10mm is measured on a 254 by 183 plot, at 160px an inch | The least plot full screen leaves a phone: 320px wide in portrait, 340px tall in landscape. 160px an inch is Android's, and near every phone's. A larger plot only spreads the points further, so `FIG-8`'s test reads this one |
