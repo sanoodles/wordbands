@@ -1,11 +1,12 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "fondue": {
       "source": "frontify/fondue",
       "sourceType": "github",
       "skillPath": "packages/sdk/skills/fondue/SKILL.md",
-      "computedHash": "5d046345b47db3fb930c82391b773b3583d35659908923b0829648950e8f9823"
+      "computedHash": "293f9a54139fcfa3992d4f5650ce7321e91e79474e8c9f8f7761793778eba002",
+      "commit": "ab677bc458458f81ed256d1367334fa1d30e2798"
     }
   }
 }
